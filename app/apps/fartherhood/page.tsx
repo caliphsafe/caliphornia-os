@@ -2,7 +2,7 @@ export default function FartherhoodPage() {
   return (
     <main className="embedded-app-shell">
       <iframe
-        src="/apps/fartherhood/index.html"
+        src="index.html"
         title="FarTHERHOOD"
         className="embedded-app-frame"
       />
