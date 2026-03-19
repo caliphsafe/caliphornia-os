@@ -10,7 +10,7 @@ export const appRegistry: AppItem[] = [
     id: "fartherhood",
     name: "FarTHErHOOD",
     icon: "/icons/fatherhood.png",
-    href: "/apps/fatherhood"
+    href: "/apps/fartherhood"
   },
   {
     id: "friends",
