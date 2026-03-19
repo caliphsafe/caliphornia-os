@@ -1,8 +1,19 @@
-export default function Page() {
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import EmailWall from "@/components/EmailWall";
+import { verifySession } from "@/lib/session";
+
+export default async function Page() {
+  const cookieStore = await cookies();
+  const session = verifySession(cookieStore.get("caliph_os_session")?.value);
+
+  if (session) {
+    redirect("/home");
+  }
+
   return (
-    <main style={{ minHeight: "100vh", padding: "24px", background: "#08111d", color: "white" }}>
-      <h1>Caliphornia OS</h1>
-      <p>Build is working.</p>
+    <main className="iphone-shell lock-screen">
+      <EmailWall />
     </main>
   );
 }
