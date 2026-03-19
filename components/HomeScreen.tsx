@@ -18,7 +18,7 @@ export default function HomeScreen({ email }: { email: string }) {
           <button
             className="account-chip"
             onClick={handleLogout}
-            title={email}
+            title={`Log out ${email}`}
             aria-label="Log out"
           >
             {email.slice(0, 1).toUpperCase()}
@@ -26,14 +26,35 @@ export default function HomeScreen({ email }: { email: string }) {
         </div>
 
         <section className="home-feature-card">
-          <div className="feature-blur-orb" />
+          <div className="feature-blur-orb feature-orb-one" />
+          <div className="feature-blur-orb feature-orb-two" />
+
           <div className="feature-copy">
             <span className="feature-kicker">Direct to fan</span>
             <h1>Your music as an operating system</h1>
             <p>
-              Songs, text worlds, lyric games, playlists, visuals, drops, and future apps
-              all in one place.
+              Text worlds, lyric games, playlists, visuals, drops, and future apps
+              living inside one cinematic ecosystem.
             </p>
+          </div>
+        </section>
+
+        <section className="widget-row">
+          <a href="/apps/music" className="widget-card widget-now-playing">
+            <div className="widget-label">Library</div>
+            <div className="widget-title">Music</div>
+            <div className="widget-subtitle">Build personal playlists across projects</div>
+          </a>
+
+          <div className="widget-card widget-folder">
+            <div className="widget-label">Collection</div>
+            <div className="folder-grid">
+              <span className="folder-mini folder-blue" />
+              <span className="folder-mini folder-gold" />
+              <span className="folder-mini folder-pink" />
+              <span className="folder-mini folder-white" />
+            </div>
+            <div className="widget-subtitle">Apps, drops, and future worlds</div>
           </div>
         </section>
 
@@ -44,16 +65,18 @@ export default function HomeScreen({ email }: { email: string }) {
         </section>
 
         <div className="bottom-dock">
-          <a href="/apps/music" className="dock-app dock-music">
-            <span className="dock-dot" />
+          <a href="/apps/music" className="dock-app dock-app-feature">
+            <span className="dock-icon" />
             <span>Music</span>
           </a>
+
           <a href="/apps/friends" className="dock-app">
-            <span className="dock-dot" />
+            <span className="dock-icon" />
             <span>frie.ends</span>
           </a>
+
           <a href="/apps/fartherhood" className="dock-app">
-            <span className="dock-dot" />
+            <span className="dock-icon" />
             <span>FarTHERHOOD</span>
           </a>
         </div>
