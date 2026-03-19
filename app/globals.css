@@ -1,0 +1,338 @@
+:root {
+  --bg1: #06111f;
+  --bg2: #0b1c33;
+  --bg3: #11284a;
+  --glass: rgba(255, 255, 255, 0.12);
+  --glass-strong: rgba(255, 255, 255, 0.18);
+  --stroke: rgba(255, 255, 255, 0.16);
+  --text: #f5f7fb;
+  --muted: rgba(245, 247, 251, 0.72);
+  --shadow: 0 24px 70px rgba(0, 0, 0, 0.38);
+  --radius-xl: 34px;
+  --radius-lg: 28px;
+  --radius-md: 18px;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  min-height: 100%;
+  background:
+    radial-gradient(circle at top, rgba(120, 170, 255, 0.2), transparent 30%),
+    linear-gradient(180deg, var(--bg3), var(--bg2) 45%, var(--bg1));
+  color: var(--text);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+body {
+  min-height: 100vh;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+button,
+input {
+  font: inherit;
+}
+
+img {
+  display: block;
+}
+
+.iphone-shell {
+  min-height: 100vh;
+  width: 100%;
+  position: relative;
+  overflow: hidden;
+}
+
+.lock-screen,
+.home-screen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.lock-screen::before,
+.home-screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    radial-gradient(circle at 20% 18%, rgba(255,255,255,0.12), transparent 25%),
+    radial-gradient(circle at 82% 30%, rgba(120,170,255,0.16), transparent 28%),
+    radial-gradient(circle at 50% 86%, rgba(255,255,255,0.08), transparent 26%);
+  pointer-events: none;
+}
+
+.lock-screen-panel,
+.home-inner {
+  position: relative;
+  z-index: 1;
+  width: min(430px, 100%);
+}
+
+.lock-screen-panel {
+  min-height: calc(100vh - 32px);
+  border-radius: 40px;
+  border: 1px solid var(--stroke);
+  background: linear-gradient(
+    180deg,
+    rgba(255,255,255,0.1),
+    rgba(255,255,255,0.04)
+  );
+  backdrop-filter: blur(24px);
+  box-shadow: var(--shadow);
+  padding: 28px 18px 22px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+}
+
+.lock-top {
+  padding-top: 26px;
+  text-align: center;
+}
+
+.lock-time {
+  font-size: clamp(64px, 18vw, 92px);
+  font-weight: 300;
+  line-height: 0.95;
+  letter-spacing: -0.04em;
+}
+
+.lock-date {
+  margin-top: 10px;
+  font-size: 18px;
+  color: var(--muted);
+}
+
+.swipe-wrap {
+  margin-top: auto;
+}
+
+.swipe-button {
+  width: 100%;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.1);
+  color: white;
+  padding: 10px 12px;
+  border-radius: 999px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+  backdrop-filter: blur(18px);
+  box-shadow: 0 12px 30px rgba(0, 0, 0, 0.16);
+}
+
+.swipe-pill {
+  width: 52px;
+  height: 52px;
+  border-radius: 999px;
+  background: rgba(255,255,255,0.95);
+  flex-shrink: 0;
+}
+
+.swipe-text {
+  font-size: 17px;
+  letter-spacing: 0.01em;
+}
+
+.email-card {
+  display: grid;
+  gap: 14px;
+  margin-top: auto;
+  padding: 22px;
+  border-radius: var(--radius-lg);
+  background: rgba(8, 17, 29, 0.46);
+  border: 1px solid var(--stroke);
+  backdrop-filter: blur(18px);
+}
+
+.email-card h2 {
+  margin: 0;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.email-card p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.email-input {
+  width: 100%;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  border-radius: 16px;
+  padding: 14px 16px;
+  outline: none;
+}
+
+.email-input::placeholder {
+  color: rgba(255,255,255,0.48);
+}
+
+.primary-btn,
+.ghost-btn {
+  border-radius: 16px;
+  padding: 14px 16px;
+  cursor: pointer;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+.primary-btn:hover,
+.ghost-btn:hover,
+.swipe-button:hover,
+.app-icon:hover {
+  transform: translateY(-1px);
+}
+
+.primary-btn {
+  border: 0;
+  background: white;
+  color: #091321;
+  font-weight: 700;
+}
+
+.ghost-btn {
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.08);
+  color: white;
+}
+
+.form-error {
+  color: #ffd6d6;
+  font-size: 14px;
+}
+
+.home-inner {
+  min-height: calc(100vh - 32px);
+  display: flex;
+  flex-direction: column;
+  padding: 8px 0 0;
+}
+
+.status-bar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 14px;
+  color: var(--muted);
+  padding: 2px 4px 16px;
+}
+
+.status-email {
+  max-width: 54%;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  text-align: right;
+}
+
+.home-header {
+  padding: 4px 4px 18px;
+}
+
+.home-header h1 {
+  margin: 0 0 6px;
+  font-size: 28px;
+  line-height: 1.05;
+}
+
+.home-header p {
+  margin: 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.app-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 22px 12px;
+  align-content: start;
+}
+
+.app-icon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+}
+
+.app-icon-tile {
+  width: 72px;
+  height: 72px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.14);
+  border: 1px solid var(--stroke);
+  box-shadow: 0 10px 30px rgba(0,0,0,0.22);
+  backdrop-filter: blur(10px);
+}
+
+.app-icon-image {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.app-icon-label {
+  max-width: 78px;
+  text-align: center;
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+.dock {
+  margin-top: auto;
+  padding: 14px;
+  border-radius: 28px;
+  border: 1px solid var(--stroke);
+  background: rgba(255,255,255,0.12);
+  backdrop-filter: blur(22px);
+}
+
+.dock .ghost-btn {
+  width: 100%;
+}
+
+@media (min-width: 768px) {
+  .lock-screen,
+  .home-screen {
+    padding: 28px;
+  }
+
+  .lock-screen-panel,
+  .home-inner {
+    width: min(460px, 100%);
+  }
+
+  .lock-screen-panel,
+  .home-inner {
+    min-height: 860px;
+    max-height: calc(100vh - 56px);
+  }
+}
+
+@media (max-width: 420px) {
+  .app-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .app-icon-tile {
+    width: 70px;
+    height: 70px;
+  }
+}
