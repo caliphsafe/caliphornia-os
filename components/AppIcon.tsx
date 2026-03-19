@@ -7,6 +7,7 @@ export default function AppIcon({ app }: { app: AppItem }) {
       <div className="app-icon-tile ios-app-icon-tile">
         <img src={app.icon} alt={app.name} className="app-icon-image" />
         <div className="icon-shine" />
+        <div className="icon-glow" />
       </div>
       <span className="app-icon-label">{app.name}</span>
     </Link>
