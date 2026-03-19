@@ -7,7 +7,7 @@ export type AppItem = {
 
 export const appRegistry: AppItem[] = [
   {
-    id: "fatherhood",
+    id: "fartherhood",
     name: "FarTHErHOOD",
     icon: "/icons/fatherhood.png",
     href: "/apps/fatherhood"
