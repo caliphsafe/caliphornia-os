@@ -241,6 +241,7 @@
 
     const defaultTracks = [
       {
+        slug: "story-time",
         title: "CALIPH - STORY TIME",
         date: "Feb 28, 2025 at 12:40 AM",
         duration: "02:07",
@@ -262,6 +263,7 @@ But somehow I'm the one that turned her to a mama`,
         description: "Song about the accidental conception of a child in the black community"
       },
       {
+        slug: "eater-james",
         title: "CALIPH - EATER JAMES",
         date: "Feb 28, 2025 at 12:45 AM",
         duration: "02:00",
@@ -273,6 +275,7 @@ go, go, okay, right, go…`,
         description: "A song about secret black love that leads to a bad relationship, failed coparenting"
       },
       {
+        slug: "blue-corner",
         title: "CALIPH - BLUE CORNER",
         date: "Feb 13, 2025 at 5:03 PM",
         duration: "02:00",
@@ -284,6 +287,7 @@ we find peace in comparing Nike Air…`,
         description: "A song about a tragedy as a result of failed co parenting."
       },
       {
+        slug: "observations-dollar-and-a-dad",
         title: "CALIPH - OBESERVATIONS / A DOLLAR AND A DAD",
         date: "Feb 28, 2025 at 12:55 AM",
         duration: "02:00",
@@ -294,6 +298,7 @@ niggas always act weird when it's time to give it up…`,
         description: "Crackhead dad encounters his son and opens up."
       },
       {
+        slug: "seeds",
         title: "CALIPH - SEEDS",
         date: "Feb 28, 2025 at 12:43 AM",
         duration: "02:00",
@@ -396,26 +401,8 @@ it's getting harder to hold the dinero…`,
     }
 
     function togglePlay(index) {
-      if (!ensureTrackLoaded(index)) return;
-
-      const same = currentIndex === index;
-      const isPlaying = !sharedAudio.paused && same;
-
-      if (isPlaying) {
-        sharedAudio.pause();
-        setCardButtonState(index, false);
-        syncModalPlayButton();
-        return;
-      }
-
-      sharedAudio.play().then(() => {
-        setCardButtonState(index, true);
-        syncModalPlayButton();
-      }).catch(() => {
-        setCardButtonState(index, false);
-        syncModalPlayButton();
-      });
-    }
+  sendQueueToParent(index, true);
+}
 
     function setCardButtonState(index, isPlaying) {
       const icon = document.getElementById(`icon-${index}`);
@@ -691,7 +678,24 @@ it's getting harder to hold the dinero…`,
 
     loadTracksFromSupabase();
     startNotesAutoRefresh(15000);
+function sendQueueToParent(startIndex, toggle = false) {
+  const payload = {
+    type: toggle ? "CALIPH_PLAYER_TOGGLE_TRACK" : "CALIPH_PLAYER_LOAD_QUEUE",
+    startIndex,
+    tracks: tracks.map(track => ({
+      id: track.id || null,
+      slug: track.slug || null,
+      title: track.title,
+      date: track.date || "",
+      duration: track.duration || "",
+      file: track.file,
+      transcript: track.transcript || "",
+      description: track.description || ""
+    }))
+  };
 
+  window.parent.postMessage(payload, "*");
+}
     // ===== Collaborators popover =====
     const btnCollaborators = document.getElementById("btnCollaborators");
     const collabPopover = document.getElementById("collabPopover");
