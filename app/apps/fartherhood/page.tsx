@@ -1,11 +1,27 @@
-export default function FartherhoodPage() {
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
+import { verifySession } from "@/lib/session";
+import GlobalPlayer from "@/components/GlobalPlayer";
+
+export default async function FartherhoodPage() {
+  const cookieStore = await cookies();
+  const session = verifySession(cookieStore.get("caliph_os_session")?.value);
+
+  if (!session) {
+    redirect("/");
+  }
+
   return (
-    <main className="embedded-app-shell">
-      <iframe
-        src="/apps/fartherhood/index.html"
-        title="FarTHERHOOD"
-        className="embedded-app-frame"
-      />
-    </main>
+    <>
+      <main className="embedded-app-shell">
+        <iframe
+          src="/apps/fartherhood/index.html"
+          title="FarTHERHOOD"
+          className="embedded-app-frame"
+        />
+      </main>
+
+      <GlobalPlayer email={session.email} />
+    </>
   );
 }
