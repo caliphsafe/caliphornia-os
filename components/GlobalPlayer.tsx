@@ -17,8 +17,19 @@ type Props = {
   email: string;
 };
 
-function cleanTrackTitle(title: string) {
-  return String(title || "").replace(/^CALIPH\s*-\s*/i, "").trim();
+function getTrackParts(title: string) {
+  const raw = String(title || "").trim();
+  const parts = raw.split(/\s*-\s*/);
+  if (parts.length >= 2) {
+    return {
+      artist: parts[0].trim(),
+      song: parts.slice(1).join(" - ").trim()
+    };
+  }
+  return {
+    artist: "Caliph",
+    song: raw
+  };
 }
 
 function IconPrev() {
@@ -67,20 +78,6 @@ function IconPause() {
   );
 }
 
-function IconAdd() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
-      <path
-        d="M12 5v14M5 12h14"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function IconMinimize() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon gp-icon-small">
@@ -90,6 +87,31 @@ function IconMinimize() {
         stroke="currentColor"
         strokeWidth="1.9"
         strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconStar({ filled }: { filled: boolean }) {
+  if (filled) {
+    return (
+      <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
+        <path
+          d="M12 3.8l2.52 5.11 5.64.82-4.08 3.98.96 5.62L12 16.66 6.96 19.33l.96-5.62L3.84 9.73l5.64-.82L12 3.8Z"
+          fill="currentColor"
+        />
+      </svg>
+    );
+  }
+
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
+      <path
+        d="M12 3.8l2.52 5.11 5.64.82-4.08 3.98.96 5.62L12 16.66 6.96 19.33l.96-5.62L3.84 9.73l5.64-.82L12 3.8Z"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.7"
+        strokeLinejoin="round"
       />
     </svg>
   );
@@ -109,6 +131,10 @@ export default function GlobalPlayer({ email }: Props) {
     if (currentIndex < 0 || currentIndex >= queue.length) return null;
     return queue[currentIndex];
   }, [queue, currentIndex]);
+
+  const trackParts = useMemo(() => {
+    return getTrackParts(currentTrack?.title || "");
+  }, [currentTrack]);
 
   function broadcastState() {
     const audio = audioRef.current;
@@ -295,11 +321,15 @@ export default function GlobalPlayer({ email }: Props) {
 
             <div className="global-player-main">
               <div className="global-player-copy">
-                <div className="global-player-eyebrow">Now Playing</div>
-                <div className="global-player-title">{cleanTrackTitle(currentTrack.title)}</div>
+                <div className="global-player-title">{trackParts.song}</div>
+                <div className="global-player-artist">{trackParts.artist}</div>
               </div>
 
               <div className="global-player-controls">
+                <button onClick={togglePlaylistSave} className={`gp-btn gp-btn-star ${isSaved ? "is-saved" : ""}`} aria-label="Add to favorites">
+                  <IconStar filled={isSaved} />
+                </button>
+
                 <button onClick={playPrev} className="gp-btn" aria-label="Previous">
                   <IconPrev />
                 </button>
@@ -321,14 +351,6 @@ export default function GlobalPlayer({ email }: Props) {
 
                 <button onClick={playNext} className="gp-btn" aria-label="Next">
                   <IconNext />
-                </button>
-
-                <button
-                  onClick={togglePlaylistSave}
-                  className={`gp-btn gp-btn-save ${isSaved ? "is-saved" : ""}`}
-                  aria-label="Add to playlist"
-                >
-                  <IconAdd />
                 </button>
               </div>
             </div>
