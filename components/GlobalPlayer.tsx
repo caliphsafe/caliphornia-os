@@ -23,7 +23,8 @@ export default function GlobalPlayer({ email }: Props) {
   const [queue, setQueue] = useState<GlobalTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [expanded, setExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(true);
+  const [isVisible, setIsVisible] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
 
   const currentTrack = useMemo(() => {
@@ -58,7 +59,8 @@ export default function GlobalPlayer({ email }: Props) {
 
         setQueue(tracks);
         setCurrentIndex(startIndex);
-        setExpanded(true);
+        setIsVisible(true);
+        setIsExpanded(true);
       }
 
       if (data.type === "CALIPH_PLAYER_TOGGLE_TRACK") {
@@ -85,7 +87,8 @@ export default function GlobalPlayer({ email }: Props) {
 
         setQueue(tracks);
         setCurrentIndex(startIndex);
-        setExpanded(true);
+        setIsVisible(true);
+        setIsExpanded(true);
       }
 
       if (data.type === "CALIPH_PLAYER_PLAY") {
@@ -117,7 +120,8 @@ export default function GlobalPlayer({ email }: Props) {
     audio.load();
     audio.play().catch(() => {});
     setIsSaved(false);
-    setExpanded(true);
+    setIsVisible(true);
+    setIsExpanded(true);
 
     void fetch("/api/events/song-play", {
       method: "POST",
@@ -194,63 +198,74 @@ export default function GlobalPlayer({ email }: Props) {
     if (data?.ok) setIsSaved(Boolean(data.saved));
   }
 
-  if (!currentTrack) return null;
+  if (!isVisible || !currentTrack) return null;
 
   return (
     <>
       <audio ref={audioRef} />
 
-      <div className={`global-player ${expanded ? "is-expanded" : ""}`}>
-        <button
-          className="global-player-minibar"
-          onClick={() => setExpanded((v) => !v)}
-          aria-label="Toggle player"
-        >
-          <div className="global-player-text">
-            <div className="global-player-title">{currentTrack.title}</div>
-            <div className="global-player-subtitle">
-              {currentTrack.description || "Now playing"}
+      <div className={`global-player-shell ${isExpanded ? "is-expanded" : "is-collapsed"}`}>
+        {isExpanded ? (
+          <div className="global-player-card">
+            <button
+              className="global-player-collapse"
+              onClick={() => setIsExpanded(false)}
+              aria-label="Minimize player"
+            >
+              —
+            </button>
+
+            <div className="global-player-main">
+              <div className="global-player-copy">
+                <div className="global-player-title">{currentTrack.title}</div>
+                <div className="global-player-subtitle">
+                  {currentTrack.description || "Now playing"}
+                </div>
+              </div>
+
+              <div className="global-player-controls">
+                <button onClick={playPrev} className="gp-btn" aria-label="Previous">
+                  ⏮
+                </button>
+
+                <button
+                  onClick={() => {
+                    if (!audioRef.current) return;
+                    if (audioRef.current.paused) {
+                      audioRef.current.play().catch(() => {});
+                    } else {
+                      audioRef.current.pause();
+                    }
+                  }}
+                  className="gp-btn gp-btn-main"
+                  aria-label="Play or pause"
+                >
+                  {isPlaying ? "⏸" : "▶"}
+                </button>
+
+                <button onClick={playNext} className="gp-btn" aria-label="Next">
+                  ⏭
+                </button>
+
+                <button
+                  onClick={togglePlaylistSave}
+                  className={`gp-btn gp-btn-save ${isSaved ? "is-saved" : ""}`}
+                  aria-label="Add to playlist"
+                >
+                  ＋
+                </button>
+              </div>
             </div>
           </div>
-          <div className="global-player-mini-controls">
-            <span>{isPlaying ? "⏸" : "▶"}</span>
-          </div>
-        </button>
-
-        <div className="global-player-panel">
-          <div className="global-player-row">
-            <button onClick={playPrev} className="gp-btn" aria-label="Previous">
-              ⏮
-            </button>
-
-            <button
-              onClick={() => {
-                if (!audioRef.current) return;
-                if (audioRef.current.paused) {
-                  audioRef.current.play().catch(() => {});
-                } else {
-                  audioRef.current.pause();
-                }
-              }}
-              className="gp-btn gp-btn-main"
-              aria-label="Play or pause"
-            >
-              {isPlaying ? "⏸" : "▶"}
-            </button>
-
-            <button onClick={playNext} className="gp-btn" aria-label="Next">
-              ⏭
-            </button>
-
-            <button
-              onClick={togglePlaylistSave}
-              className={`gp-btn gp-btn-save ${isSaved ? "is-saved" : ""}`}
-              aria-label="Add to playlist"
-            >
-              ＋
-            </button>
-          </div>
-        </div>
+        ) : (
+          <button
+            className="global-player-orb"
+            onClick={() => setIsExpanded(true)}
+            aria-label="Open player"
+          >
+            {isPlaying ? "⏸" : "▶"}
+          </button>
+        )}
       </div>
     </>
   );
