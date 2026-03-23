@@ -877,15 +877,20 @@ img {
   transform: translateX(1px);
 }
 
-.embedded-app-shell,
 .home-screen,
 .ios-home-screen {
   padding-bottom: 126px;
 }
 
+.embedded-app-shell {
+  min-height: 100vh;
+  background: #000;
+  padding: 0;
+}
+
 @media (max-width: 640px) {
   .global-player-shell {
-    bottom: calc(38px + env(safe-area-inset-bottom, 0px));
+    bottom: calc(54px + env(safe-area-inset-bottom, 0px));
   }
 
   .global-player-card {
@@ -911,9 +916,12 @@ img {
     height: 50px;
   }
 
-  .embedded-app-shell,
   .home-screen,
   .ios-home-screen {
     padding-bottom: 144px;
+  }
+
+  .embedded-app-shell {
+    padding: 0;
   }
 }
