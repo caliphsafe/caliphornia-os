@@ -772,3 +772,98 @@ body.modal-lock{ overflow: hidden; }
   font-size: 1.05rem;
   line-height: 1.5;
 }
+
+.global-player {
+  position: fixed;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  z-index: 5000;
+  display: grid;
+  gap: 8px;
+}
+
+.global-player-minibar {
+  width: 100%;
+  border: 1px solid rgba(255,255,255,0.12);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.16), rgba(255,255,255,0.08)),
+    rgba(7, 15, 28, 0.72);
+  color: white;
+  border-radius: 26px;
+  padding: 14px 16px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+}
+
+.global-player-text {
+  min-width: 0;
+  text-align: left;
+}
+
+.global-player-title {
+  font-size: 14px;
+  font-weight: 700;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global-player-subtitle {
+  font-size: 12px;
+  color: rgba(255,255,255,0.72);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.global-player-panel {
+  display: none;
+}
+
+.global-player.is-expanded .global-player-panel {
+  display: block;
+}
+
+.global-player-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.07)),
+    rgba(7, 15, 28, 0.74);
+  border-radius: 28px;
+  padding: 14px;
+  backdrop-filter: blur(24px) saturate(150%);
+  -webkit-backdrop-filter: blur(24px) saturate(150%);
+  box-shadow: 0 18px 40px rgba(0,0,0,0.24);
+}
+
+.gp-btn {
+  width: 48px;
+  height: 48px;
+  border-radius: 999px;
+  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.08);
+  color: white;
+  cursor: pointer;
+}
+
+.gp-btn-main {
+  width: 58px;
+  height: 58px;
+  background: white;
+  color: #08111d;
+  font-weight: 700;
+}
+
+.gp-btn-save.is-saved {
+  background: rgba(255,255,255,0.22);
+}
