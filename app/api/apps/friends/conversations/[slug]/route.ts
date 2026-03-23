@@ -15,6 +15,10 @@ export async function GET(
         slug,
         title,
         subtitle,
+        avatar_letter,
+        list_preview,
+        last_activity_label,
+        sort_order,
         is_published
       `)
       .eq("slug", slug)
@@ -37,6 +41,10 @@ export async function GET(
         sender_label,
         body,
         position,
+        message_side,
+        display_time,
+        audio_label,
+        audio_kind,
         is_published
       `)
       .eq("conversation_id", conversation.id)
