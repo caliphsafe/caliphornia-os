@@ -82,8 +82,6 @@
     <button type="button" id="btnSubmitNote">Submit</button>
   </div>
 
-  <iframe name="noteSink" id="noteSink" style="display:none;"></iframe>
-
   <audio id="sharedAudio" preload="metadata"></audio>
 
   <div class="modal" id="transcriptModal" aria-hidden="true">
@@ -205,8 +203,6 @@
   </div>
 
   <script>
-    const NOTE_POST_URL = "https://script.google.com/macros/s/AKfycbzMhOSvm4Phve_mWZzvhLGB1J3ZUK7X1_DGSih3wwh6BmToKZM_0k9ySmNpSrP7WqiOFg/exec";
-    const NOTE_READ_URL = "https://opensheet.elk.sh/1bn2n5zjYoCqHOilw2sYe_EOpAKUg5VFiw2JnzQ-EvHo/fartherhood_notes";
 
     const sharedAudio = document.getElementById("sharedAudio");
     const audioWrapper = document.getElementById("audioWrapper");
@@ -588,114 +584,132 @@ it's getting harder to hold the dinero…`,
       updateTimer();
     });
 
-    const noteForm = document.getElementById("noteForm");
-    const btnOpenNote = document.getElementById("btnOpenNote");
-    const btnSubmitNote = document.getElementById("btnSubmitNote");
+  const noteForm = document.getElementById("noteForm");
+const btnOpenNote = document.getElementById("btnOpenNote");
+const btnSubmitNote = document.getElementById("btnSubmitNote");
 
-    btnOpenNote.addEventListener("click", (e) => {
-      e.preventDefault();
-      const isOpen = noteForm.style.display === "block";
-      noteForm.style.display = isOpen ? "none" : "block";
+btnOpenNote.addEventListener("click", (e) => {
+  e.preventDefault();
+  const isOpen = noteForm.style.display === "block";
+  noteForm.style.display = isOpen ? "none" : "block";
+});
+
+btnSubmitNote.addEventListener("click", () => submitNote());
+
+async function submitNote() {
+  const nameEl = document.getElementById("noteName");
+  const msgEl  = document.getElementById("noteMessage");
+  const hint   = document.getElementById("reloadHint");
+
+  const displayName = (nameEl.value || "").trim();
+  const noteBody = (msgEl.value || "").trim();
+
+  if (!displayName || !noteBody) {
+    alert("Please fill out both fields.");
+    return;
+  }
+
+  try {
+    const res = await fetch("/api/apps/fartherhood/notes", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        displayName,
+        noteBody
+      })
     });
 
-    btnSubmitNote.addEventListener("click", () => submitNote());
+    const data = await res.json();
 
-    function submitNote() {
-      const nameEl = document.getElementById("noteName");
-      const msgEl  = document.getElementById("noteMessage");
-      const hint   = document.getElementById("reloadHint");
-
-      const name = (nameEl.value || "").trim();
-      const message = (msgEl.value || "").trim();
-
-      if (!name || !message) {
-        alert("Please fill out both fields.");
-        return;
-      }
-
-      const f = document.createElement("form");
-      f.action = NOTE_POST_URL;
-      f.method = "POST";
-      f.target = "noteSink";
-      f.style.display = "none";
-
-      const inName = document.createElement("input");
-      inName.name = "name";
-      inName.value = name;
-
-      const inMsg = document.createElement("input");
-      inMsg.name = "message";
-      inMsg.value = message;
-
-      f.appendChild(inName);
-      f.appendChild(inMsg);
-
-      document.body.appendChild(f);
-      f.submit();
-      f.remove();
-
-      nameEl.value = "";
-      msgEl.value = "";
-      noteForm.style.display = "none";
-      if (hint) hint.style.display = "block";
-
-      setTimeout(loadNotes, 1200);
+    if (!data.ok) {
+      alert(data.error || "Could not submit note.");
+      return;
     }
 
-    function loadNotes() {
-      const container = document.getElementById("publicNotes");
-      if (!container) return;
+    nameEl.value = "";
+    msgEl.value = "";
+    noteForm.style.display = "none";
 
-      fetch(NOTE_READ_URL, { cache: "no-store" })
-        .then(r => r.json())
-        .then(rows => {
-          if (!Array.isArray(rows) || rows.length === 0) {
-            container.innerHTML = `
-              <div class="message">
-                <p><strong>No notes yet</strong></p>
-                <p>Be the first to leave a message.</p>
-              </div>
-            `;
-            return;
-          }
-
-          rows.reverse();
-
-          container.innerHTML = rows.map(row => {
-            const nm = escapeHtml(row.Name || row.name || "Anonymous");
-            const msg = escapeHtml(row.Message || row.message || "");
-            const ts = escapeHtml(row.Timestamp || row.timestamp || "");
-            return `
-              <div class="message">
-                <p><strong>${nm}</strong></p>
-                ${ts ? `<p class="msg-ts">${ts}</p>` : ""}
-                <p>${msg}</p>
-              </div>
-            `;
-          }).join("");
-        })
-        .catch(() => {
-          container.innerHTML = `
-            <div class="message">
-              <p><strong>Couldn’t load notes</strong></p>
-              <p>Try reloading.</p>
-            </div>
-          `;
-        });
+    if (hint) {
+      hint.style.display = "block";
+      hint.innerHTML = `Note sent.`;
     }
 
-    let notesIntervalId = null;
+    await loadNotes();
+  } catch {
+    alert("Could not submit note.");
+  }
+}
 
-    function startNotesAutoRefresh(ms = 15000) {
-      loadNotes();
+function formatNoteDate(dateStr) {
+  try {
+    const d = new Date(dateStr);
+    return new Intl.DateTimeFormat("en-US", {
+      month: "numeric",
+      day: "numeric",
+      year: "2-digit",
+      hour: "numeric",
+      minute: "2-digit"
+    }).format(d);
+  } catch {
+    return "";
+  }
+}
 
-      if (notesIntervalId) clearInterval(notesIntervalId);
+async function loadNotes() {
+  const container = document.getElementById("publicNotes");
+  if (!container) return;
 
-      notesIntervalId = setInterval(() => {
-        loadNotes();
-      }, ms);
+  try {
+    const res = await fetch("/api/apps/fartherhood/notes", { cache: "no-store" });
+    const data = await res.json();
+
+    if (!data.ok || !Array.isArray(data.notes) || data.notes.length === 0) {
+      container.innerHTML = `
+        <div class="message">
+          <p><strong>No notes yet</strong></p>
+          <p>Be the first to leave a message.</p>
+        </div>
+      `;
+      return;
     }
 
+    container.innerHTML = data.notes.map((row) => {
+      const nm = escapeHtml(row.display_name || "Anonymous");
+      const msg = escapeHtml(row.note_body || "");
+      const ts = row.created_at ? escapeHtml(formatNoteDate(row.created_at)) : "";
+
+      return `
+        <div class="message">
+          <p><strong>${nm}</strong></p>
+          ${ts ? `<p class="msg-ts">${ts}</p>` : ""}
+          <p>${msg}</p>
+        </div>
+      `;
+    }).join("");
+  } catch {
+    container.innerHTML = `
+      <div class="message">
+        <p><strong>Couldn’t load notes</strong></p>
+        <p>Try reloading.</p>
+      </div>
+    `;
+  }
+}
+
+let notesIntervalId = null;
+
+function startNotesAutoRefresh(ms = 15000) {
+  loadNotes();
+
+  if (notesIntervalId) clearInterval(notesIntervalId);
+
+  notesIntervalId = setInterval(() => {
+    loadNotes();
+  }, ms);
+}
     loadTracksFromSupabase();
     startNotesAutoRefresh(15000);
 
