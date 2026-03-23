@@ -79,7 +79,7 @@ export default async function FriendsPage() {
           <div className="friends-search-pill">
             <span className="friends-search-icon">⌕</span>
             <span className="friends-search-text">Search</span>
-            <span className="friends-mic-icon">◖</span>
+            <span className="friends-mic-icon">◐</span>
           </div>
 
           <button className="friends-compose-btn" aria-label="Compose">
