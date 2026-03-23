@@ -1,17 +1,15 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-type LyricsShape = { body?: string } | { body?: string }[] | null;
-
-function getLyricsBody(lyrics: LyricsShape): string {
+function getLyricsBody(lyrics: any): string {
   if (!lyrics) return "";
 
   if (Array.isArray(lyrics)) {
     return lyrics[0]?.body || "";
   }
 
-  if (typeof lyrics === "object" && "body" in lyrics) {
-    return lyrics.body || "";
+  if (typeof lyrics === "object" && lyrics.body) {
+    return lyrics.body;
   }
 
   return "";
@@ -44,7 +42,6 @@ export async function GET() {
           duration_label,
           description,
           audio_path,
-          track_number,
           lyrics (
             body
           )
@@ -63,8 +60,7 @@ export async function GET() {
     const normalized = await Promise.all(
       (appSongs || []).map(async (row: any) => {
         const song = Array.isArray(row.songs) ? row.songs[0] : row.songs;
-
-        if (!song?.audio_path) return null;
+        if (!song) return null;
 
         const { data: signed, error: signedError } = await supabaseAdmin.storage
           .from("songs")
@@ -73,6 +69,8 @@ export async function GET() {
         if (signedError || !signed?.signedUrl) return null;
 
         return {
+          id: song.id,
+          slug: song.slug,
           title: song.title,
           date: song.display_date || "",
           duration: song.duration_label || "02:00",
