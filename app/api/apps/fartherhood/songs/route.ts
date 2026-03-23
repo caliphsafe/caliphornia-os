@@ -1,6 +1,22 @@
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
+type LyricsShape = { body?: string } | { body?: string }[] | null;
+
+function getLyricsBody(lyrics: LyricsShape): string {
+  if (!lyrics) return "";
+
+  if (Array.isArray(lyrics)) {
+    return lyrics[0]?.body || "";
+  }
+
+  if (typeof lyrics === "object" && "body" in lyrics) {
+    return lyrics.body || "";
+  }
+
+  return "";
+}
+
 export async function GET() {
   try {
     const { data: appRow, error: appError } = await supabaseAdmin
@@ -16,46 +32,52 @@ export async function GET() {
       );
     }
 
-    const { data: songs, error: songsError } = await supabaseAdmin
-      .from("songs")
+    const { data: appSongs, error: appSongsError } = await supabaseAdmin
+      .from("app_songs")
       .select(`
-        id,
-        slug,
-        title,
-        display_date,
-        duration_label,
-        description,
-        audio_path,
-        track_number,
-        lyrics (
-          body
+        position,
+        songs (
+          id,
+          slug,
+          title,
+          display_date,
+          duration_label,
+          description,
+          audio_path,
+          track_number,
+          lyrics (
+            body
+          )
         )
       `)
       .eq("app_id", appRow.id)
-      .order("track_number", { ascending: true });
+      .order("position", { ascending: true });
 
-    if (songsError) {
+    if (appSongsError) {
       return NextResponse.json(
-        { ok: false, error: songsError.message },
+        { ok: false, error: appSongsError.message },
         { status: 500 }
       );
     }
 
     const normalized = await Promise.all(
-      (songs || []).map(async (song) => {
+      (appSongs || []).map(async (row: any) => {
+        const song = Array.isArray(row.songs) ? row.songs[0] : row.songs;
+
+        if (!song?.audio_path) return null;
+
         const { data: signed, error: signedError } = await supabaseAdmin.storage
           .from("songs")
           .createSignedUrl(song.audio_path, 60 * 60);
+
+        if (signedError || !signed?.signedUrl) return null;
 
         return {
           title: song.title,
           date: song.display_date || "",
           duration: song.duration_label || "02:00",
-          file: !signedError && signed?.signedUrl ? signed.signedUrl : "",
-          transcript:
-            Array.isArray(song.lyrics) && song.lyrics.length > 0
-              ? song.lyrics[0].body
-              : "",
+          file: signed.signedUrl,
+          transcript: getLyricsBody(song.lyrics),
           description: song.description || ""
         };
       })
@@ -63,7 +85,7 @@ export async function GET() {
 
     return NextResponse.json({
       ok: true,
-      tracks: normalized.filter((t) => t.file)
+      tracks: normalized.filter(Boolean)
     });
   } catch {
     return NextResponse.json(
