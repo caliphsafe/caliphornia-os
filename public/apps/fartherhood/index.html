@@ -12,25 +12,22 @@
   <div class="top-chrome">
     <!-- Back button (left) -->
     <a href="#" class="nav-round" aria-label="Back">
-      <!-- iOS chevron.left -->
       <img src="back.png" alt="Share" class="ico-img" />
     </a>
 
     <!-- Right capsule (collaborators yellow + share white + more white) -->
     <div class="nav-capsule" role="group" aria-label="Actions">
-      <!-- Collaborators (ONLY yellow icon) -->
-       <a href="#" class="nav-capsule-btn" aria-label="Collaborators" id="btnCollaborators">
-  <img src="listen.png" alt="Collaborators" class="ico-img" />
-</a>
+      <a href="#" class="nav-capsule-btn" aria-label="Collaborators" id="btnCollaborators">
+        <img src="listen.png" alt="Collaborators" class="ico-img" />
+      </a>
 
       <a href="#" class="nav-capsule-btn" aria-label="Share" id="btnShare">
-  <img src="share.png" alt="Share" class="ico-img" />
-</a>
+        <img src="share.png" alt="Share" class="ico-img" />
+      </a>
 
-      <!-- More (ellipsis) -->
-           <a href="#" class="nav-capsule-btn" aria-label="More">
-  <img src="more.png" alt="Share" class="ico-img" />
-</a>
+      <a href="#" class="nav-capsule-btn" aria-label="More">
+        <img src="more.png" alt="Share" class="ico-img" />
+      </a>
     </div>
   </div>
 
@@ -45,13 +42,12 @@
 
       <div class="audio-wrapper" id="audioWrapper"></div>
 
-      <!-- ✅ LIVE PUBLIC NOTES SECTION -->
       <div class="messages-section">
         <h2>Notes from Listeners</h2>
-<p class="notes-sub">
-  Tap the bottom right icon and leave a note for your dad, about your dad, this project, your favorite song, or fatherhood in general.
-</p>
-        <!-- shows after submit -->
+        <p class="notes-sub">
+          Tap the bottom right icon and leave a note for your dad, about your dad, this project, your favorite song, or fatherhood in general.
+        </p>
+
         <p class="reload-hint" id="reloadHint" style="display:none;">
           Note sent. <strong>Reload</strong> to see it show up for everyone.
         </p>
@@ -66,37 +62,32 @@
   <!-- Bottom chrome (floating pill + compose) -->
   <div class="bottom-chrome" aria-label="Bottom actions">
     <div class="bottom-pill">
-      <!-- Subscribe (checklist-ish) -->
-            <a href="#" class="nav-capsule-btn" aria-label="Subscribe">
-  <img src="sub.png" alt="Subscribe" class="ico-img" />
-</a>
+      <a href="#" class="nav-capsule-btn" aria-label="Subscribe">
+        <img src="sub.png" alt="Subscribe" class="ico-img" />
+      </a>
 
-      <!-- Buy/Download (paperclip) -->
       <a href="#" class="nav-capsule-btn" aria-label="buy">
-  <img src="buy.png" alt="Subscribe" class="ico-img" />
-</a>
+        <img src="buy.png" alt="Subscribe" class="ico-img" />
+      </a>
 
-      <!-- Merch (markup pen) -->
       <a href="#" class="nav-capsule-btn" aria-label="Draw">
-  <img src="draw.png" alt="Subscribe" class="ico-img" />
-</a>
+        <img src="draw.png" alt="Subscribe" class="ico-img" />
+      </a>
     </div>
 
-    <!-- ✅ Compose now toggles note form -->
     <a href="#" class="compose-fab" aria-label="Add note" id="btnOpenNote">
-      <!-- square.and.pencil -->
-     <img src="note.png" alt="Subscribe" class="ico-img" />
+      <img src="note.png" alt="Subscribe" class="ico-img" />
     </a>
   </div>
 
-  <!-- ✅ NOTE FORM -->
+  <!-- NOTE FORM -->
   <div class="note-form" id="noteForm" style="display:none;">
     <input type="text" id="noteName" placeholder="Your name..." maxlength="60" />
     <textarea id="noteMessage" placeholder="Your message to a father or about this project..." maxlength="500"></textarea>
     <button type="button" id="btnSubmitNote">Submit</button>
   </div>
 
-  <!-- ✅ Hidden iframe for CORS-proof submission -->
+  <!-- Hidden iframe for CORS-proof submission -->
   <iframe name="noteSink" id="noteSink" style="display:none;"></iframe>
 
   <!-- Shared Audio Player -->
@@ -130,105 +121,107 @@
       </div>
     </div>
   </div>
-<!-- ✅ Collaborators iOS-style popover -->
-<div class="collab-popover" id="collabPopover" aria-hidden="true">
-  <div class="collab-nub" aria-hidden="true"></div>
 
-  <div class="collab-head">
-    <div class="collab-avatar">C</div>
-    <div class="collab-head-text">
-      <div class="collab-title">CALIPH — FarTHErHOOD</div>
-      <div class="collab-sub">Production collaborators</div>
+  <!-- Collaborators iOS-style popover -->
+  <div class="collab-popover" id="collabPopover" aria-hidden="true">
+    <div class="collab-nub" aria-hidden="true"></div>
+
+    <div class="collab-head">
+      <div class="collab-avatar">C</div>
+      <div class="collab-head-text">
+        <div class="collab-title">CALIPH — FarTHErHOOD</div>
+        <div class="collab-sub">Production collaborators</div>
+      </div>
+    </div>
+
+    <div class="collab-actions">
+      <div class="collab-action">
+        <div class="collab-action-ico">💬</div>
+        <div class="collab-action-txt">message</div>
+      </div>
+      <div class="collab-action">
+        <div class="collab-action-ico">🎥</div>
+        <div class="collab-action-txt">video</div>
+      </div>
+      <div class="collab-action">
+        <div class="collab-action-ico">📞</div>
+        <div class="collab-action-txt">audio</div>
+      </div>
+    </div>
+
+    <div class="collab-section">
+      <div class="collab-section-title">Current Participants</div>
+      <div class="collab-card">
+        <div class="collab-card-title">Now collaborating</div>
+        <div class="collab-card-sub">Producers credited on this note</div>
+      </div>
+    </div>
+
+    <div class="collab-section">
+      <div class="collab-section-title">Credits</div>
+
+      <div class="collab-list">
+        <div class="collab-row">
+          <div class="collab-dot"></div>
+          <div class="collab-row-main">
+            <div class="collab-row-title">Story Time</div>
+            <div class="collab-row-sub">Prod. by <strong>S. Rudolph</strong></div>
+          </div>
+          <div class="collab-tag">active</div>
+        </div>
+
+        <div class="collab-row">
+          <div class="collab-dot"></div>
+          <div class="collab-row-main">
+            <div class="collab-row-title">Eater James</div>
+            <div class="collab-row-sub">Prod. by <strong>Caliph</strong></div>
+          </div>
+          <div class="collab-tag">active</div>
+        </div>
+
+        <div class="collab-row">
+          <div class="collab-dot"></div>
+          <div class="collab-row-main">
+            <div class="collab-row-title">Blue Corner</div>
+            <div class="collab-row-sub">Prod. by <strong>Caliph</strong></div>
+          </div>
+          <div class="collab-tag">active</div>
+        </div>
+
+        <div class="collab-row">
+          <div class="collab-dot"></div>
+          <div class="collab-row-main">
+            <div class="collab-row-title">Observations / A Dollar And A Dad</div>
+            <div class="collab-row-sub">Prod. by <strong>Caliph</strong></div>
+          </div>
+          <div class="collab-tag">active</div>
+        </div>
+
+        <div class="collab-row">
+          <div class="collab-dot"></div>
+          <div class="collab-row-main">
+            <div class="collab-row-title">Seeds</div>
+            <div class="collab-row-sub">Prod. by <strong>Caliph</strong><br/>Co Prod. by <strong>AyyDot</strong></div>
+          </div>
+          <div class="collab-tag">active</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="collab-foot">
+      <div class="collab-foot-muted">Tip: tap outside to close</div>
     </div>
   </div>
 
-  <div class="collab-actions">
-    <div class="collab-action">
-      <div class="collab-action-ico">💬</div>
-      <div class="collab-action-txt">message</div>
-    </div>
-    <div class="collab-action">
-      <div class="collab-action-ico">🎥</div>
-      <div class="collab-action-txt">video</div>
-    </div>
-    <div class="collab-action">
-      <div class="collab-action-ico">📞</div>
-      <div class="collab-action-txt">audio</div>
-    </div>
-  </div>
-
-  <div class="collab-section">
-    <div class="collab-section-title">Current Participants</div>
-    <div class="collab-card">
-      <div class="collab-card-title">Now collaborating</div>
-      <div class="collab-card-sub">Producers credited on this note</div>
-    </div>
-  </div>
-
-  <div class="collab-section">
-    <div class="collab-section-title">Credits</div>
-
-    <div class="collab-list">
-      <div class="collab-row">
-        <div class="collab-dot"></div>
-        <div class="collab-row-main">
-          <div class="collab-row-title">Story Time</div>
-          <div class="collab-row-sub">Prod. by <strong>S. Rudolph</strong></div>
-        </div>
-        <div class="collab-tag">active</div>
-      </div>
-
-      <div class="collab-row">
-        <div class="collab-dot"></div>
-        <div class="collab-row-main">
-          <div class="collab-row-title">Eater James</div>
-          <div class="collab-row-sub">Prod. by <strong>Caliph</strong></div>
-        </div>
-        <div class="collab-tag">active</div>
-      </div>
-
-      <div class="collab-row">
-        <div class="collab-dot"></div>
-        <div class="collab-row-main">
-          <div class="collab-row-title">Blue Corner</div>
-          <div class="collab-row-sub">Prod. by <strong>Caliph</strong></div>
-        </div>
-        <div class="collab-tag">active</div>
-      </div>
-
-      <div class="collab-row">
-        <div class="collab-dot"></div>
-        <div class="collab-row-main">
-          <div class="collab-row-title">Observations / A Dollar And A Dad</div>
-          <div class="collab-row-sub">Prod. by <strong>Caliph</strong></div>
-        </div>
-        <div class="collab-tag">active</div>
-      </div>
-
-      <div class="collab-row">
-        <div class="collab-dot"></div>
-        <div class="collab-row-main">
-          <div class="collab-row-title">Seeds</div>
-          <div class="collab-row-sub">Prod. by <strong>Caliph</strong><br/>Co Prod. by <strong>AyyDot</strong></div>
-        </div>
-        <div class="collab-tag">active</div>
-      </div>
-    </div>
-  </div>
-
-  <div class="collab-foot">
-    <div class="collab-foot-muted">Tip: tap outside to close</div>
-  </div>
-</div>
   <script>
     // =============================
-    // ✅ PUBLIC NOTES CONFIG (ADDED)
+    // PUBLIC NOTES CONFIG
     // =============================
     const NOTE_POST_URL = "https://script.google.com/macros/s/AKfycbzMhOSvm4Phve_mWZzvhLGB1J3ZUK7X1_DGSih3wwh6BmToKZM_0k9ySmNpSrP7WqiOFg/exec";
     const NOTE_READ_URL = "https://opensheet.elk.sh/1bn2n5zjYoCqHOilw2sYe_EOpAKUg5VFiw2JnzQ-EvHo/fartherhood_notes";
 
     // =============================
-    // EXISTING AUDIO / MODAL CODE (UNCHANGED)
+    // AUDIO / MODAL CODE
     // =============================
     const sharedAudio = document.getElementById("sharedAudio");
     const audioWrapper = document.getElementById("audioWrapper");
@@ -246,7 +239,7 @@
     const btnBack15 = document.getElementById("btnBack15");
     const btnFwd15  = document.getElementById("btnFwd15");
 
-    const tracks = [
+    const defaultTracks = [
       {
         title: "CALIPH - STORY TIME",
         date: "Feb 28, 2025 at 12:40 AM",
@@ -312,18 +305,51 @@ it's getting harder to hold the dinero…`,
       }
     ];
 
+    let tracks = [...defaultTracks];
     let currentIndex = -1;
     let modalIndex = -1;
     let rafId = null;
+
+    async function loadTracksFromSupabase() {
+      try {
+        const res = await fetch("/api/apps/fartherhood/songs", { cache: "no-store" });
+        const data = await res.json();
+
+        if (!data.ok || !Array.isArray(data.tracks) || data.tracks.length === 0) {
+          tracks = [...defaultTracks];
+          renderTracks();
+          updateTimer();
+          return;
+        }
+
+        tracks = data.tracks.map((track, i) => ({
+          ...track,
+          transcript: track.transcript || defaultTracks[i]?.transcript || ""
+        }));
+
+        currentIndex = -1;
+        modalIndex = -1;
+        sharedAudio.pause();
+        sharedAudio.removeAttribute("src");
+        sharedAudio.load();
+
+        renderTracks();
+        updateTimer();
+      } catch (err) {
+        tracks = [...defaultTracks];
+        renderTracks();
+        updateTimer();
+      }
+    }
 
     function renderTracks() {
       audioWrapper.innerHTML = "";
 
       tracks.forEach((track, i) => {
-        const preview = escapeHtml(track.transcript)
+        const preview = escapeHtml(track.transcript || "")
           .split('\n')
           .filter(Boolean)
-          .slice(0,2)
+          .slice(0, 2)
           .join(' ');
 
         const html = `
@@ -351,7 +377,7 @@ it's getting harder to hold the dinero…`,
             </div>
           </section>
 
-          <p class="description">${track.description}</p>
+          <p class="description">${track.description || ""}</p>
         `;
 
         audioWrapper.insertAdjacentHTML("beforeend", html);
@@ -414,7 +440,7 @@ it's getting harder to hold the dinero…`,
       const t = tracks[index];
       sheetTitle.textContent = t.title;
       sheetMeta.innerHTML = `${formatModalDate(t.date)} <span class="dot">•</span> ${t.duration}`;
-      sheetBody.textContent = t.transcript;
+      sheetBody.textContent = t.transcript || "";
 
       modal.classList.add("open");
       modal.setAttribute("aria-hidden", "false");
@@ -543,7 +569,7 @@ it's getting harder to hold the dinero…`,
     }
 
     function formatModalDate(dateStr) {
-      return dateStr
+      return String(dateStr || "")
         .replace("Jan ", "1/").replace("Feb ", "2/").replace("Mar ", "3/")
         .replace("Apr ", "4/").replace("May ", "5/").replace("Jun ", "6/")
         .replace("Jul ", "7/").replace("Aug ", "8/").replace("Sep ", "9/")
@@ -553,7 +579,7 @@ it's getting harder to hold the dinero…`,
     }
 
     // =============================
-    // ✅ PUBLIC NOTES (NEW) — uses OpenSheet for reading (CORS-safe)
+    // PUBLIC NOTES — still Google Sheets for now
     // =============================
     const noteForm = document.getElementById("noteForm");
     const btnOpenNote = document.getElementById("btnOpenNote");
@@ -567,7 +593,7 @@ it's getting harder to hold the dinero…`,
 
     btnSubmitNote.addEventListener("click", () => submitNote());
 
-    function submitNote(){
+    function submitNote() {
       const nameEl = document.getElementById("noteName");
       const msgEl  = document.getElementById("noteMessage");
       const hint   = document.getElementById("reloadHint");
@@ -575,12 +601,11 @@ it's getting harder to hold the dinero…`,
       const name = (nameEl.value || "").trim();
       const message = (msgEl.value || "").trim();
 
-      if(!name || !message){
+      if (!name || !message) {
         alert("Please fill out both fields.");
         return;
       }
 
-      // submit via hidden iframe (no CORS issues)
       const f = document.createElement("form");
       f.action = NOTE_POST_URL;
       f.method = "POST";
@@ -602,24 +627,22 @@ it's getting harder to hold the dinero…`,
       f.submit();
       f.remove();
 
-      // UI feedback
       nameEl.value = "";
       msgEl.value = "";
       noteForm.style.display = "none";
-      if(hint) hint.style.display = "block";
+      if (hint) hint.style.display = "block";
 
-      // try refresh shortly after (still tells them to reload)
       setTimeout(loadNotes, 1200);
     }
 
-    function loadNotes(){
+    function loadNotes() {
       const container = document.getElementById("publicNotes");
       if (!container) return;
 
       fetch(NOTE_READ_URL, { cache: "no-store" })
         .then(r => r.json())
         .then(rows => {
-          if(!Array.isArray(rows) || rows.length === 0){
+          if (!Array.isArray(rows) || rows.length === 0) {
             container.innerHTML = `
               <div class="message">
                 <p><strong>No notes yet</strong></p>
@@ -629,7 +652,7 @@ it's getting harder to hold the dinero…`,
             return;
           }
 
-          rows.reverse(); // newest first
+          rows.reverse();
 
           container.innerHTML = rows.map(row => {
             const nm = escapeHtml(row.Name || row.name || "Anonymous");
@@ -653,123 +676,111 @@ it's getting harder to hold the dinero…`,
           `;
         });
     }
-// Auto-refresh public notes every 15 seconds
-let notesIntervalId = null;
 
-function startNotesAutoRefresh(ms = 15000) {
-  // load once immediately
-  loadNotes();
+    let notesIntervalId = null;
 
-  // clear any existing interval (prevents duplicates if called twice)
-  if (notesIntervalId) clearInterval(notesIntervalId);
+    function startNotesAutoRefresh(ms = 15000) {
+      loadNotes();
 
-  notesIntervalId = setInterval(() => {
-    loadNotes();
-  }, ms);
-}
-    renderTracks();
-    updateTimer();
-    startNotesAutoRefresh(15000); // 15000 = 15 seconds (use 10000 for 10 seconds)
-    // ===== Collaborators popover =====
-const btnCollaborators = document.getElementById("btnCollaborators");
-const collabPopover = document.getElementById("collabPopover");
+      if (notesIntervalId) clearInterval(notesIntervalId);
 
-function openCollabPopover(){
-  if (!btnCollaborators || !collabPopover) return;
-
-  // Position popover under the top-right capsule area, anchored to the button
-  const r = btnCollaborators.getBoundingClientRect();
-
-  // Popover top aligns slightly below the top chrome
-  const top = Math.min(window.innerHeight - 20, r.bottom + 12);
-
-  // Keep it inside viewport
-  const popW = Math.min(360, window.innerWidth - 24);
-  const left = Math.min(window.innerWidth - popW - 12, Math.max(12, r.right - popW));
-
-  collabPopover.style.top = `${top}px`;
-  collabPopover.style.left = `${left}px`;
-
-  // Nub aligned to the center of the button relative to popover
-  const nub = collabPopover.querySelector(".collab-nub");
-  if (nub){
-    const btnCenterX = r.left + (r.width / 2);
-    const nubLeft = Math.max(18, Math.min(popW - 36, btnCenterX - left - 9));
-    nub.style.right = "auto";
-    nub.style.left = `${nubLeft}px`;
-  }
-
-  collabPopover.classList.add("open");
-  collabPopover.setAttribute("aria-hidden", "false");
-}
-
-function closeCollabPopover(){
-  if (!collabPopover) return;
-  collabPopover.classList.remove("open");
-  collabPopover.setAttribute("aria-hidden", "true");
-}
-
-function toggleCollabPopover(){
-  if (!collabPopover) return;
-  const isOpen = collabPopover.classList.contains("open");
-  if (isOpen) closeCollabPopover();
-  else openCollabPopover();
-}
-
-btnCollaborators?.addEventListener("click", (e) => {
-  e.preventDefault();
-  toggleCollabPopover();
-});
-
-// Close on outside tap
-document.addEventListener("click", (e) => {
-  if (!collabPopover?.classList.contains("open")) return;
-  const t = e.target;
-  if (collabPopover.contains(t)) return;
-  if (btnCollaborators?.contains(t)) return;
-  closeCollabPopover();
-});
-
-// Close on escape
-document.addEventListener("keydown", (e) => {
-  if (e.key === "Escape") closeCollabPopover();
-});
-
-// Reposition on resize/orientation change
-window.addEventListener("resize", () => {
-  if (collabPopover?.classList.contains("open")) openCollabPopover();
-});
-    // ===== Share button: iOS/Android Share Sheet when available =====
-const btnShare = document.getElementById("btnShare");
-
-btnShare?.addEventListener("click", async (e) => {
-  e.preventDefault();
-
-  const shareData = {
-    title: document.title,
-    text: "CALIPH — FarTHErHOOD",
-    url: window.location.href
-  };
-
-  try {
-    // iOS Safari supports navigator.share in many cases (must be user-initiated)
-    if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
-      await navigator.share(shareData);
-      return;
+      notesIntervalId = setInterval(() => {
+        loadNotes();
+      }, ms);
     }
-  } catch (err) {
-    // user canceled or share failed — ignore
-  }
 
-  // Fallback if Web Share isn't available:
-  // Copy link + small alert (you can swap this with a glass popover if you want)
-  try {
-    await navigator.clipboard.writeText(window.location.href);
-    alert("Link copied. Paste it anywhere to share.");
-  } catch {
-    prompt("Copy this link to share:", window.location.href);
-  }
-});
+    loadTracksFromSupabase();
+    startNotesAutoRefresh(15000);
+
+    // ===== Collaborators popover =====
+    const btnCollaborators = document.getElementById("btnCollaborators");
+    const collabPopover = document.getElementById("collabPopover");
+
+    function openCollabPopover() {
+      if (!btnCollaborators || !collabPopover) return;
+
+      const r = btnCollaborators.getBoundingClientRect();
+      const top = Math.min(window.innerHeight - 20, r.bottom + 12);
+      const popW = Math.min(360, window.innerWidth - 24);
+      const left = Math.min(window.innerWidth - popW - 12, Math.max(12, r.right - popW));
+
+      collabPopover.style.top = `${top}px`;
+      collabPopover.style.left = `${left}px`;
+
+      const nub = collabPopover.querySelector(".collab-nub");
+      if (nub) {
+        const btnCenterX = r.left + (r.width / 2);
+        const nubLeft = Math.max(18, Math.min(popW - 36, btnCenterX - left - 9));
+        nub.style.right = "auto";
+        nub.style.left = `${nubLeft}px`;
+      }
+
+      collabPopover.classList.add("open");
+      collabPopover.setAttribute("aria-hidden", "false");
+    }
+
+    function closeCollabPopover() {
+      if (!collabPopover) return;
+      collabPopover.classList.remove("open");
+      collabPopover.setAttribute("aria-hidden", "true");
+    }
+
+    function toggleCollabPopover() {
+      if (!collabPopover) return;
+      const isOpen = collabPopover.classList.contains("open");
+      if (isOpen) closeCollabPopover();
+      else openCollabPopover();
+    }
+
+    btnCollaborators?.addEventListener("click", (e) => {
+      e.preventDefault();
+      toggleCollabPopover();
+    });
+
+    document.addEventListener("click", (e) => {
+      if (!collabPopover?.classList.contains("open")) return;
+      const t = e.target;
+      if (collabPopover.contains(t)) return;
+      if (btnCollaborators?.contains(t)) return;
+      closeCollabPopover();
+    });
+
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeCollabPopover();
+    });
+
+    window.addEventListener("resize", () => {
+      if (collabPopover?.classList.contains("open")) openCollabPopover();
+    });
+
+    // ===== Share button =====
+    const btnShare = document.getElementById("btnShare");
+
+    btnShare?.addEventListener("click", async (e) => {
+      e.preventDefault();
+
+      const shareData = {
+        title: document.title,
+        text: "CALIPH — FarTHErHOOD",
+        url: window.location.href
+      };
+
+      try {
+        if (navigator.share && (!navigator.canShare || navigator.canShare(shareData))) {
+          await navigator.share(shareData);
+          return;
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      try {
+        await navigator.clipboard.writeText(window.location.href);
+        alert("Link copied. Paste it anywhere to share.");
+      } catch {
+        prompt("Copy this link to share:", window.location.href);
+      }
+    });
   </script>
 </body>
 </html>
