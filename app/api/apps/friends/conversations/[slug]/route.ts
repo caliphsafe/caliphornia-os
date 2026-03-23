@@ -45,7 +45,24 @@ export async function GET(
         display_time,
         audio_label,
         audio_kind,
-        is_published
+        is_published,
+        message_audio_clips (
+          id,
+          clip_title,
+          start_seconds,
+          end_seconds,
+          display_duration,
+          audio_assets (
+            id,
+            slug,
+            title,
+            storage_path,
+            version_label,
+            is_final_version,
+            is_playlistable,
+            linked_song_id
+          )
+        )
       `)
       .eq("conversation_id", conversation.id)
       .eq("is_published", true)
@@ -58,10 +75,63 @@ export async function GET(
       );
     }
 
+    const normalizedMessages = await Promise.all(
+      (messages || []).map(async (msg: any) => {
+        const clip = Array.isArray(msg.message_audio_clips) ? msg.message_audio_clips[0] : null;
+        const asset = clip?.audio_assets
+          ? (Array.isArray(clip.audio_assets) ? clip.audio_assets[0] : clip.audio_assets)
+          : null;
+
+        let signedUrl: string | null = null;
+
+        if (asset?.storage_path) {
+          const { data: signed } = await supabaseAdmin.storage
+            .from("songs")
+            .createSignedUrl(asset.storage_path, 60 * 60);
+
+          signedUrl = signed?.signedUrl || null;
+        }
+
+        return {
+          id: msg.id,
+          message_type: msg.message_type,
+          sender_name: msg.sender_name,
+          sender_label: msg.sender_label,
+          body: msg.body,
+          position: msg.position,
+          message_side: msg.message_side,
+          display_time: msg.display_time,
+          audio_label: msg.audio_label,
+          audio_kind: msg.audio_kind,
+          clip: clip
+            ? {
+                id: clip.id,
+                clip_title: clip.clip_title,
+                start_seconds: Number(clip.start_seconds || 0),
+                end_seconds: clip.end_seconds != null ? Number(clip.end_seconds) : null,
+                display_duration: clip.display_duration,
+                file: signedUrl,
+                asset: asset
+                  ? {
+                      id: asset.id,
+                      slug: asset.slug,
+                      title: asset.title,
+                      version_label: asset.version_label,
+                      is_final_version: asset.is_final_version,
+                      is_playlistable: asset.is_playlistable,
+                      linked_song_id: asset.linked_song_id
+                    }
+                  : null
+              }
+            : null
+        };
+      })
+    );
+
     return NextResponse.json({
       ok: true,
       conversation,
-      messages: messages || []
+      messages: normalizedMessages
     });
   } catch {
     return NextResponse.json(
