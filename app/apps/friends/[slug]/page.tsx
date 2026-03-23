@@ -1,6 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
+import FriendsThreadClient from "@/components/FriendsThreadClient";
 
 async function getConversation(slug: string) {
   const base =
@@ -39,71 +40,10 @@ export default async function FriendsConversationPage({
     redirect("/apps/friends");
   }
 
-  const conversation = data.conversation;
-  const messages = data.messages || [];
-
   return (
-    <main className="friends-thread-screen">
-      <div className="friends-thread-shell">
-        <div className="friends-thread-header">
-          <a href="/apps/friends" className="friends-thread-back">
-            ‹ Fri.ends
-          </a>
-
-          <div className="friends-thread-center">
-            <div className="friends-thread-avatar">
-              {conversation.avatar_letter || conversation.title?.[0] || "V"}
-            </div>
-
-            <div className="friends-thread-meta">
-              <div className="friends-thread-title">{conversation.title}</div>
-              <div className="friends-thread-subtitle">
-                {conversation.subtitle || ""}
-              </div>
-            </div>
-          </div>
-
-          <div className="friends-thread-actions">
-            <button className="friends-thread-action">⌄</button>
-            <button className="friends-thread-action">◻︎</button>
-          </div>
-        </div>
-
-        <div className="friends-thread-messages">
-          {messages.map((msg: any) => {
-            if (msg.message_type === "timestamp" || msg.message_type === "system" || msg.message_side === "center") {
-              return (
-                <div key={msg.id} className="friends-center-line">
-                  {msg.body}
-                </div>
-              );
-            }
-
-            const side = msg.message_side === "outgoing" ? "outgoing" : "incoming";
-
-            return (
-              <div key={msg.id} className={`friends-message-block ${side}`}>
-                {msg.sender_label && side === "incoming" ? (
-                  <div className="friends-sender-label">{msg.sender_label}</div>
-                ) : null}
-
-                <div className={`friends-bubble ${side}`}>
-                  {msg.body}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="friends-thread-inputbar">
-          <button className="friends-plus-btn">＋</button>
-
-          <div className="friends-input-pill">
-            <span className="friends-input-placeholder">iMessage</span>
-            <span className="friends-input-mic">◖</span>
-          </div>
-        </div>
-      </div>
-    </main>
+    <FriendsThreadClient
+      conversation={data.conversation}
+      messages={data.messages || []}
+    />
   );
 }
