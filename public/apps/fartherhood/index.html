@@ -8,14 +8,11 @@
 </head>
 <body>
 
-  <!-- Top chrome (iOS Notes vibe) -->
   <div class="top-chrome">
-    <!-- Back button (left) -->
     <a href="#" class="nav-round" aria-label="Back">
       <img src="back.png" alt="Share" class="ico-img" />
     </a>
 
-    <!-- Right capsule (collaborators yellow + share white + more white) -->
     <div class="nav-capsule" role="group" aria-label="Actions">
       <a href="#" class="nav-capsule-btn" aria-label="Collaborators" id="btnCollaborators">
         <img src="listen.png" alt="Collaborators" class="ico-img" />
@@ -59,7 +56,6 @@
     </main>
   </div>
 
-  <!-- Bottom chrome (floating pill + compose) -->
   <div class="bottom-chrome" aria-label="Bottom actions">
     <div class="bottom-pill">
       <a href="#" class="nav-capsule-btn" aria-label="Subscribe">
@@ -80,20 +76,16 @@
     </a>
   </div>
 
-  <!-- NOTE FORM -->
   <div class="note-form" id="noteForm" style="display:none;">
     <input type="text" id="noteName" placeholder="Your name..." maxlength="60" />
     <textarea id="noteMessage" placeholder="Your message to a father or about this project..." maxlength="500"></textarea>
     <button type="button" id="btnSubmitNote">Submit</button>
   </div>
 
-  <!-- Hidden iframe for CORS-proof submission -->
   <iframe name="noteSink" id="noteSink" style="display:none;"></iframe>
 
-  <!-- Shared Audio Player -->
   <audio id="sharedAudio" preload="metadata"></audio>
 
-  <!-- Transcript Modal (iOS-style sheet) -->
   <div class="modal" id="transcriptModal" aria-hidden="true">
     <div class="modal-backdrop" id="modalBackdrop"></div>
 
@@ -122,7 +114,6 @@
     </div>
   </div>
 
-  <!-- Collaborators iOS-style popover -->
   <div class="collab-popover" id="collabPopover" aria-hidden="true">
     <div class="collab-nub" aria-hidden="true"></div>
 
@@ -214,15 +205,9 @@
   </div>
 
   <script>
-    // =============================
-    // PUBLIC NOTES CONFIG
-    // =============================
     const NOTE_POST_URL = "https://script.google.com/macros/s/AKfycbzMhOSvm4Phve_mWZzvhLGB1J3ZUK7X1_DGSih3wwh6BmToKZM_0k9ySmNpSrP7WqiOFg/exec";
     const NOTE_READ_URL = "https://opensheet.elk.sh/1bn2n5zjYoCqHOilw2sYe_EOpAKUg5VFiw2JnzQ-EvHo/fartherhood_notes";
 
-    // =============================
-    // AUDIO / MODAL CODE
-    // =============================
     const sharedAudio = document.getElementById("sharedAudio");
     const audioWrapper = document.getElementById("audioWrapper");
 
@@ -315,6 +300,69 @@ it's getting harder to hold the dinero…`,
     let modalIndex = -1;
     let rafId = null;
 
+    let playerState = {
+      slug: null,
+      isPlaying: false,
+      currentTime: 0,
+      duration: 0
+    };
+
+    function getTrackIndexBySlug(slug) {
+      return tracks.findIndex((track) => track.slug === slug);
+    }
+
+    function setAllCardButtonStates() {
+      tracks.forEach((track, index) => {
+        const isActive = playerState.slug === track.slug;
+        const isPlaying = isActive && playerState.isPlaying;
+        setCardButtonState(index, isPlaying);
+      });
+    }
+
+    function syncModalPlayButton() {
+      const modalOpen = modal.classList.contains("open");
+      if (!modalOpen || modalIndex === -1) return;
+
+      const activeTrack = tracks[modalIndex];
+      const playing = activeTrack && playerState.slug === activeTrack.slug && playerState.isPlaying;
+      btnModalPlay.textContent = playing ? "⏸" : "▶";
+    }
+
+    function updateTimer() {
+      if (modalIndex === -1) {
+        sheetTimer.textContent = "00:00.00";
+        return;
+      }
+
+      const activeTrack = tracks[modalIndex];
+      const sameTrack = activeTrack && playerState.slug === activeTrack.slug;
+      const t = sameTrack ? (playerState.currentTime || 0) : 0;
+      sheetTimer.textContent = formatTimer(t);
+    }
+
+    function sendQueueToParent(startIndex, toggle = false) {
+      const payload = {
+        type: toggle ? "CALIPH_PLAYER_TOGGLE_TRACK" : "CALIPH_PLAYER_LOAD_QUEUE",
+        startIndex,
+        tracks: tracks.map(track => ({
+          id: track.id || null,
+          slug: track.slug || null,
+          title: track.title,
+          date: track.date || "",
+          duration: track.duration || "",
+          file: track.file,
+          transcript: track.transcript || "",
+          description: track.description || ""
+        }))
+      };
+
+      window.parent.postMessage(payload, "*");
+    }
+
+    function sendPlayerCommand(type, extra = {}) {
+      window.parent.postMessage({ type, ...extra }, "*");
+    }
+
     async function loadTracksFromSupabase() {
       try {
         const res = await fetch("/api/apps/fartherhood/songs", { cache: "no-store" });
@@ -323,12 +371,14 @@ it's getting harder to hold the dinero…`,
         if (!data.ok || !Array.isArray(data.tracks) || data.tracks.length === 0) {
           tracks = [...defaultTracks];
           renderTracks();
+          setAllCardButtonStates();
           updateTimer();
           return;
         }
 
         tracks = data.tracks.map((track, i) => ({
           ...track,
+          slug: track.slug || defaultTracks[i]?.slug || null,
           transcript: track.transcript || defaultTracks[i]?.transcript || ""
         }));
 
@@ -339,10 +389,12 @@ it's getting harder to hold the dinero…`,
         sharedAudio.load();
 
         renderTracks();
+        setAllCardButtonStates();
         updateTimer();
       } catch (err) {
         tracks = [...defaultTracks];
         renderTracks();
+        setAllCardButtonStates();
         updateTimer();
       }
     }
@@ -389,20 +441,19 @@ it's getting harder to hold the dinero…`,
       });
     }
 
-    function ensureTrackLoaded(index) {
-      if (index < 0 || index >= tracks.length) return false;
-
-      if (currentIndex !== index) {
-        if (currentIndex !== -1) setCardButtonState(currentIndex, false);
-        currentIndex = index;
-        sharedAudio.src = tracks[index].file;
-      }
-      return true;
-    }
-
     function togglePlay(index) {
-  sendQueueToParent(index, true);
-}
+      const track = tracks[index];
+      if (!track) return;
+
+      const isSameTrack = playerState.slug === track.slug;
+
+      if (isSameTrack) {
+        sendPlayerCommand(playerState.isPlaying ? "CALIPH_PLAYER_PAUSE" : "CALIPH_PLAYER_PLAY");
+        return;
+      }
+
+      sendQueueToParent(index, true);
+    }
 
     function setCardButtonState(index, isPlaying) {
       const icon = document.getElementById(`icon-${index}`);
@@ -435,6 +486,7 @@ it's getting harder to hold the dinero…`,
 
       syncModalPlayButton();
       startTimerLoop();
+      updateTimer();
     }
 
     function closeTranscript() {
@@ -454,65 +506,24 @@ it's getting harder to hold the dinero…`,
     btnModalPlay.addEventListener("click", () => {
       if (modalIndex === -1) return;
 
-      ensureTrackLoaded(modalIndex);
+      const track = tracks[modalIndex];
+      if (!track) return;
 
-      if (!sharedAudio.paused) {
-        sharedAudio.pause();
-        setCardButtonState(currentIndex, false);
+      const isSameTrack = playerState.slug === track.slug;
+
+      if (isSameTrack) {
+        sendPlayerCommand(playerState.isPlaying ? "CALIPH_PLAYER_PAUSE" : "CALIPH_PLAYER_PLAY");
       } else {
-        sharedAudio.play().then(() => {
-          setCardButtonState(currentIndex, true);
-        }).catch(() => {});
-      }
-
-      syncModalPlayButton();
-    });
-
-    btnBack15.addEventListener("click", () => seekBy(-15));
-    btnFwd15.addEventListener("click", () => seekBy(15));
-
-    function seekBy(seconds) {
-      if (!sharedAudio.src) return;
-      const t = sharedAudio.currentTime || 0;
-      sharedAudio.currentTime = Math.max(0, t + seconds);
-      updateTimer();
-    }
-
-    function syncModalPlayButton() {
-      const modalOpen = modal.classList.contains("open");
-      if (!modalOpen) return;
-
-      const isModalTrackActive = (modalIndex !== -1 && currentIndex === modalIndex);
-      const playing = isModalTrackActive && !sharedAudio.paused;
-
-      btnModalPlay.textContent = playing ? "⏸" : "▶";
-    }
-
-    sharedAudio.addEventListener("play", () => {
-      if (currentIndex !== -1) setCardButtonState(currentIndex, true);
-      syncModalPlayButton();
-    });
-
-    sharedAudio.addEventListener("pause", () => {
-      if (currentIndex !== -1) setCardButtonState(currentIndex, false);
-      syncModalPlayButton();
-    });
-
-    sharedAudio.addEventListener("ended", () => {
-      if (currentIndex !== -1) setCardButtonState(currentIndex, false);
-      syncModalPlayButton();
-      updateTimer();
-
-      if (currentIndex + 1 < tracks.length) {
-        togglePlay(currentIndex + 1);
-        if (modal.classList.contains("open")) {
-          openTranscript(currentIndex);
-        }
+        sendQueueToParent(modalIndex, true);
       }
     });
 
-    sharedAudio.addEventListener("timeupdate", () => {
-      if (modal.classList.contains("open")) updateTimer();
+    btnBack15.addEventListener("click", () => {
+      sendPlayerCommand("CALIPH_PLAYER_SEEK", { delta: -15 });
+    });
+
+    btnFwd15.addEventListener("click", () => {
+      sendPlayerCommand("CALIPH_PLAYER_SEEK", { delta: 15 });
     });
 
     function startTimerLoop() {
@@ -529,12 +540,6 @@ it's getting harder to hold the dinero…`,
     function stopTimerLoop() {
       if (rafId) cancelAnimationFrame(rafId);
       rafId = null;
-    }
-
-    function updateTimer() {
-      const isModalTrackActive = (modalIndex !== -1 && currentIndex === modalIndex && sharedAudio.src);
-      const t = isModalTrackActive ? (sharedAudio.currentTime || 0) : 0;
-      sheetTimer.textContent = formatTimer(t);
     }
 
     function formatTimer(seconds) {
@@ -565,9 +570,24 @@ it's getting harder to hold the dinero…`,
         .replace(" at ", ", ");
     }
 
-    // =============================
-    // PUBLIC NOTES — still Google Sheets for now
-    // =============================
+    window.addEventListener("message", (event) => {
+      const data = event.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type !== "CALIPH_PLAYER_STATE") return;
+
+      playerState = {
+        slug: data.slug || null,
+        isPlaying: Boolean(data.isPlaying),
+        currentTime: Number(data.currentTime || 0),
+        duration: Number(data.duration || 0)
+      };
+
+      currentIndex = getTrackIndexBySlug(playerState.slug);
+      setAllCardButtonStates();
+      syncModalPlayButton();
+      updateTimer();
+    });
+
     const noteForm = document.getElementById("noteForm");
     const btnOpenNote = document.getElementById("btnOpenNote");
     const btnSubmitNote = document.getElementById("btnSubmitNote");
@@ -678,25 +698,7 @@ it's getting harder to hold the dinero…`,
 
     loadTracksFromSupabase();
     startNotesAutoRefresh(15000);
-function sendQueueToParent(startIndex, toggle = false) {
-  const payload = {
-    type: toggle ? "CALIPH_PLAYER_TOGGLE_TRACK" : "CALIPH_PLAYER_LOAD_QUEUE",
-    startIndex,
-    tracks: tracks.map(track => ({
-      id: track.id || null,
-      slug: track.slug || null,
-      title: track.title,
-      date: track.date || "",
-      duration: track.duration || "",
-      file: track.file,
-      transcript: track.transcript || "",
-      description: track.description || ""
-    }))
-  };
 
-  window.parent.postMessage(payload, "*");
-}
-    // ===== Collaborators popover =====
     const btnCollaborators = document.getElementById("btnCollaborators");
     const collabPopover = document.getElementById("collabPopover");
 
@@ -757,7 +759,6 @@ function sendQueueToParent(startIndex, toggle = false) {
       if (collabPopover?.classList.contains("open")) openCollabPopover();
     });
 
-    // ===== Share button =====
     const btnShare = document.getElementById("btnShare");
 
     btnShare?.addEventListener("click", async (e) => {
@@ -774,9 +775,7 @@ function sendQueueToParent(startIndex, toggle = false) {
           await navigator.share(shareData);
           return;
         }
-      } catch (err) {
-        // ignore
-      }
+      } catch (err) {}
 
       try {
         await navigator.clipboard.writeText(window.location.href);
