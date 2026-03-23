@@ -17,6 +17,84 @@ type Props = {
   email: string;
 };
 
+function cleanTrackTitle(title: string) {
+  return String(title || "").replace(/^CALIPH\s*-\s*/i, "").trim();
+}
+
+function IconPrev() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
+      <path
+        d="M7 6v12M18 7l-7 5 7 5V7Z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconNext() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
+      <path
+        d="M17 6v12M6 7l7 5-7 5V7Z"
+        fill="currentColor"
+        stroke="currentColor"
+        strokeWidth="1.2"
+        strokeLinejoin="round"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconPlay() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon gp-icon-play">
+      <path d="M8 6.5v11l9-5.5-9-5.5Z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconPause() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
+      <path d="M8 6h3v12H8zM13 6h3v12h-3z" fill="currentColor" />
+    </svg>
+  );
+}
+
+function IconAdd() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
+      <path
+        d="M12 5v14M5 12h14"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
+function IconMinimize() {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon gp-icon-small">
+      <path
+        d="M7 12h10"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.9"
+        strokeLinecap="round"
+      />
+    </svg>
+  );
+}
+
 export default function GlobalPlayer({ email }: Props) {
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
@@ -212,20 +290,18 @@ export default function GlobalPlayer({ email }: Props) {
               onClick={() => setIsExpanded(false)}
               aria-label="Minimize player"
             >
-              —
+              <IconMinimize />
             </button>
 
             <div className="global-player-main">
               <div className="global-player-copy">
-                <div className="global-player-title">{currentTrack.title}</div>
-                <div className="global-player-subtitle">
-                  {currentTrack.description || "Now playing"}
-                </div>
+                <div className="global-player-eyebrow">Now Playing</div>
+                <div className="global-player-title">{cleanTrackTitle(currentTrack.title)}</div>
               </div>
 
               <div className="global-player-controls">
                 <button onClick={playPrev} className="gp-btn" aria-label="Previous">
-                  ⏮
+                  <IconPrev />
                 </button>
 
                 <button
@@ -240,11 +316,11 @@ export default function GlobalPlayer({ email }: Props) {
                   className="gp-btn gp-btn-main"
                   aria-label="Play or pause"
                 >
-                  {isPlaying ? "⏸" : "▶"}
+                  {isPlaying ? <IconPause /> : <IconPlay />}
                 </button>
 
                 <button onClick={playNext} className="gp-btn" aria-label="Next">
-                  ⏭
+                  <IconNext />
                 </button>
 
                 <button
@@ -252,7 +328,7 @@ export default function GlobalPlayer({ email }: Props) {
                   className={`gp-btn gp-btn-save ${isSaved ? "is-saved" : ""}`}
                   aria-label="Add to playlist"
                 >
-                  ＋
+                  <IconAdd />
                 </button>
               </div>
             </div>
@@ -263,7 +339,7 @@ export default function GlobalPlayer({ email }: Props) {
             onClick={() => setIsExpanded(true)}
             aria-label="Open player"
           >
-            {isPlaying ? "⏸" : "▶"}
+            {isPlaying ? <IconPause /> : <IconPlay />}
           </button>
         )}
       </div>
