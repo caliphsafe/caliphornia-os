@@ -134,134 +134,163 @@ export default function FriendsThreadClient({
     );
   }
 
-  return (
-    <main className="friends-thread-screen">
-      <div className="friends-thread-shell">
-        <div className="friends-thread-header">
-          <Link href="/apps/friends" className="friends-thread-back">
-            ‹ Fri.ends
-          </Link>
+  function renderTimestamp(msg: Message) {
+    return (
+      <div key={msg.id} className="timestamp">
+        {msg.body}
+      </div>
+    );
+  }
 
-          <div className="friends-thread-center">
-            <div className="friends-thread-avatar">
-              {conversation.avatar_letter || conversation.title?.[0] || "V"}
+  function renderText(msg: Message) {
+    const side = msg.message_side === "outgoing" ? "outgoing" : "incoming";
+
+    return (
+      <div key={msg.id} className={`message-row ${side}`}>
+        <div className="message-group">
+          {side === "incoming" && msg.sender_label ? (
+            <div className="message-label">{msg.sender_label}</div>
+          ) : null}
+
+          <div className="message-bubble">{msg.body}</div>
+        </div>
+      </div>
+    );
+  }
+
+  function renderAudio(msg: Message) {
+    const clip = msg.clip;
+    if (!clip) return null;
+
+    const side = msg.message_side === "outgoing" ? "outgoing" : "incoming";
+    const active = activeClipId === clip.id;
+    const playing = active && isPlaying;
+    const progress = clipProgress[clip.id] || 0;
+    const elapsed = clipTimes[clip.id] || 0;
+
+    const durationText =
+      playing || active
+        ? formatTime(elapsed)
+        : clip.display_duration ||
+          (clip.end_seconds != null
+            ? formatTime(clip.end_seconds - clip.start_seconds)
+            : "0:00");
+
+    const bars = Array.from({ length: 28 });
+
+    return (
+      <div key={msg.id} className={`message-row ${side}`}>
+        <div className="message-group">
+          {side === "incoming" && msg.sender_label ? (
+            <div className="message-label">{msg.sender_label}</div>
+          ) : null}
+
+          <button
+            type="button"
+            className={`audio-card ${playing ? "is-playing" : ""}`}
+            onClick={() => playClip(msg)}
+            aria-label={`Play ${msg.audio_label || clip.clip_title || "audio clip"}`}
+          >
+            <div className="audio-card-top">
+              <span className="audio-play" />
+
+              <div className="wave-wrap">
+                <div className="waveform">
+                  {bars.map((_, i) => {
+                    const playedCount = Math.round(progress * bars.length);
+                    return (
+                      <span
+                        key={i}
+                        className={i < playedCount ? "is-played" : ""}
+                        style={{
+                          height: `${[8,12,18,24,30,16,22,10,14,26,20][i % 11]}px`
+                        }}
+                      />
+                    );
+                  })}
+                </div>
+
+                <div className="audio-duration">{durationText}</div>
+              </div>
             </div>
 
-            <div className="friends-thread-meta">
-              <div className="friends-thread-title">{conversation.title}</div>
-              <div className="friends-thread-subtitle">
+            <div className="audio-meta">
+              <div className="audio-file-name">
+                {msg.audio_label || clip.clip_title}
+              </div>
+              <div className="audio-kind">{msg.audio_kind || "Voice note"}</div>
+            </div>
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="app-shell">
+      <section className="screen screen-thread is-active" aria-label="Conversation thread">
+        <div className="thread-topbar top-safe">
+          <Link href="/apps/friends" className="back-btn" aria-label="Back to inbox">
+            <span className="back-chevron" aria-hidden="true"></span>
+            <span className="back-text">Fri.ends</span>
+          </Link>
+
+          <div className="thread-header-meta">
+            <div className="thread-avatar thread-avatar--header">
+              {conversation.avatar_letter || conversation.title?.[0] || "F"}
+            </div>
+
+            <div className="thread-header-text">
+              <div className="thread-header-title">{conversation.title}</div>
+              <div className="thread-header-subtitle">
                 {conversation.subtitle || ""}
               </div>
             </div>
           </div>
 
-          <div className="friends-thread-actions">
-            <button className="friends-thread-action">⌄</button>
-            <button className="friends-thread-action">◻︎</button>
+          <div className="thread-actions">
+            <button className="circle-icon-btn" type="button" aria-label="Call">
+              <span className="phone-icon"></span>
+            </button>
+            <button className="circle-icon-btn" type="button" aria-label="Video">
+              <span className="video-icon"></span>
+            </button>
           </div>
         </div>
 
-        <div className="friends-thread-messages">
-          {messages.map((msg) => {
-            if (
-              msg.message_type === "timestamp" ||
-              msg.message_type === "system" ||
-              msg.message_side === "center"
-            ) {
-              return (
-                <div key={msg.id} className="friends-center-line">
-                  {msg.body}
-                </div>
-              );
-            }
+        <main className="messages-wrap">
+          <div className="messages">
+            {messages.map((msg) => {
+              if (
+                msg.message_type === "timestamp" ||
+                msg.message_type === "system" ||
+                msg.message_side === "center"
+              ) {
+                return renderTimestamp(msg);
+              }
 
-            if (msg.message_type === "audio" && msg.clip) {
-              const isActive = activeClipId === msg.clip.id;
-              const playing = isActive && isPlaying;
-              const progress = clipProgress[msg.clip.id] || 0;
-              const elapsed = clipTimes[msg.clip.id] || 0;
-              const side = msg.message_side === "outgoing" ? "outgoing" : "incoming";
+              if (msg.message_type === "audio" && msg.clip) {
+                return renderAudio(msg);
+              }
 
-              const durationText =
-                playing || isActive
-                  ? formatTime(elapsed)
-                  : msg.clip.display_duration ||
-                    (msg.clip.end_seconds != null
-                      ? formatTime(msg.clip.end_seconds - msg.clip.start_seconds)
-                      : "0:00");
+              return renderText(msg);
+            })}
+          </div>
+        </main>
 
-              return (
-                <div key={msg.id} className={`friends-message-block ${side}`}>
-                  {msg.sender_label && side === "incoming" ? (
-                    <div className="friends-sender-label">{msg.sender_label}</div>
-                  ) : null}
+        <div className="message-composer bottom-safe">
+          <button className="composer-plus" type="button" aria-label="Add">
+            <span>+</span>
+          </button>
 
-                  <button
-                    type="button"
-                    className={`friends-audio-bubble ${side}`}
-                    onClick={() => playClip(msg)}
-                    aria-label={`Play ${msg.audio_label || msg.clip.clip_title || "audio clip"}`}
-                  >
-                    <div className={`friends-audio-play ${playing ? "is-playing" : ""}`}>
-                      {playing ? "❚❚" : "▶"}
-                    </div>
-
-                    <div className="friends-audio-wave-wrap">
-                      <div
-                        className="friends-audio-wave-progress"
-                        style={{ width: `${progress * 100}%` }}
-                      />
-                      <div className="friends-audio-wave">
-                        {Array.from({ length: 24 }).map((_, i) => (
-                          <span
-                            key={i}
-                            className="friends-audio-bar"
-                            style={{
-                              height: `${10 + ((i * 7) % 18)}px`
-                            }}
-                          />
-                        ))}
-                      </div>
-                    </div>
-
-                    <div className="friends-audio-time">{durationText}</div>
-
-                    <div className="friends-audio-meta">
-                      <div className="friends-audio-label">
-                        {msg.audio_label || msg.clip.clip_title}
-                      </div>
-                      <div className="friends-audio-kind">
-                        {msg.audio_kind || "VOICE NOTE"}
-                      </div>
-                    </div>
-                  </button>
-                </div>
-              );
-            }
-
-            const side = msg.message_side === "outgoing" ? "outgoing" : "incoming";
-
-            return (
-              <div key={msg.id} className={`friends-message-block ${side}`}>
-                {msg.sender_label && side === "incoming" ? (
-                  <div className="friends-sender-label">{msg.sender_label}</div>
-                ) : null}
-
-                <div className={`friends-bubble ${side}`}>{msg.body}</div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div className="friends-thread-inputbar">
-          <button className="friends-plus-btn">＋</button>
-
-          <div className="friends-input-pill">
-            <span className="friends-input-placeholder">iMessage</span>
-            <span className="friends-input-mic">◖</span>
+          <div className="composer-input-wrap">
+            <div className="composer-input">iMessage</div>
+            <button className="composer-mic" type="button" aria-label="Voice message">
+              <span className="mini-mic"></span>
+            </button>
           </div>
         </div>
-      </div>
-    </main>
+      </section>
+    </div>
   );
 }
