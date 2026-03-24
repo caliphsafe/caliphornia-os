@@ -22,6 +22,6 @@ export const appRegistry: AppItem[] = [
     id: "music",
     name: "Music",
     icon: "/icons/music.png",
-    href: "/apps/music?email=your@email.com"
+    href: "/apps/music"
   }
 ];
