@@ -158,10 +158,6 @@
   opacity: 0.45;
 }
 
-.music-list-section {
-  background: #000;
-}
-
 .music-song-list {
   display: grid;
   gap: 0;
@@ -212,8 +208,7 @@
   color: rgba(255,255,255,0.9);
   font-size: 28px;
   font-weight: 700;
-  background:
-    linear-gradient(145deg, #2b2b2b, #161616);
+  background: linear-gradient(145deg, #2b2b2b, #161616);
 }
 
 .music-song-copy {
