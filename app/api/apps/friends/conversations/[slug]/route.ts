@@ -2,11 +2,11 @@ import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export async function GET(
-  request: Request,
-  context: { params: Promise<{ slug: string }> }
+  _request: Request,
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
-    const { slug } = await context.params;
+    const { slug } = await params;
 
     const { data: conversation, error: conversationError } = await supabaseAdmin
       .from("conversations")
@@ -27,7 +27,11 @@ export async function GET(
 
     if (conversationError || !conversation) {
       return NextResponse.json(
-        { ok: false, error: conversationError?.message || "Conversation not found." },
+        {
+          ok: false,
+          routeVersion: "V3-CLIP-SIGNED",
+          error: conversationError?.message || "Conversation not found."
+        },
         { status: 404 }
       );
     }
@@ -70,7 +74,11 @@ export async function GET(
 
     if (messagesError) {
       return NextResponse.json(
-        { ok: false, error: messagesError.message },
+        {
+          ok: false,
+          routeVersion: "V3-CLIP-SIGNED",
+          error: messagesError.message
+        },
         { status: 500 }
       );
     }
@@ -118,7 +126,10 @@ export async function GET(
                 id: clip.id,
                 clip_title: clip.clip_title,
                 start_seconds: Number(clip.start_seconds || 0),
-                end_seconds: clip.end_seconds != null ? Number(clip.end_seconds) : null,
+                end_seconds:
+                  clip.end_seconds !== null && clip.end_seconds !== undefined
+                    ? Number(clip.end_seconds)
+                    : null,
                 display_duration: clip.display_duration,
                 file: signedUrl,
                 signing_error: signingError,
@@ -142,20 +153,18 @@ export async function GET(
 
     return NextResponse.json({
       ok: true,
+      routeVersion: "V3-CLIP-SIGNED",
       conversation,
       messages: normalizedMessages
     });
-  } catch {
+  } catch (error: any) {
     return NextResponse.json(
-      { ok: false, error: "Server error." },
+      {
+        ok: false,
+        routeVersion: "V3-CLIP-SIGNED",
+        error: error?.message || "Server error."
+      },
       { status: 500 }
     );
   }
 }
-
-return NextResponse.json({
-  ok: true,
-  routeVersion: "V3-CLIP-SIGNED",
-  conversation,
-  messages: normalizedMessages
-});
