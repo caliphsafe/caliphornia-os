@@ -152,3 +152,10 @@ export async function GET(
     );
   }
 }
+
+return NextResponse.json({
+  ok: true,
+  routeVersion: "V3-CLIP-SIGNED",
+  conversation,
+  messages: normalizedMessages
+});
