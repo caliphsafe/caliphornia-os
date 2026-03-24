@@ -4,7 +4,9 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 export async function GET(request: Request) {
   try {
     const { searchParams } = new URL(request.url);
-    const userEmail = String(searchParams.get("userEmail") || "").trim().toLowerCase();
+    const userEmail = String(searchParams.get("userEmail") || "")
+      .trim()
+      .toLowerCase();
 
     if (!userEmail) {
       return NextResponse.json(
