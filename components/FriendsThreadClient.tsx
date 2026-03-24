@@ -149,7 +149,11 @@ export default function FriendsThreadClient({
             clipStartSeconds: clip.start_seconds,
             clipEndSeconds: clip.end_seconds,
             playlistSongSlug: clip.playlist_song_slug || null,
-            analyticsSongSlug: clip.playlist_song_slug || null
+            analyticsSongSlug: clip.playlist_song_slug || null,
+            sourceApp: "friends",
+            conversationSlug: conversation.slug,
+            conversationRoute: `/apps/friends/${conversation.slug}`,
+            isFriendsFinal: false
           }
         ]
       },
