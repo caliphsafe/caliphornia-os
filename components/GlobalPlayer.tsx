@@ -19,7 +19,6 @@ export type GlobalTrack = {
   clipEndSeconds?: number | null;
   playlistSongSlug?: string | null;
   analyticsSongSlug?: string | null;
-
   sourceApp?: string | null;
   conversationSlug?: string | null;
   conversationRoute?: string | null;
@@ -162,7 +161,11 @@ function normalizeFriendsFinalTrack(convo: FriendsConversationListItem): GlobalT
     description: "Final song",
     file: finalTrack.file,
     playlistSongSlug: finalTrack.playlist_song_slug || finalTrack.slug || null,
-    analyticsSongSlug: finalTrack.analytics_song_slug || finalTrack.playlist_song_slug || finalTrack.slug || null,
+    analyticsSongSlug:
+      finalTrack.analytics_song_slug ||
+      finalTrack.playlist_song_slug ||
+      finalTrack.slug ||
+      null,
     sourceApp: "friends",
     conversationSlug: convo.slug,
     conversationRoute: `/apps/friends/${convo.slug}`,
@@ -215,6 +218,36 @@ export default function GlobalPlayer({ email }: Props) {
     }
   }
 
+  function getPlaylistTargetSlug(track: GlobalTrack | null) {
+    if (!track) return null;
+    return track.playlistSongSlug || track.slug || null;
+  }
+
+  async function refreshFavoriteState(track: GlobalTrack | null) {
+    const targetSlug = getPlaylistTargetSlug(track);
+
+    if (!email || !targetSlug) {
+      setIsSaved(false);
+      return;
+    }
+
+    try {
+      const params = new URLSearchParams({
+        userEmail: email,
+        songSlug: targetSlug
+      });
+
+      const res = await fetch(`/api/playlists/is-favorite?${params.toString()}`, {
+        cache: "no-store"
+      });
+
+      const data = await res.json();
+      setIsSaved(Boolean(data?.ok && data?.saved));
+    } catch {
+      setIsSaved(false);
+    }
+  }
+
   function broadcastState() {
     const audio = audioRef.current;
     const start = currentTrack?.clipStartSeconds || 0;
@@ -248,6 +281,57 @@ export default function GlobalPlayer({ email }: Props) {
     document.querySelectorAll("iframe").forEach((frame) => {
       frame.contentWindow?.postMessage(payload, "*");
     });
+  }
+
+  async function advanceWithinCurrentProject(direction: "next" | "prev" = "next") {
+    if (!currentTrack) return;
+
+    if (currentTrack.sourceApp === "friends") {
+      const finals = friendsFinalQueue.length ? friendsFinalQueue : await loadFriendsFinalQueue();
+      if (!finals.length) return;
+
+      const currentConversationSlug =
+        currentTrack.conversationSlug ||
+        currentTrack.playlistSongSlug ||
+        currentTrack.slug;
+
+      const currentFinalIndex = finals.findIndex(
+        (track) => track.conversationSlug === currentConversationSlug
+      );
+
+      let nextFinalIndex = 0;
+
+      if (direction === "prev") {
+        nextFinalIndex =
+          currentFinalIndex <= 0 ? finals.length - 1 : currentFinalIndex - 1;
+      } else {
+        nextFinalIndex =
+          currentFinalIndex >= finals.length - 1 || currentFinalIndex === -1
+            ? 0
+            : currentFinalIndex + 1;
+      }
+
+      setQueue(finals);
+      setCurrentIndex(nextFinalIndex);
+      setIsVisible(true);
+      setIsExpanded(true);
+      return;
+    }
+
+    if (!queue.length) return;
+
+    const nextIndex =
+      direction === "prev"
+        ? currentIndex <= 0
+          ? queue.length - 1
+          : currentIndex - 1
+        : currentIndex >= queue.length - 1
+          ? 0
+          : currentIndex + 1;
+
+    setCurrentIndex(nextIndex);
+    setIsVisible(true);
+    setIsExpanded(true);
   }
 
   useEffect(() => {
@@ -304,7 +388,10 @@ export default function GlobalPlayer({ email }: Props) {
       if (data.type === "CALIPH_PLAYER_SEEK") {
         const delta = Number(data.delta || 0);
         if (audioRef.current) {
-          audioRef.current.currentTime = Math.max(0, (audioRef.current.currentTime || 0) + delta);
+          audioRef.current.currentTime = Math.max(
+            0,
+            (audioRef.current.currentTime || 0) + delta
+          );
           broadcastState();
         }
       }
@@ -347,8 +434,6 @@ export default function GlobalPlayer({ email }: Props) {
       void beginPlayback();
     }
 
-    setIsSaved(false);
-
     const analyticsSlug =
       currentTrack.analyticsSongSlug ||
       currentTrack.playlistSongSlug ||
@@ -368,15 +453,17 @@ export default function GlobalPlayer({ email }: Props) {
       });
     }
 
-   if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
-  const path = window.location.pathname;
-  const isOnFriendsConversationPage =
-    path.startsWith("/apps/friends/") && path !== "/apps/friends";
+    void refreshFavoriteState(currentTrack);
 
-  if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) {
-    router.push(currentTrack.conversationRoute);
-  }
-}
+    if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
+      const path = window.location.pathname;
+      const isOnFriendsConversationPage =
+        path.startsWith("/apps/friends/") && path !== "/apps/friends";
+
+      if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) {
+        router.push(currentTrack.conversationRoute);
+      }
+    }
   }, [currentTrack, email, router]);
 
   useEffect(() => {
@@ -400,11 +487,17 @@ export default function GlobalPlayer({ email }: Props) {
       broadcastState();
     }
 
+    function onEnded() {
+      if (currentTrack?.clipEndSeconds != null) return;
+      void advanceWithinCurrentProject("next");
+    }
+
     audio.addEventListener("play", sync);
     audio.addEventListener("pause", sync);
     audio.addEventListener("timeupdate", sync);
     audio.addEventListener("loadedmetadata", sync);
     audio.addEventListener("seeked", sync);
+    audio.addEventListener("ended", onEnded);
 
     return () => {
       audio.removeEventListener("play", sync);
@@ -412,73 +505,20 @@ export default function GlobalPlayer({ email }: Props) {
       audio.removeEventListener("timeupdate", sync);
       audio.removeEventListener("loadedmetadata", sync);
       audio.removeEventListener("seeked", sync);
+      audio.removeEventListener("ended", onEnded);
     };
-  }, [currentTrack]);
+  }, [currentTrack, currentIndex, queue, friendsFinalQueue]);
 
   async function playPrev() {
-    if (!currentTrack) return;
-
-    if (currentTrack.sourceApp === "friends") {
-      const finals = friendsFinalQueue.length ? friendsFinalQueue : await loadFriendsFinalQueue();
-      if (!finals.length) return;
-
-      const currentConversationSlug =
-        currentTrack.conversationSlug ||
-        currentTrack.playlistSongSlug ||
-        currentTrack.slug;
-
-      const currentFinalIndex = finals.findIndex(
-        (track) => track.conversationSlug === currentConversationSlug
-      );
-
-      const nextFinalIndex =
-        currentFinalIndex <= 0 ? finals.length - 1 : currentFinalIndex - 1;
-
-      setQueue(finals);
-      setCurrentIndex(nextFinalIndex);
-      setIsVisible(true);
-      setIsExpanded(true);
-      return;
-    }
-
-    if (!queue.length) return;
-    const next = currentIndex <= 0 ? queue.length - 1 : currentIndex - 1;
-    setCurrentIndex(next);
+    await advanceWithinCurrentProject("prev");
   }
 
   async function playNext() {
-    if (!currentTrack) return;
-
-    if (currentTrack.sourceApp === "friends") {
-      const finals = friendsFinalQueue.length ? friendsFinalQueue : await loadFriendsFinalQueue();
-      if (!finals.length) return;
-
-      const currentConversationSlug =
-        currentTrack.conversationSlug ||
-        currentTrack.playlistSongSlug ||
-        currentTrack.slug;
-
-      const currentFinalIndex = finals.findIndex(
-        (track) => track.conversationSlug === currentConversationSlug
-      );
-
-      const nextFinalIndex =
-        currentFinalIndex >= finals.length - 1 || currentFinalIndex === -1 ? 0 : currentFinalIndex + 1;
-
-      setQueue(finals);
-      setCurrentIndex(nextFinalIndex);
-      setIsVisible(true);
-      setIsExpanded(true);
-      return;
-    }
-
-    if (!queue.length) return;
-    const next = currentIndex >= queue.length - 1 ? 0 : currentIndex + 1;
-    setCurrentIndex(next);
+    await advanceWithinCurrentProject("next");
   }
 
   async function togglePlaylistSave() {
-    const targetSlug = currentTrack?.playlistSongSlug || currentTrack?.slug;
+    const targetSlug = getPlaylistTargetSlug(currentTrack);
     if (!targetSlug) return;
 
     const res = await fetch("/api/playlists/toggle-favorite", {
