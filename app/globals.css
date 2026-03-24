@@ -926,6 +926,7 @@ img {
   }
 }
 
+
 .friends-original-app,
 .friends-original-app-shell,
 .friends-screen,
@@ -938,42 +939,77 @@ img {
 .friends-original-shell,
 .friends-shell,
 .friends-thread-shell {
-  width: min(100%, 860px);
+  width: 100%;
   min-height: 100vh;
-  margin: 0 auto;
+  margin: 0;
   background: #000;
 }
 
+/* ===== shared centered content width like FarTHErHOOD ===== */
+.friends-original-inbox-header,
+.friends-original-thread-list,
+.friends-original-messages-wrap {
+  width: min(720px, calc(100vw - 36px));
+  margin-left: auto;
+  margin-right: auto;
+}
+
+/* ===== floating top controls ===== */
 .friends-original-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: min(720px, calc(100vw - 28px));
+  margin-left: auto;
+  margin-right: auto;
+  min-height: calc(env(safe-area-inset-top) + 64px);
+  padding-top: env(safe-area-inset-top);
+  padding-left: 0;
+  padding-right: 0;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-left: 20px;
-  padding-right: 20px;
+  z-index: 1200;
+  pointer-events: none;
+  background: transparent;
+}
+
+.friends-original-topbar > * {
+  pointer-events: auto;
 }
 
 .friends-notes-back-btn {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border-radius: 999px;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
 .friends-notes-back-icon {
-  width: 19px;
-  height: 19px;
+  width: 20px;
+  height: 20px;
   object-fit: contain;
 }
 
 .friends-original-icon-btn {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  border: 0;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
   display: grid;
   place-items: center;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
 .friends-original-filter-icon {
@@ -1013,8 +1049,9 @@ img {
   opacity: 0.85;
 }
 
+/* ===== inbox ===== */
 .friends-original-inbox-header {
-  padding: 6px 20px 10px;
+  padding: calc(env(safe-area-inset-top) + 82px) 18px 10px;
 }
 
 .friends-original-inbox-header h1 {
@@ -1029,7 +1066,7 @@ img {
   flex: 1;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 8px 0 130px;
+  padding: 8px 18px 150px;
 }
 
 .friends-original-thread-list::-webkit-scrollbar,
@@ -1120,33 +1157,46 @@ img {
   white-space: nowrap;
 }
 
+/* ===== floating inbox bottom controls ===== */
 .friends-original-bottombar {
-  position: sticky;
+  position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
+  width: min(720px, calc(100vw - 28px));
+  margin-left: auto;
+  margin-right: auto;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding-left: 16px;
-  padding-right: 16px;
-  background:
-    linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.70), rgba(0,0,0,0));
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 14px);
+  z-index: 1200;
+  pointer-events: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.friends-original-bottombar > * {
+  pointer-events: auto;
 }
 
 .friends-original-search-pill {
   flex: 1;
-  min-height: 54px;
+  min-height: 56px;
   border-radius: 999px;
-  background: rgba(32,32,38,0.92);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
   display: flex;
   align-items: center;
   padding: 0 16px;
   color: #9b9ba3;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
 .friends-original-search-icon,
@@ -1217,13 +1267,15 @@ img {
 
 .friends-original-compose-btn {
   flex: 0 0 auto;
-  width: 54px;
-  height: 54px;
-  border-radius: 50%;
-  background: rgba(32,32,38,0.92);
-  border: 1px solid rgba(255,255,255,0.06);
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
   position: relative;
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.04);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
 .friends-original-compose-btn::before,
@@ -1253,37 +1305,58 @@ img {
   transform: rotate(-45deg);
 }
 
+/* ===== floating thread top controls ===== */
 .friends-original-thread-topbar {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  width: min(720px, calc(100vw - 28px));
+  margin-left: auto;
+  margin-right: auto;
+  min-height: calc(env(safe-area-inset-top) + 64px);
+  padding-top: env(safe-area-inset-top);
+  padding-left: 0;
+  padding-right: 0;
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
-  padding-left: 12px;
-  padding-right: 12px;
-  min-height: 72px;
-  border-bottom: 1px solid rgba(255,255,255,0.05);
-  background: rgba(0,0,0,0.78);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  z-index: 1200;
+  pointer-events: none;
+  background: transparent;
+  border-bottom: 0;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.friends-original-thread-topbar > * {
+  pointer-events: auto;
 }
 
 .friends-original-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  min-height: 44px;
-  color: #4da2ff;
+  min-height: 46px;
+  color: rgba(255,255,255,0.92);
   font-size: 18px;
   font-weight: 400;
-  padding: 0 2px;
+  padding: 0 16px 0 14px;
   text-decoration: none;
+  border-radius: 999px;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
 .friends-original-back-chevron {
   width: 12px;
   height: 12px;
-  border-left: 2px solid #4da2ff;
-  border-bottom: 2px solid #4da2ff;
+  border-left: 2px solid rgba(255,255,255,0.92);
+  border-bottom: 2px solid rgba(255,255,255,0.92);
   transform: rotate(45deg);
   margin-right: 2px;
 }
@@ -1334,18 +1407,29 @@ img {
 .friends-original-thread-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 0;
+  border-radius: 999px;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+  overflow: hidden;
 }
 
 .friends-original-circle-icon-btn {
-  width: 34px;
-  height: 34px;
-  border-radius: 50%;
-  background: rgba(31,140,255,0.14);
+  width: 54px;
+  height: 46px;
+  border-radius: 0;
+  background: transparent;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   border: 0;
+}
+
+.friends-original-circle-icon-btn + .friends-original-circle-icon-btn {
+  border-left: 1px solid rgba(255,255,255,0.10);
 }
 
 .friends-original-phone-icon,
@@ -1383,11 +1467,12 @@ img {
   border-bottom: 3px solid transparent;
 }
 
+/* ===== thread content ===== */
 .friends-original-messages-wrap {
   flex: 1;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 14px 12px 24px;
+  padding: calc(env(safe-area-inset-top) + 82px) 18px 150px;
   background:
     radial-gradient(circle at top, rgba(255,255,255,0.02), transparent 30%),
     #000;
@@ -1398,7 +1483,7 @@ img {
   flex-direction: column;
   gap: 10px;
   width: 100%;
-  max-width: 860px;
+  max-width: none;
   margin: 0 auto;
 }
 
@@ -1588,42 +1673,76 @@ img {
   letter-spacing: 0.06em;
 }
 
+.friends-original-audio-card.is-playing {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 12px 30px rgba(0,0,0,0.26);
+}
+
+.friends-original-audio-card.is-playing .friends-original-audio-play::before {
+  width: 10px;
+  height: 14px;
+  border-left: 4px solid #fff;
+  border-right: 4px solid #fff;
+  border-top: 0;
+  border-bottom: 0;
+  margin-left: 0;
+}
+
+/* ===== floating thread bottom controls ===== */
 .friends-original-message-composer {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  width: min(720px, calc(100vw - 28px));
+  margin-left: auto;
+  margin-right: auto;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding-left: 12px;
-  padding-right: 12px;
-  padding-top: 10px;
-  background:
-    linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.76), rgba(0,0,0,0));
-  backdrop-filter: blur(16px);
-  -webkit-backdrop-filter: blur(16px);
+  padding-left: 0;
+  padding-right: 0;
+  padding-top: 0;
+  padding-bottom: calc(env(safe-area-inset-bottom) + 14px);
+  z-index: 1200;
+  pointer-events: none;
+  background: transparent;
+  backdrop-filter: none;
+  -webkit-backdrop-filter: none;
+}
+
+.friends-original-message-composer > * {
+  pointer-events: auto;
 }
 
 .friends-original-composer-plus {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  background: #212127;
+  width: 46px;
+  height: 46px;
+  border-radius: 999px;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
   font-size: 28px;
   line-height: 1;
-  border: 0;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
 .friends-original-composer-input-wrap {
   flex: 1;
-  min-height: 44px;
+  min-height: 56px;
   border-radius: 999px;
-  background: rgba(32,32,38,0.94);
-  border: 1px solid rgba(255,255,255,0.06);
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
   display: flex;
   align-items: center;
   padding: 0 14px 0 16px;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
 .friends-original-composer-input {
@@ -1674,20 +1793,7 @@ img {
   transform: translateX(-50%);
 }
 
-.friends-original-audio-card.is-playing {
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 12px 30px rgba(0,0,0,0.26);
-}
-
-.friends-original-audio-card.is-playing .friends-original-audio-play::before {
-  width: 10px;
-  height: 14px;
-  border-left: 4px solid #fff;
-  border-right: 4px solid #fff;
-  border-top: 0;
-  border-bottom: 0;
-  margin-left: 0;
-}
-
+/* ===== responsive ===== */
 @media (min-width: 768px) {
   .friends-original-app,
   .friends-original-app-shell,
@@ -1698,18 +1804,6 @@ img {
     width: 100%;
     min-height: 100vh;
     background: #000;
-  }
-
-  .friends-original-topbar,
-  .friends-original-inbox-header,
-  .friends-original-thread-list,
-  .friends-original-bottombar,
-  .friends-original-thread-topbar,
-  .friends-original-messages-wrap,
-  .friends-original-message-composer {
-    width: min(100%, 430px);
-    margin-left: auto;
-    margin-right: auto;
   }
 
   .friends-original-message-bubble {
@@ -1734,226 +1828,17 @@ img {
   .friends-original-audio-card {
     min-width: 230px;
   }
-}
 
-/* =========================================
-   FRI.ENDS DESKTOP OVERRIDES
-   Match FarTHErHOOD desktop layout feel
-========================================= */
-@media (min-width: 768px) {
-  .friends-original-app,
-  .friends-original-app-shell,
-  .friends-original-shell,
-  .friends-original-screen,
-  .friends-original-screen-inbox,
-  .screen.screen-thread.is-active,
-  .friends-screen,
-  .friends-thread-screen {
-    width: 100%;
-    min-height: 100vh;
-    background: #000;
-  }
-
-  .friends-original-shell,
-  .friends-original-app-shell {
-    max-width: none;
-    margin: 0;
-  }
-
-  /* centered content column like FarTHErHOOD */
   .friends-original-inbox-header,
   .friends-original-thread-list,
   .friends-original-messages-wrap {
-    width: min(720px, calc(100vw - 36px));
-    margin-left: auto;
-    margin-right: auto;
+    width: calc(100vw - 20px);
   }
 
-  .friends-original-inbox-header {
-    padding-top: calc(env(safe-area-inset-top) + 82px);
-    padding-left: 18px;
-    padding-right: 18px;
-  }
-
-  .friends-original-thread-list {
-    padding: 8px 18px 150px;
-  }
-
-  .friends-original-messages-wrap {
-    padding: calc(env(safe-area-inset-top) + 82px) 18px 150px;
-  }
-
-  /* top bars float over content like FarTHErHOOD */
   .friends-original-topbar,
-  .friends-original-thread-topbar {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    width: min(720px, calc(100vw - 28px));
-    margin-left: auto;
-    margin-right: auto;
-    padding-top: env(safe-area-inset-top);
-    padding-left: 0;
-    padding-right: 0;
-    min-height: calc(env(safe-area-inset-top) + 64px);
-    background: transparent;
-    border-bottom: 0;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    z-index: 1200;
-    pointer-events: none;
-  }
-
-  .friends-original-topbar > *,
-  .friends-original-thread-topbar > * {
-    pointer-events: auto;
-  }
-
-  /* inbox top left back button = same floating glass feel */
-  .friends-notes-back-btn {
-    width: 46px;
-    height: 46px;
-    border-radius: 999px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-    display: grid;
-    place-items: center;
-  }
-
-  .friends-notes-back-icon {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-  }
-
-  /* inbox top right filter glass button */
-  .friends-original-icon-btn {
-    width: 46px;
-    height: 46px;
-    border-radius: 999px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-  }
-
-  /* thread left back control becomes glass pill */
-  .friends-original-back-btn {
-    min-height: 46px;
-    padding: 0 16px 0 14px;
-    border-radius: 999px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-    color: rgba(255,255,255,0.92);
-  }
-
-  /* thread right actions become a glass capsule */
-  .friends-original-thread-actions {
-    gap: 0;
-    border-radius: 999px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-    overflow: hidden;
-  }
-
-  .friends-original-circle-icon-btn {
-    width: 54px;
-    height: 46px;
-    border-radius: 0;
-    background: transparent;
-  }
-
-  .friends-original-circle-icon-btn + .friends-original-circle-icon-btn {
-    border-left: 1px solid rgba(255,255,255,0.10);
-  }
-
-  /* bottom bars float over content like FarTHErHOOD */
+  .friends-original-thread-topbar,
   .friends-original-bottombar,
   .friends-original-message-composer {
-    position: fixed;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    width: min(720px, calc(100vw - 28px));
-    margin-left: auto;
-    margin-right: auto;
-    padding-left: 0;
-    padding-right: 0;
-    padding-top: 0;
-    padding-bottom: calc(env(safe-area-inset-bottom) + 14px);
-    background: transparent;
-    backdrop-filter: none;
-    -webkit-backdrop-filter: none;
-    z-index: 1200;
-    pointer-events: none;
-  }
-
-  .friends-original-bottombar > *,
-  .friends-original-message-composer > * {
-    pointer-events: auto;
-  }
-
-  /* inbox bottom search pill */
-  .friends-original-search-pill {
-    min-height: 56px;
-    border-radius: 999px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-  }
-
-  /* inbox bottom compose button */
-  .friends-original-compose-btn {
-    width: 56px;
-    height: 56px;
-    border-radius: 18px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-  }
-
-  /* thread bottom left plus */
-  .friends-original-composer-plus {
-    width: 46px;
-    height: 46px;
-    border-radius: 999px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-  }
-
-  /* thread bottom input pill */
-  .friends-original-composer-input-wrap {
-    min-height: 56px;
-    border-radius: 999px;
-    background: rgba(24,24,26,0.58);
-    border: 1px solid rgba(255,255,255,0.12);
-    backdrop-filter: blur(18px);
-    -webkit-backdrop-filter: blur(18px);
-    box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-  }
-
-  /* keep desktop feeling like a full screen app, not a phone frame */
-  .friends-original-thread-list,
-  .friends-original-messages-wrap,
-  .friends-original-inbox-header {
-    max-width: none;
+    width: calc(100vw - 20px);
   }
 }
