@@ -136,7 +136,7 @@ export default function FriendsThreadClient({
 
   function renderTimestamp(msg: Message) {
     return (
-      <div key={msg.id} className="timestamp">
+      <div key={msg.id} className="friends-original-timestamp">
         {msg.body}
       </div>
     );
@@ -146,13 +146,13 @@ export default function FriendsThreadClient({
     const side = msg.message_side === "outgoing" ? "outgoing" : "incoming";
 
     return (
-      <div key={msg.id} className={`message-row ${side}`}>
-        <div className="message-group">
+      <div key={msg.id} className={`friends-original-message-row ${side}`}>
+        <div className="friends-original-message-group">
           {side === "incoming" && msg.sender_label ? (
-            <div className="message-label">{msg.sender_label}</div>
+            <div className="friends-original-message-label">{msg.sender_label}</div>
           ) : null}
 
-          <div className="message-bubble">{msg.body}</div>
+          <div className="friends-original-message-bubble">{msg.body}</div>
         </div>
       </div>
     );
@@ -176,49 +176,50 @@ export default function FriendsThreadClient({
             ? formatTime(clip.end_seconds - clip.start_seconds)
             : "0:00");
 
+    const heights = [8, 12, 18, 24, 30, 16, 22, 10, 14, 26, 20];
     const bars = Array.from({ length: 28 });
+    const playedCount = Math.round(progress * bars.length);
 
     return (
-      <div key={msg.id} className={`message-row ${side}`}>
-        <div className="message-group">
+      <div key={msg.id} className={`friends-original-message-row ${side}`}>
+        <div className="friends-original-message-group">
           {side === "incoming" && msg.sender_label ? (
-            <div className="message-label">{msg.sender_label}</div>
+            <div className="friends-original-message-label">{msg.sender_label}</div>
           ) : null}
 
           <button
             type="button"
-            className={`audio-card ${playing ? "is-playing" : ""}`}
+            className={`friends-original-audio-card ${playing ? "is-playing" : ""}`}
             onClick={() => playClip(msg)}
             aria-label={`Play ${msg.audio_label || clip.clip_title || "audio clip"}`}
           >
-            <div className="audio-card-top">
-              <span className="audio-play" />
+            <div className="friends-original-audio-card-top">
+              <span className="friends-original-audio-play"></span>
 
-              <div className="wave-wrap">
-                <div className="waveform">
-                  {bars.map((_, i) => {
-                    const playedCount = Math.round(progress * bars.length);
-                    return (
-                      <span
-                        key={i}
-                        className={i < playedCount ? "is-played" : ""}
-                        style={{
-                          height: `${[8,12,18,24,30,16,22,10,14,26,20][i % 11]}px`
-                        }}
-                      />
-                    );
-                  })}
+              <div className="friends-original-wave-wrap">
+                <div className="friends-original-waveform">
+                  {bars.map((_, i) => (
+                    <span
+                      key={i}
+                      className={i < playedCount ? "is-played" : ""}
+                      style={{ height: `${heights[i % heights.length]}px` }}
+                    />
+                  ))}
                 </div>
 
-                <div className="audio-duration">{durationText}</div>
+                <div className="friends-original-audio-duration">
+                  {durationText}
+                </div>
               </div>
             </div>
 
-            <div className="audio-meta">
-              <div className="audio-file-name">
+            <div className="friends-original-audio-meta">
+              <div className="friends-original-audio-file-name">
                 {msg.audio_label || clip.clip_title}
               </div>
-              <div className="audio-kind">{msg.audio_kind || "Voice note"}</div>
+              <div className="friends-original-audio-kind">
+                {msg.audio_kind || "Voice note"}
+              </div>
             </div>
           </button>
         </div>
@@ -227,39 +228,59 @@ export default function FriendsThreadClient({
   }
 
   return (
-    <div className="app-shell">
-      <section className="screen screen-thread is-active" aria-label="Conversation thread">
-        <div className="thread-topbar top-safe">
-          <Link href="/apps/friends" className="back-btn" aria-label="Back to inbox">
-            <span className="back-chevron" aria-hidden="true"></span>
-            <span className="back-text">Fri.ends</span>
+    <div className="app-shell friends-original-app-shell">
+      <section
+        className="screen screen-thread is-active"
+        aria-label="Conversation thread"
+      >
+        <div className="friends-original-thread-topbar top-safe">
+          <Link
+            href="/apps/friends"
+            className="friends-original-back-btn"
+            aria-label="Back to inbox"
+          >
+            <span
+              className="friends-original-back-chevron"
+              aria-hidden="true"
+            ></span>
+            <span className="friends-original-back-text">Fri.ends</span>
           </Link>
 
-          <div className="thread-header-meta">
-            <div className="thread-avatar thread-avatar--header">
+          <div className="friends-original-thread-header-meta">
+            <div className="friends-original-thread-avatar friends-original-thread-avatar--header">
               {conversation.avatar_letter || conversation.title?.[0] || "F"}
             </div>
 
-            <div className="thread-header-text">
-              <div className="thread-header-title">{conversation.title}</div>
-              <div className="thread-header-subtitle">
+            <div className="friends-original-thread-header-text">
+              <div className="friends-original-thread-header-title">
+                {conversation.title}
+              </div>
+              <div className="friends-original-thread-header-subtitle">
                 {conversation.subtitle || ""}
               </div>
             </div>
           </div>
 
-          <div className="thread-actions">
-            <button className="circle-icon-btn" type="button" aria-label="Call">
-              <span className="phone-icon"></span>
+          <div className="friends-original-thread-actions">
+            <button
+              className="friends-original-circle-icon-btn"
+              type="button"
+              aria-label="Call"
+            >
+              <span className="friends-original-phone-icon"></span>
             </button>
-            <button className="circle-icon-btn" type="button" aria-label="Video">
-              <span className="video-icon"></span>
+            <button
+              className="friends-original-circle-icon-btn"
+              type="button"
+              aria-label="Video"
+            >
+              <span className="friends-original-video-icon"></span>
             </button>
           </div>
         </div>
 
-        <main className="messages-wrap">
-          <div className="messages">
+        <main className="friends-original-messages-wrap">
+          <div className="friends-original-messages">
             {messages.map((msg) => {
               if (
                 msg.message_type === "timestamp" ||
@@ -278,15 +299,23 @@ export default function FriendsThreadClient({
           </div>
         </main>
 
-        <div className="message-composer bottom-safe">
-          <button className="composer-plus" type="button" aria-label="Add">
+        <div className="friends-original-message-composer bottom-safe">
+          <button
+            className="friends-original-composer-plus"
+            type="button"
+            aria-label="Add"
+          >
             <span>+</span>
           </button>
 
-          <div className="composer-input-wrap">
-            <div className="composer-input">iMessage</div>
-            <button className="composer-mic" type="button" aria-label="Voice message">
-              <span className="mini-mic"></span>
+          <div className="friends-original-composer-input-wrap">
+            <div className="friends-original-composer-input">iMessage</div>
+            <button
+              className="friends-original-composer-mic"
+              type="button"
+              aria-label="Voice message"
+            >
+              <span className="friends-original-mini-mic"></span>
             </button>
           </div>
         </div>
