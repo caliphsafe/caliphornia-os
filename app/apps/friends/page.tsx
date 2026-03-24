@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import { verifySession } from "@/lib/session";
+import Link from "next/link";
 
 async function getConversations() {
   const base =
@@ -32,61 +32,86 @@ export default async function FriendsPage() {
   const conversations = await getConversations();
 
   return (
-    <main className="friends-screen">
-      <div className="friends-shell">
-        <div className="friends-topbar">
-          <button className="friends-edit-btn">Edit</button>
-
-          <button className="friends-filter-btn" aria-label="Filter conversations">
-            <span />
-            <span />
-            <span />
-          </button>
-        </div>
-
-        <h1 className="friends-title">Fri.ends</h1>
-
-        <div className="friends-list">
-          {conversations.map((conversation: any, index: number) => (
+    <main className="friends-original-app">
+      <div className="friends-original-shell">
+        <section
+          className="friends-original-screen friends-original-screen-inbox is-active"
+          aria-label="Fri.ends inbox"
+        >
+          <div className="friends-original-topbar top-safe">
             <Link
-              key={conversation.id}
-              href={`/apps/friends/${conversation.slug}`}
-              className="friends-row"
+              href="/home"
+              className="friends-notes-back-btn"
+              aria-label="Back to home"
             >
-              <div className="friends-row-avatar-wrap">
-                {index === 0 ? <span className="friends-unread-dot" /> : null}
-                <div className="friends-row-avatar">
-                  {conversation.avatar_letter || conversation.title?.[0] || "F"}
-                </div>
-              </div>
+              <img
+                src="/apps/friends/back.png"
+                alt="Back"
+                className="friends-notes-back-icon"
+              />
+            </Link>
 
-              <div className="friends-row-main">
-                <div className="friends-row-top">
-                  <div className="friends-row-title">{conversation.title}</div>
-                  <div className="friends-row-time">
-                    {conversation.last_activity_label || ""}
+            <button
+              className="friends-original-icon-btn ghost-btn"
+              type="button"
+              aria-label="Filter"
+            >
+              <span className="friends-original-filter-icon" aria-hidden="true"></span>
+            </button>
+          </div>
+
+          <header className="friends-original-inbox-header">
+            <h1>Fri.ends</h1>
+          </header>
+
+          <main className="friends-original-thread-list" aria-label="Track list">
+            {conversations.map((thread: any) => (
+              <Link
+                key={thread.id}
+                href={`/apps/friends/${thread.slug}`}
+                className="friends-original-thread-row"
+              >
+                {thread.sort_order === 1 ? (
+                  <span className="friends-original-thread-unread-dot"></span>
+                ) : null}
+
+                <div className="friends-original-thread-avatar group">
+                  {thread.avatar_letter || thread.title?.[0] || "F"}
+                </div>
+
+                <div className="friends-original-thread-main">
+                  <div className="friends-original-thread-topline">
+                    <div className="friends-original-thread-title">
+                      {thread.title}
+                    </div>
+                  </div>
+
+                  <div className="friends-original-thread-preview">
+                    {thread.list_preview || ""}
                   </div>
                 </div>
 
-                <div className="friends-row-preview">
-                  {conversation.list_preview || conversation.subtitle || ""}
+                <div className="friends-original-thread-time">
+                  {thread.last_activity_label || ""}
                 </div>
-              </div>
-            </Link>
-          ))}
-        </div>
+              </Link>
+            ))}
+          </main>
 
-        <div className="friends-bottom-tools">
-          <div className="friends-search-pill">
-            <span className="friends-search-icon">⌕</span>
-            <span className="friends-search-text">Search</span>
-            <span className="friends-mic-icon">◐</span>
+          <div className="friends-original-bottombar bottom-safe">
+            <div className="friends-original-search-pill" aria-hidden="true">
+              <span className="friends-original-search-icon"></span>
+              <span className="friends-original-search-text">Search</span>
+              <span className="friends-original-mic-icon"></span>
+            </div>
+
+            <button
+              className="friends-original-compose-btn"
+              type="button"
+              aria-label="Compose"
+            ></button>
           </div>
-
-          <button className="friends-compose-btn" aria-label="Compose">
-            ✎
-          </button>
-        </div>
+        </section>
       </div>
     </main>
   );
