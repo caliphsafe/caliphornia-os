@@ -934,7 +934,7 @@ img {
   min-height: 100vh;
   background: #000;
   color: #fff;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 
 .friends-original-shell,
@@ -944,7 +944,7 @@ img {
   min-height: 100vh;
   margin: 0;
   background: #000;
-  overflow-x: clip;
+  overflow-x: hidden;
 }
 
 /* ===== shared centered content width like FarTHErHOOD ===== */
