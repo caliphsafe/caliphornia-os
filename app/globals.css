@@ -1315,7 +1315,7 @@ img {
   grid-column: 2;
   grid-row: 1;
   height: 28px;
-  overflow: hidden;
+  width: 100%;
   align-self: center;
 }
 
@@ -1335,11 +1335,14 @@ img {
   height: 28px;
   display: flex;
   align-items: center;
-  gap: 4px;
+  justify-content: space-between;
+  width: 100%;
 }
 
 .friends-audio-bar {
-  width: 3px;
+  width: 2px;
+  flex: 1;
+  max-width: 3px;
   border-radius: 999px;
   background: rgba(255,255,255,0.34);
   display: block;
