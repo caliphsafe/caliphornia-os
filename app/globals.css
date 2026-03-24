@@ -938,8 +938,9 @@ img {
 .friends-original-shell,
 .friends-shell,
 .friends-thread-shell {
-  width: 100%;
+  width: min(100%, 860px);
   min-height: 100vh;
+  margin: 0 auto;
   background: #000;
 }
 
