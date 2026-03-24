@@ -537,9 +537,9 @@ export default function GlobalPlayer({ email }: Props) {
     if (data?.ok) setIsSaved(Boolean(data.saved));
   }
 
-  const isOnMusicPage = pathname === "/apps/music";
+  const isOnMusicPage = pathname?.startsWith("/apps/music");
 
-  if ((!isVisible || !currentTrack) || isOnMusicPage) return null;
+if ((!isVisible || !currentTrack) || isOnMusicPage) return null;
 
   return (
     <>
