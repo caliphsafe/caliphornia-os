@@ -368,11 +368,15 @@ export default function GlobalPlayer({ email }: Props) {
       });
     }
 
-    if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
-      if (window.location.pathname !== currentTrack.conversationRoute) {
-        router.push(currentTrack.conversationRoute);
-      }
-    }
+   if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
+  const path = window.location.pathname;
+  const isOnFriendsConversationPage =
+    path.startsWith("/apps/friends/") && path !== "/apps/friends";
+
+  if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) {
+    router.push(currentTrack.conversationRoute);
+  }
+}
   }, [currentTrack, email, router]);
 
   useEffect(() => {
