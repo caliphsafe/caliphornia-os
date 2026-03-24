@@ -127,7 +127,6 @@ export default function FriendsThreadClient({
     setIsPlaying(false);
 
     const start = clip.start_seconds || 0;
-
     const sameSource = audio.src === clip.file;
 
     if (!sameSource) {
@@ -204,7 +203,8 @@ export default function FriendsThreadClient({
     }
 
     function onError() {
-      console.error("Audio element error", audio.error);
+      const currentAudio = audioRef.current;
+      console.error("Audio element error", currentAudio?.error ?? null);
     }
 
     audio.addEventListener("play", onPlay);
