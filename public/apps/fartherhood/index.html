@@ -804,12 +804,18 @@ btnBackHome?.addEventListener("click", (e) => {
   e.preventDefault();
 
   try {
-    if (window.top && window.top !== window.self) {
-      window.top.location.assign("/home");
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "CALIPH_NAVIGATE",
+          href: "/home"
+        },
+        "*"
+      );
       return;
     }
   } catch (err) {
-    // fall through
+    // ignore and fall back
   }
 
   window.location.assign("/home");
