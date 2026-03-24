@@ -50,9 +50,9 @@ export async function GET(request: Request) {
         id,
         slug,
         title,
-        artist,
-        cover_image,
-        file_url
+        artist_name,
+        audio_path,
+        cover_image_path
       `)
       .in("id", songIds);
 
@@ -67,10 +67,29 @@ export async function GET(request: Request) {
       (songs || []).map((song) => [song.id, song])
     );
 
-    const orderedSongs = (favorites || [])
-      .map((favorite) => {
+    const orderedSongs = await Promise.all(
+      (favorites || []).map(async (favorite) => {
         const song = songMap.get(favorite.song_id);
         if (!song) return null;
+
+        let audioUrl: string | null = null;
+        let coverUrl: string | null = null;
+
+        if (song.audio_path) {
+          const { data: signedAudio } = await supabaseAdmin.storage
+            .from("songs")
+            .createSignedUrl(song.audio_path, 60 * 60);
+
+          audioUrl = signedAudio?.signedUrl || null;
+        }
+
+        if (song.cover_image_path) {
+          const { data: signedCover } = await supabaseAdmin.storage
+            .from("songs")
+            .createSignedUrl(song.cover_image_path, 60 * 60);
+
+          coverUrl = signedCover?.signedUrl || null;
+        }
 
         return {
           favorite_id: favorite.id,
@@ -78,16 +97,16 @@ export async function GET(request: Request) {
           song_id: song.id,
           slug: song.slug,
           title: song.title || favorite.song_title || favorite.song_slug || "Untitled",
-          artist: song.artist || "Caliph",
-          cover_image: song.cover_image || null,
-          file: song.file_url || null
+          artist: song.artist_name || "Caliph",
+          cover_image: coverUrl,
+          file: audioUrl
         };
       })
-      .filter(Boolean);
+    );
 
     return NextResponse.json({
       ok: true,
-      songs: orderedSongs
+      songs: orderedSongs.filter(Boolean)
     });
   } catch {
     return NextResponse.json(
