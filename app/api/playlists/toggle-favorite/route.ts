@@ -8,7 +8,10 @@ export async function POST(request: Request) {
     const songSlug = String(body.songSlug || "").trim();
 
     if (!userEmail || !songSlug) {
-      return NextResponse.json({ ok: false, error: "Missing fields" }, { status: 400 });
+      return NextResponse.json(
+        { ok: false, error: "Missing fields" },
+        { status: 400 }
+      );
     }
 
     const { data: song, error: songError } = await supabaseAdmin
@@ -18,21 +21,38 @@ export async function POST(request: Request) {
       .single();
 
     if (songError || !song) {
-      return NextResponse.json({ ok: false, error: "Song not found" }, { status: 404 });
+      return NextResponse.json(
+        { ok: false, error: "Song not found" },
+        { status: 404 }
+      );
     }
 
-    const { data: existing } = await supabaseAdmin
+    const { data: existing, error: existingError } = await supabaseAdmin
       .from("user_favorite_songs")
       .select("id")
       .eq("user_email", userEmail)
       .eq("song_id", song.id)
       .maybeSingle();
 
+    if (existingError) {
+      return NextResponse.json(
+        { ok: false, error: existingError.message },
+        { status: 500 }
+      );
+    }
+
     if (existing?.id) {
-      await supabaseAdmin
+      const { error: deleteError } = await supabaseAdmin
         .from("user_favorite_songs")
         .delete()
         .eq("id", existing.id);
+
+      if (deleteError) {
+        return NextResponse.json(
+          { ok: false, error: deleteError.message },
+          { status: 500 }
+        );
+      }
 
       await supabaseAdmin.from("event_logs").insert({
         user_email: userEmail,
@@ -44,10 +64,19 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true, saved: false });
     }
 
-    await supabaseAdmin.from("user_favorite_songs").insert({
-      user_email: userEmail,
-      song_id: song.id
-    });
+    const { error: insertError } = await supabaseAdmin
+      .from("user_favorite_songs")
+      .insert({
+        user_email: userEmail,
+        song_id: song.id
+      });
+
+    if (insertError) {
+      return NextResponse.json(
+        { ok: false, error: insertError.message },
+        { status: 500 }
+      );
+    }
 
     await supabaseAdmin.from("event_logs").insert({
       user_email: userEmail,
@@ -58,6 +87,9 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ ok: true, saved: true });
   } catch {
-    return NextResponse.json({ ok: false, error: "Server error" }, { status: 500 });
+    return NextResponse.json(
+      { ok: false, error: "Server error" },
+      { status: 500 }
+    );
   }
 }
