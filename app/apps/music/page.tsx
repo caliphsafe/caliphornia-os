@@ -1,4 +1,4 @@
-import "./music.css";
+import "../../styles/music.css";
 import MusicLibraryClient from "@/components/MusicLibraryClient";
 
 export default async function MusicPage({
