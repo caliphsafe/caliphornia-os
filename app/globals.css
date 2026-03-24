@@ -34,14 +34,24 @@ body {
     Helvetica,
     Arial,
     sans-serif;
-  background:
+  background-color: #05101d;
+  background-image:
     radial-gradient(circle at 18% 14%, rgba(197, 223, 255, 0.18), transparent 18%),
     radial-gradient(circle at 85% 20%, rgba(120, 168, 255, 0.16), transparent 22%),
     radial-gradient(circle at 50% 78%, rgba(255, 255, 255, 0.08), transparent 26%),
     linear-gradient(180deg, #1a406e 0%, #113056 28%, #0a1d36 58%, #05101d 100%);
-  background-attachment: fixed;
+  background-repeat: no-repeat;
+  background-size: cover;
+}
+html {
+  background: #000;
 }
 
+body {
+  min-height: 100vh;
+  min-height: 100dvh;
+  background: #000;
+}
 body {
   min-height: 100vh;
 }
