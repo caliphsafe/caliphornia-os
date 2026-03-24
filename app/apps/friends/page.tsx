@@ -1,5 +1,6 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import Link from "next/link";
 import { verifySession } from "@/lib/session";
 
 async function getConversations() {
@@ -47,7 +48,7 @@ export default async function FriendsPage() {
 
         <div className="friends-list">
           {conversations.map((conversation: any, index: number) => (
-            <a
+            <Link
               key={conversation.id}
               href={`/apps/friends/${conversation.slug}`}
               className="friends-row"
@@ -71,7 +72,7 @@ export default async function FriendsPage() {
                   {conversation.list_preview || conversation.subtitle || ""}
                 </div>
               </div>
-            </a>
+            </Link>
           ))}
         </div>
 
