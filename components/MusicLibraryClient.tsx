@@ -203,7 +203,9 @@ export default function MusicLibraryClient({ email }: Props) {
                     </div>
 
                     <div className="music-song-copy">
-                      <div className="music-song-title">{song.title}</div>
+                     <div className="music-song-title">
+                    {song.title.replace(/^CALIPH\s*-\s*/i, "")}
+                      </div>
                       <div className="music-song-artist">{song.artist}</div>
                     </div>
                   </div>
