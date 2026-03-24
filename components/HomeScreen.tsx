@@ -63,7 +63,7 @@ export default function HomeScreen({ email }: { email: string }) {
 
         <section className="app-grid ios-app-grid">
           {appRegistry.map((app) => (
-            <AppIcon key={app.id} app={app} />
+           <AppIcon key={app.id} app={app} email={email} />
           ))}
         </section>
       </div>
