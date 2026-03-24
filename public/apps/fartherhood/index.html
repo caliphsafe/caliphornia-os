@@ -9,9 +9,9 @@
 <body>
 
   <div class="top-chrome">
-    <a href="/home" class="nav-round" aria-label="Back">
-      <img src="back.png" alt="Back" class="ico-img" />
-    </a>
+    <a href="/home" class="nav-round" aria-label="Back" id="btnBackHome">
+  <img src="back.png" alt="Back" class="ico-img" />
+</a>
 
     <div class="nav-capsule" role="group" aria-label="Actions">
       <a href="#" class="nav-capsule-btn" aria-label="Collaborators" id="btnCollaborators">
@@ -798,6 +798,22 @@ it's getting harder to hold the dinero…`,
         prompt("Copy this link to share:", window.location.href);
       }
     });
+    const btnBackHome = document.getElementById("btnBackHome");
+
+btnBackHome?.addEventListener("click", (e) => {
+  e.preventDefault();
+
+  try {
+    if (window.top && window.top !== window.self) {
+      window.top.location.assign("/home");
+      return;
+    }
+  } catch (err) {
+    // fall through
+  }
+
+  window.location.assign("/home");
+});
   </script>
 </body>
 </html>
