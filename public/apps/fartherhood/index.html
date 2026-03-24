@@ -803,6 +803,17 @@ it's getting harder to hold the dinero…`,
 btnBackHome?.addEventListener("click", (e) => {
   e.preventDefault();
 
+  let handledByParent = false;
+
+  function onAck(event) {
+    if (event?.data?.type === "CALIPH_NAVIGATE_ACK") {
+      handledByParent = true;
+      window.removeEventListener("message", onAck);
+    }
+  }
+
+  window.addEventListener("message", onAck);
+
   try {
     if (window.parent && window.parent !== window) {
       window.parent.postMessage(
@@ -812,13 +823,16 @@ btnBackHome?.addEventListener("click", (e) => {
         },
         "*"
       );
-      return;
     }
-  } catch (err) {
-    // ignore and fall back
-  }
+  } catch (err) {}
 
-  window.location.assign("/home");
+  setTimeout(() => {
+    window.removeEventListener("message", onAck);
+
+    if (!handledByParent) {
+      window.location.assign("/home");
+    }
+  }, 180);
 });
   </script>
 </body>
