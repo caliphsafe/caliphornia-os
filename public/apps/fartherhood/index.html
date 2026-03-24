@@ -814,6 +814,28 @@ btnBackHome?.addEventListener("click", (e) => {
 
   window.location.href = "/home";
 });
+    const btnBackHome = document.getElementById("btnBackHome");
+
+btnBackHome?.addEventListener("click", (e) => {
+  e.preventDefault();
+
+  try {
+    if (window.parent && window.parent !== window) {
+      window.parent.postMessage(
+        {
+          type: "CALIPH_NAVIGATE",
+          href: "/home"
+        },
+        window.location.origin
+      );
+      return;
+    }
+  } catch (err) {
+    // ignore and fall back
+  }
+
+  window.location.href = "/home";
+});
   </script>
 </body>
 </html>
