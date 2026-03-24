@@ -798,6 +798,22 @@ function startNotesAutoRefresh(ms = 15000) {
         prompt("Copy this link to share:", window.location.href);
       }
     });
+    const btnBackHome = document.getElementById("btnBackHome");
+
+btnBackHome?.addEventListener("click", (e) => {
+  e.preventDefault();
+
+  try {
+    if (window.top && window.top !== window.self) {
+      window.top.location.href = "/home";
+      return;
+    }
+  } catch (err) {
+    // ignore cross-frame access issues and fall back
+  }
+
+  window.location.href = "/home";
+});
   </script>
 </body>
 </html>
