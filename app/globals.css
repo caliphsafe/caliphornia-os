@@ -934,6 +934,7 @@ img {
   min-height: 100vh;
   background: #000;
   color: #fff;
+  overflow-x: clip;
 }
 
 .friends-original-shell,
