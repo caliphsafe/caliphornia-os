@@ -1,6 +1,6 @@
 "use client";
 
-import { useRouter } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export type GlobalTrack = {
@@ -175,6 +175,7 @@ function normalizeFriendsFinalTrack(convo: FriendsConversationListItem): GlobalT
 
 export default function GlobalPlayer({ email }: Props) {
   const router = useRouter();
+  const pathname = usePathname();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<GlobalTrack[]>([]);
@@ -536,7 +537,9 @@ export default function GlobalPlayer({ email }: Props) {
     if (data?.ok) setIsSaved(Boolean(data.saved));
   }
 
-  if (!isVisible || !currentTrack) return null;
+  const isOnMusicPage = pathname === "/apps/music";
+
+  if ((!isVisible || !currentTrack) || isOnMusicPage) return null;
 
   return (
     <>
