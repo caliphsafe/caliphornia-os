@@ -10,7 +10,7 @@
 
   <div class="top-chrome">
     <a href="/home" class="nav-round" aria-label="Back">
-      <img src="back.png" alt="Share" class="ico-img" />
+      <img src="back.png" alt="Back" class="ico-img" />
     </a>
 
     <div class="nav-capsule" role="group" aria-label="Actions">
@@ -23,7 +23,7 @@
       </a>
 
       <a href="#" class="nav-capsule-btn" aria-label="More">
-        <img src="more.png" alt="Share" class="ico-img" />
+        <img src="more.png" alt="More" class="ico-img" />
       </a>
     </div>
   </div>
@@ -62,17 +62,17 @@
         <img src="sub.png" alt="Subscribe" class="ico-img" />
       </a>
 
-      <a href="#" class="nav-capsule-btn" aria-label="buy">
-        <img src="buy.png" alt="Subscribe" class="ico-img" />
+      <a href="#" class="nav-capsule-btn" aria-label="Buy">
+        <img src="buy.png" alt="Buy" class="ico-img" />
       </a>
 
       <a href="#" class="nav-capsule-btn" aria-label="Draw">
-        <img src="draw.png" alt="Subscribe" class="ico-img" />
+        <img src="draw.png" alt="Draw" class="ico-img" />
       </a>
     </div>
 
     <a href="#" class="compose-fab" aria-label="Add note" id="btnOpenNote">
-      <img src="note.png" alt="Subscribe" class="ico-img" />
+      <img src="note.png" alt="Add note" class="ico-img" />
     </a>
   </div>
 
@@ -203,7 +203,6 @@
   </div>
 
   <script>
-
     const sharedAudio = document.getElementById("sharedAudio");
     const audioWrapper = document.getElementById("audioWrapper");
 
@@ -584,132 +583,133 @@ it's getting harder to hold the dinero…`,
       updateTimer();
     });
 
-  const noteForm = document.getElementById("noteForm");
-const btnOpenNote = document.getElementById("btnOpenNote");
-const btnSubmitNote = document.getElementById("btnSubmitNote");
+    const noteForm = document.getElementById("noteForm");
+    const btnOpenNote = document.getElementById("btnOpenNote");
+    const btnSubmitNote = document.getElementById("btnSubmitNote");
 
-btnOpenNote.addEventListener("click", (e) => {
-  e.preventDefault();
-  const isOpen = noteForm.style.display === "block";
-  noteForm.style.display = isOpen ? "none" : "block";
-});
-
-btnSubmitNote.addEventListener("click", () => submitNote());
-
-async function submitNote() {
-  const nameEl = document.getElementById("noteName");
-  const msgEl  = document.getElementById("noteMessage");
-  const hint   = document.getElementById("reloadHint");
-
-  const displayName = (nameEl.value || "").trim();
-  const noteBody = (msgEl.value || "").trim();
-
-  if (!displayName || !noteBody) {
-    alert("Please fill out both fields.");
-    return;
-  }
-
-  try {
-    const res = await fetch("/api/apps/fartherhood/notes", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        displayName,
-        noteBody
-      })
+    btnOpenNote.addEventListener("click", (e) => {
+      e.preventDefault();
+      const isOpen = noteForm.style.display === "block";
+      noteForm.style.display = isOpen ? "none" : "block";
     });
 
-    const data = await res.json();
+    btnSubmitNote.addEventListener("click", () => submitNote());
 
-    if (!data.ok) {
-      alert(data.error || "Could not submit note.");
-      return;
+    async function submitNote() {
+      const nameEl = document.getElementById("noteName");
+      const msgEl  = document.getElementById("noteMessage");
+      const hint   = document.getElementById("reloadHint");
+
+      const displayName = (nameEl.value || "").trim();
+      const noteBody = (msgEl.value || "").trim();
+
+      if (!displayName || !noteBody) {
+        alert("Please fill out both fields.");
+        return;
+      }
+
+      try {
+        const res = await fetch("/api/apps/fartherhood/notes", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json"
+          },
+          body: JSON.stringify({
+            displayName,
+            noteBody
+          })
+        });
+
+        const data = await res.json();
+
+        if (!data.ok) {
+          alert(data.error || "Could not submit note.");
+          return;
+        }
+
+        nameEl.value = "";
+        msgEl.value = "";
+        noteForm.style.display = "none";
+
+        if (hint) {
+          hint.style.display = "block";
+          hint.innerHTML = `Note sent.`;
+        }
+
+        await loadNotes();
+      } catch {
+        alert("Could not submit note.");
+      }
     }
 
-    nameEl.value = "";
-    msgEl.value = "";
-    noteForm.style.display = "none";
-
-    if (hint) {
-      hint.style.display = "block";
-      hint.innerHTML = `Note sent.`;
+    function formatNoteDate(dateStr) {
+      try {
+        const d = new Date(dateStr);
+        return new Intl.DateTimeFormat("en-US", {
+          month: "numeric",
+          day: "numeric",
+          year: "2-digit",
+          hour: "numeric",
+          minute: "2-digit"
+        }).format(d);
+      } catch {
+        return "";
+      }
     }
 
-    await loadNotes();
-  } catch {
-    alert("Could not submit note.");
-  }
-}
+    async function loadNotes() {
+      const container = document.getElementById("publicNotes");
+      if (!container) return;
 
-function formatNoteDate(dateStr) {
-  try {
-    const d = new Date(dateStr);
-    return new Intl.DateTimeFormat("en-US", {
-      month: "numeric",
-      day: "numeric",
-      year: "2-digit",
-      hour: "numeric",
-      minute: "2-digit"
-    }).format(d);
-  } catch {
-    return "";
-  }
-}
+      try {
+        const res = await fetch("/api/apps/fartherhood/notes", { cache: "no-store" });
+        const data = await res.json();
 
-async function loadNotes() {
-  const container = document.getElementById("publicNotes");
-  if (!container) return;
+        if (!data.ok || !Array.isArray(data.notes) || data.notes.length === 0) {
+          container.innerHTML = `
+            <div class="message">
+              <p><strong>No notes yet</strong></p>
+              <p>Be the first to leave a message.</p>
+            </div>
+          `;
+          return;
+        }
 
-  try {
-    const res = await fetch("/api/apps/fartherhood/notes", { cache: "no-store" });
-    const data = await res.json();
+        container.innerHTML = data.notes.map((row) => {
+          const nm = escapeHtml(row.display_name || "Anonymous");
+          const msg = escapeHtml(row.note_body || "");
+          const ts = row.created_at ? escapeHtml(formatNoteDate(row.created_at)) : "";
 
-    if (!data.ok || !Array.isArray(data.notes) || data.notes.length === 0) {
-      container.innerHTML = `
-        <div class="message">
-          <p><strong>No notes yet</strong></p>
-          <p>Be the first to leave a message.</p>
-        </div>
-      `;
-      return;
+          return `
+            <div class="message">
+              <p><strong>${nm}</strong></p>
+              ${ts ? `<p class="msg-ts">${ts}</p>` : ""}
+              <p>${msg}</p>
+            </div>
+          `;
+        }).join("");
+      } catch {
+        container.innerHTML = `
+          <div class="message">
+            <p><strong>Couldn’t load notes</strong></p>
+            <p>Try reloading.</p>
+          </div>
+        `;
+      }
     }
 
-    container.innerHTML = data.notes.map((row) => {
-      const nm = escapeHtml(row.display_name || "Anonymous");
-      const msg = escapeHtml(row.note_body || "");
-      const ts = row.created_at ? escapeHtml(formatNoteDate(row.created_at)) : "";
+    let notesIntervalId = null;
 
-      return `
-        <div class="message">
-          <p><strong>${nm}</strong></p>
-          ${ts ? `<p class="msg-ts">${ts}</p>` : ""}
-          <p>${msg}</p>
-        </div>
-      `;
-    }).join("");
-  } catch {
-    container.innerHTML = `
-      <div class="message">
-        <p><strong>Couldn’t load notes</strong></p>
-        <p>Try reloading.</p>
-      </div>
-    `;
-  }
-}
+    function startNotesAutoRefresh(ms = 15000) {
+      loadNotes();
 
-let notesIntervalId = null;
+      if (notesIntervalId) clearInterval(notesIntervalId);
 
-function startNotesAutoRefresh(ms = 15000) {
-  loadNotes();
+      notesIntervalId = setInterval(() => {
+        loadNotes();
+      }, ms);
+    }
 
-  if (notesIntervalId) clearInterval(notesIntervalId);
-
-  notesIntervalId = setInterval(() => {
-    loadNotes();
-  }, ms);
-}
     loadTracksFromSupabase();
     startNotesAutoRefresh(15000);
 
@@ -798,44 +798,6 @@ function startNotesAutoRefresh(ms = 15000) {
         prompt("Copy this link to share:", window.location.href);
       }
     });
-    const btnBackHome = document.getElementById("btnBackHome");
-
-btnBackHome?.addEventListener("click", (e) => {
-  e.preventDefault();
-
-  try {
-    if (window.top && window.top !== window.self) {
-      window.top.location.href = "/home";
-      return;
-    }
-  } catch (err) {
-    // ignore cross-frame access issues and fall back
-  }
-
-  window.location.href = "/home";
-});
-    const btnBackHome = document.getElementById("btnBackHome");
-
-btnBackHome?.addEventListener("click", (e) => {
-  e.preventDefault();
-
-  try {
-    if (window.parent && window.parent !== window) {
-      window.parent.postMessage(
-        {
-          type: "CALIPH_NAVIGATE",
-          href: "/home"
-        },
-        window.location.origin
-      );
-      return;
-    }
-  } catch (err) {
-    // ignore and fall back
-  }
-
-  window.location.href = "/home";
-});
   </script>
 </body>
 </html>
