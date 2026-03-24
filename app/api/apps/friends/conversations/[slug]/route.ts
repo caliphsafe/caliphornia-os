@@ -29,11 +29,36 @@ export async function GET(
       return NextResponse.json(
         {
           ok: false,
-          routeVersion: "V3-CLIP-SIGNED",
+          routeVersion: "friends-v4-global-player",
           error: conversationError?.message || "Conversation not found."
         },
         { status: 404 }
       );
+    }
+
+    const { data: finalAsset } = await supabaseAdmin
+      .from("audio_assets")
+      .select("linked_song_id")
+      .eq("conversation_id", conversation.id)
+      .eq("is_final_version", true)
+      .maybeSingle();
+
+    let playlistSong: {
+      slug: string;
+      title: string;
+      artist_name: string | null;
+    } | null = null;
+
+    if (finalAsset?.linked_song_id) {
+      const { data: song } = await supabaseAdmin
+        .from("songs")
+        .select("slug, title, artist_name")
+        .eq("id", finalAsset.linked_song_id)
+        .maybeSingle();
+
+      if (song) {
+        playlistSong = song;
+      }
     }
 
     const { data: messages, error: messagesError } = await supabaseAdmin
@@ -76,7 +101,7 @@ export async function GET(
       return NextResponse.json(
         {
           ok: false,
-          routeVersion: "V3-CLIP-SIGNED",
+          routeVersion: "friends-v4-global-player",
           error: messagesError.message
         },
         { status: 500 }
@@ -133,6 +158,9 @@ export async function GET(
                 display_duration: clip.display_duration,
                 file: signedUrl,
                 signing_error: signingError,
+                playlist_song_slug: playlistSong?.slug || null,
+                playlist_song_title: playlistSong?.title || null,
+                playlist_song_artist: playlistSong?.artist_name || null,
                 asset: asset
                   ? {
                       id: asset.id,
@@ -153,7 +181,7 @@ export async function GET(
 
     return NextResponse.json({
       ok: true,
-      routeVersion: "V3-CLIP-SIGNED",
+      routeVersion: "friends-v4-global-player",
       conversation,
       messages: normalizedMessages
     });
@@ -161,7 +189,7 @@ export async function GET(
     return NextResponse.json(
       {
         ok: false,
-        routeVersion: "V3-CLIP-SIGNED",
+        routeVersion: "friends-v4-global-player",
         error: error?.message || "Server error."
       },
       { status: 500 }
