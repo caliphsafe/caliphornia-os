@@ -944,6 +944,7 @@ img {
   min-height: 100vh;
   margin: 0;
   background: #000;
+  overflow-x: clip;
 }
 
 /* ===== shared centered content width like FarTHErHOOD ===== */
