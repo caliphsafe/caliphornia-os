@@ -20,7 +20,6 @@ export async function GET(request: Request) {
         user_email,
         song_id,
         song_slug,
-        song_title,
         created_at
       `)
       .eq("user_email", userEmail)
@@ -63,9 +62,7 @@ export async function GET(request: Request) {
       );
     }
 
-    const songMap = new Map(
-      (songs || []).map((song) => [song.id, song])
-    );
+    const songMap = new Map((songs || []).map((song) => [song.id, song]));
 
     const orderedSongs = await Promise.all(
       (favorites || []).map(async (favorite) => {
@@ -76,19 +73,25 @@ export async function GET(request: Request) {
         let coverUrl: string | null = null;
 
         if (song.audio_path) {
-          const { data: signedAudio } = await supabaseAdmin.storage
-            .from("songs")
-            .createSignedUrl(song.audio_path, 60 * 60);
+          const { data: signedAudio, error: signedAudioError } =
+            await supabaseAdmin.storage
+              .from("songs")
+              .createSignedUrl(song.audio_path, 60 * 60);
 
-          audioUrl = signedAudio?.signedUrl || null;
+          if (!signedAudioError) {
+            audioUrl = signedAudio?.signedUrl || null;
+          }
         }
 
         if (song.cover_image_path) {
-          const { data: signedCover } = await supabaseAdmin.storage
-            .from("songs")
-            .createSignedUrl(song.cover_image_path, 60 * 60);
+          const { data: signedCover, error: signedCoverError } =
+            await supabaseAdmin.storage
+              .from("songs")
+              .createSignedUrl(song.cover_image_path, 60 * 60);
 
-          coverUrl = signedCover?.signedUrl || null;
+          if (!signedCoverError) {
+            coverUrl = signedCover?.signedUrl || null;
+          }
         }
 
         return {
@@ -96,7 +99,7 @@ export async function GET(request: Request) {
           favorited_at: favorite.created_at,
           song_id: song.id,
           slug: song.slug,
-          title: song.title || favorite.song_title || favorite.song_slug || "Untitled",
+          title: song.title || favorite.song_slug || "Untitled",
           artist: song.artist_name || "Caliph",
           cover_image: coverUrl,
           file: audioUrl
@@ -108,9 +111,9 @@ export async function GET(request: Request) {
       ok: true,
       songs: orderedSongs.filter(Boolean)
     });
-  } catch {
+  } catch (error: any) {
     return NextResponse.json(
-      { ok: false, error: "Server error" },
+      { ok: false, error: error?.message || "Server error" },
       { status: 500 }
     );
   }
