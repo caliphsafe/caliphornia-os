@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useState } from "react";
 
 type Clip = {
@@ -137,9 +138,9 @@ export default function FriendsThreadClient({
     <main className="friends-thread-screen">
       <div className="friends-thread-shell">
         <div className="friends-thread-header">
-          <a href="/apps/friends" className="friends-thread-back">
+          <Link href="/apps/friends" className="friends-thread-back">
             ‹ Fri.ends
-          </a>
+          </Link>
 
           <div className="friends-thread-center">
             <div className="friends-thread-avatar">
