@@ -65,65 +65,15 @@ export default function FriendsThreadClient({
     return map;
   }, [messages]);
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  function stopRaf() {
+    if (rafRef.current) cancelAnimationFrame(rafRef.current);
+    rafRef.current = null;
+  }
 
-    function stopLoop() {
-      if (rafRef.current) cancelAnimationFrame(rafRef.current);
-      rafRef.current = null;
-    }
-
-    function tick() {
-      const currentAudio = audioRef.current;
-      const clipId = activeClipId;
-
-      if (!currentAudio || !clipId) return;
-
-      const clip = clipsById.get(clipId);
-      if (!clip || clip.end_seconds == null) return;
-
-      const current = currentAudio.currentTime || 0;
-      const start = clip.start_seconds || 0;
-      const end = clip.end_seconds || 0;
-      const duration = Math.max(0.001, end - start);
-      const elapsed = Math.max(0, current - start);
-      const progress = Math.min(1, elapsed / duration);
-
-      setClipProgress((prev) => ({ ...prev, [clipId]: progress }));
-      setClipTimes((prev) => ({ ...prev, [clipId]: elapsed }));
-
-      if (current >= end) {
-        currentAudio.pause();
-        currentAudio.currentTime = start;
-        setIsPlaying(false);
-        stopLoop();
-        return;
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
-    }
-
-    function onPlay() {
-      setIsPlaying(true);
-      stopLoop();
-      rafRef.current = requestAnimationFrame(tick);
-    }
-
-    function onPause() {
-      setIsPlaying(false);
-      stopLoop();
-    }
-
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onPause);
-
-    return () => {
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onPause);
-      stopLoop();
-    };
-  }, [activeClipId, clipsById]);
+  function resetClipVisuals(clipId: string) {
+    setClipProgress((prev) => ({ ...prev, [clipId]: 0 }));
+    setClipTimes((prev) => ({ ...prev, [clipId]: 0 }));
+  }
 
   function formatTime(seconds: number) {
     const s = Math.max(0, Math.floor(seconds));
@@ -132,46 +82,148 @@ export default function FriendsThreadClient({
     return `${mm}:${String(ss).padStart(2, "0")}`;
   }
 
-  async function toggleClip(clip: Clip) {
+  function startTracking(clip: Clip) {
+    stopRaf();
+
+    const tick = () => {
+      const audio = audioRef.current;
+      if (!audio) return;
+
+      const current = audio.currentTime || 0;
+      const start = clip.start_seconds || 0;
+      const end = clip.end_seconds;
+      const elapsed = Math.max(0, current - start);
+
+      setClipTimes((prev) => ({ ...prev, [clip.id]: elapsed }));
+
+      if (end != null) {
+        const duration = Math.max(0.001, end - start);
+        const progress = Math.min(1, elapsed / duration);
+        setClipProgress((prev) => ({ ...prev, [clip.id]: progress }));
+
+        if (current >= end) {
+          audio.pause();
+          setIsPlaying(false);
+          stopRaf();
+          return;
+        }
+      } else {
+        const duration = audio.duration && Number.isFinite(audio.duration) ? audio.duration : 0;
+        const progress = duration > 0 ? Math.min(1, current / duration) : 0;
+        setClipProgress((prev) => ({ ...prev, [clip.id]: progress }));
+      }
+
+      rafRef.current = requestAnimationFrame(tick);
+    };
+
+    rafRef.current = requestAnimationFrame(tick);
+  }
+
+  async function loadAndPlayClip(clip: Clip) {
     const audio = audioRef.current;
     if (!audio || !clip.file) return;
 
-    const sameClip = activeClipId === clip.id;
+    stopRaf();
+    setIsPlaying(false);
+
     const start = clip.start_seconds || 0;
+
+    const sameSource = audio.src === clip.file;
+
+    if (!sameSource) {
+      audio.pause();
+      audio.src = clip.file;
+      audio.load();
+    }
+
+    setActiveClipId(clip.id);
+    resetClipVisuals(clip.id);
+
+    const beginPlayback = async () => {
+      try {
+        audio.currentTime = start;
+      } catch {}
+
+      try {
+        await audio.play();
+        setIsPlaying(true);
+        startTracking(clip);
+      } catch (err) {
+        console.error("Audio play failed:", err);
+      }
+    };
+
+    if (!sameSource) {
+      const onCanPlay = async () => {
+        audio.removeEventListener("canplay", onCanPlay);
+        await beginPlayback();
+      };
+
+      audio.addEventListener("canplay", onCanPlay, { once: true });
+      return;
+    }
+
+    await beginPlayback();
+  }
+
+  async function toggleClip(clip: Clip) {
+    const audio = audioRef.current;
+    if (!audio || !clip.file) {
+      console.error("Missing audio element or clip file", clip);
+      return;
+    }
+
+    const sameClip = activeClipId === clip.id;
 
     if (sameClip && !audio.paused) {
       audio.pause();
+      setIsPlaying(false);
+      stopRaf();
       return;
     }
 
-    if (!sameClip || audio.src !== clip.file) {
-      audio.src = clip.file;
-      audio.load();
-
-      const onLoaded = async () => {
-        audio.currentTime = start;
-        try {
-          await audio.play();
-        } catch {}
-        audio.removeEventListener("loadedmetadata", onLoaded);
-      };
-
-      audio.addEventListener("loadedmetadata", onLoaded);
-      setActiveClipId(clip.id);
-      setClipProgress((prev) => ({ ...prev, [clip.id]: 0 }));
-      setClipTimes((prev) => ({ ...prev, [clip.id]: 0 }));
-      return;
-    }
-
-    audio.currentTime = start;
-    try {
-      await audio.play();
-    } catch {}
+    await loadAndPlayClip(clip);
   }
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    function onPlay() {
+      setIsPlaying(true);
+    }
+
+    function onPause() {
+      setIsPlaying(false);
+      stopRaf();
+    }
+
+    function onEnded() {
+      setIsPlaying(false);
+      stopRaf();
+    }
+
+    function onError() {
+      console.error("Audio element error", audio.error);
+    }
+
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("ended", onEnded);
+    audio.addEventListener("error", onError);
+
+    return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("ended", onEnded);
+      audio.removeEventListener("error", onError);
+      stopRaf();
+    };
+  }, []);
 
   return (
     <>
-      <audio ref={audioRef} preload="metadata" />
+      <audio ref={audioRef} preload="metadata" playsInline />
 
       <main className="friends-thread-screen">
         <div className="friends-thread-shell">
@@ -219,10 +271,14 @@ export default function FriendsThreadClient({
                 const progress = clipProgress[msg.clip.id] || 0;
                 const elapsed = clipTimes[msg.clip.id] || 0;
                 const side = msg.message_side === "outgoing" ? "outgoing" : "incoming";
+
                 const durationText =
                   playing || isActive
                     ? formatTime(elapsed)
-                    : msg.clip.display_duration || "0:00";
+                    : msg.clip.display_duration ||
+                      (msg.clip.end_seconds != null
+                        ? formatTime(msg.clip.end_seconds - msg.clip.start_seconds)
+                        : "0:00");
 
                 return (
                   <div key={msg.id} className={`friends-message-block ${side}`}>
@@ -231,9 +287,10 @@ export default function FriendsThreadClient({
                     ) : null}
 
                     <button
+                      type="button"
                       className={`friends-audio-bubble ${side}`}
                       onClick={() => toggleClip(msg.clip!)}
-                      aria-label={`Play ${msg.audio_label || msg.clip?.clip_title || "audio clip"}`}
+                      aria-label={`Play ${msg.audio_label || msg.clip.clip_title || "audio clip"}`}
                     >
                       <div className={`friends-audio-play ${playing ? "is-playing" : ""}`}>
                         {playing ? "❚❚" : "▶"}
