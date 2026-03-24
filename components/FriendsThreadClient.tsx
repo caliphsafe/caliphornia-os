@@ -75,13 +75,15 @@ export default function FriendsThreadClient({
     }
 
     function tick() {
+      const currentAudio = audioRef.current;
       const clipId = activeClipId;
-      if (!clipId) return;
+
+      if (!currentAudio || !clipId) return;
 
       const clip = clipsById.get(clipId);
       if (!clip || clip.end_seconds == null) return;
 
-      const current = audio.currentTime || 0;
+      const current = currentAudio.currentTime || 0;
       const start = clip.start_seconds || 0;
       const end = clip.end_seconds || 0;
       const duration = Math.max(0.001, end - start);
@@ -92,8 +94,8 @@ export default function FriendsThreadClient({
       setClipTimes((prev) => ({ ...prev, [clipId]: elapsed }));
 
       if (current >= end) {
-        audio.pause();
-        audio.currentTime = start;
+        currentAudio.pause();
+        currentAudio.currentTime = start;
         setIsPlaying(false);
         stopLoop();
         return;
