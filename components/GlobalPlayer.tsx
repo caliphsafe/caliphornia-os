@@ -434,4 +434,4 @@ export default function GlobalPlayer({ email }: Props) {
       </div>
     </>
   );
-}
+} 
