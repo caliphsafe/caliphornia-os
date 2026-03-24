@@ -309,11 +309,17 @@ export default function GlobalPlayer({ email }: Props) {
     if (!audio) return;
 
     function sync() {
-      setIsPlaying(!audio.paused);
+      const currentAudio = audioRef.current;
+      if (!currentAudio) return;
 
-      if (currentTrack?.clipEndSeconds != null && audio.currentTime >= currentTrack.clipEndSeconds) {
-        audio.pause();
-        audio.currentTime = currentTrack.clipEndSeconds;
+      setIsPlaying(!currentAudio.paused);
+
+      if (
+        currentTrack?.clipEndSeconds != null &&
+        currentAudio.currentTime >= currentTrack.clipEndSeconds
+      ) {
+        currentAudio.pause();
+        currentAudio.currentTime = currentTrack.clipEndSeconds;
       }
 
       broadcastState();
@@ -434,4 +440,4 @@ export default function GlobalPlayer({ email }: Props) {
       </div>
     </>
   );
-} 
+}
