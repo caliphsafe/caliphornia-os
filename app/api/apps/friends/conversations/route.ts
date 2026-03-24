@@ -41,9 +41,75 @@ export async function GET() {
       );
     }
 
+    const conversationIds = (conversations || []).map((c) => c.id);
+
+    if (!conversationIds.length) {
+      return NextResponse.json({
+        ok: true,
+        conversations: []
+      });
+    }
+
+    const { data: finalAssets, error: finalAssetsError } = await supabaseAdmin
+      .from("audio_assets")
+      .select(`
+        id,
+        conversation_id,
+        slug,
+        title,
+        storage_path,
+        is_final_version,
+        is_playlistable
+      `)
+      .in("conversation_id", conversationIds)
+      .eq("is_final_version", true)
+      .eq("is_playlistable", true);
+
+    if (finalAssetsError) {
+      return NextResponse.json(
+        { ok: false, error: finalAssetsError.message },
+        { status: 500 }
+      );
+    }
+
+    const finalTrackMap = new Map<string, any>();
+
+    for (const asset of finalAssets || []) {
+      if (!asset?.conversation_id || !asset?.storage_path) continue;
+
+      let signedUrl: string | null = null;
+
+      const { data: signed, error: signedError } = await supabaseAdmin.storage
+        .from("songs")
+        .createSignedUrl(asset.storage_path, 60 * 60);
+
+      if (!signedError) {
+        signedUrl = signed?.signedUrl || null;
+      }
+
+      finalTrackMap.set(asset.conversation_id, {
+        slug: asset.slug,
+        title: asset.title,
+        artist: null,
+        file: signedUrl,
+        playlist_song_slug: asset.slug,
+        analytics_song_slug: asset.slug
+      });
+    }
+
+    const normalizedConversations = (conversations || []).map((conversation) => ({
+      ...conversation,
+      final_track: finalTrackMap.has(conversation.id)
+        ? {
+            ...finalTrackMap.get(conversation.id),
+            artist: conversation.subtitle || null
+          }
+        : null
+    }));
+
     return NextResponse.json({
       ok: true,
-      conversations: conversations || []
+      conversations: normalizedConversations
     });
   } catch {
     return NextResponse.json(
