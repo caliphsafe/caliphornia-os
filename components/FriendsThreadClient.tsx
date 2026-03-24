@@ -1,7 +1,8 @@
+
 "use client";
 
 import Link from "next/link";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 
 type Clip = {
   id: string;
@@ -60,6 +61,8 @@ export default function FriendsThreadClient({
   const [clipProgress, setClipProgress] = useState<Record<string, number>>({});
   const [clipTimes, setClipTimes] = useState<Record<string, number>>({});
 
+  const messagesWrapRef = useRef<HTMLElement | null>(null);
+
   function formatTime(seconds: number) {
     const s = Math.max(0, Math.floor(seconds));
     const mm = Math.floor(s / 60);
@@ -92,6 +95,15 @@ export default function FriendsThreadClient({
     window.addEventListener("message", onPlayerState);
     return () => window.removeEventListener("message", onPlayerState);
   }, []);
+
+  useEffect(() => {
+    const el = messagesWrapRef.current;
+    if (!el) return;
+
+    requestAnimationFrame(() => {
+      el.scrollTop = el.scrollHeight;
+    });
+  }, [messages]);
 
   function playClip(msg: Message) {
     const clip = msg.clip;
@@ -279,7 +291,7 @@ export default function FriendsThreadClient({
           </div>
         </div>
 
-        <main className="friends-original-messages-wrap">
+        <main className="friends-original-messages-wrap" ref={messagesWrapRef}>
           <div className="friends-original-messages">
             {messages.map((msg) => {
               if (
