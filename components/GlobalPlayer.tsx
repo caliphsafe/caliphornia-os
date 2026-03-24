@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export type GlobalTrack = {
@@ -18,10 +19,29 @@ export type GlobalTrack = {
   clipEndSeconds?: number | null;
   playlistSongSlug?: string | null;
   analyticsSongSlug?: string | null;
+
+  sourceApp?: string | null;
+  conversationSlug?: string | null;
+  conversationRoute?: string | null;
+  isFriendsFinal?: boolean;
 };
 
 type Props = {
   email: string;
+};
+
+type FriendsConversationListItem = {
+  slug: string;
+  title?: string | null;
+  subtitle?: string | null;
+  final_track?: {
+    slug?: string | null;
+    title?: string | null;
+    artist?: string | null;
+    file?: string | null;
+    playlist_song_slug?: string | null;
+    analytics_song_slug?: string | null;
+  } | null;
 };
 
 function getTrackParts(title: string, artist?: string) {
@@ -130,7 +150,28 @@ function IconStar({ filled }: { filled: boolean }) {
   );
 }
 
+function normalizeFriendsFinalTrack(convo: FriendsConversationListItem): GlobalTrack | null {
+  const finalTrack = convo.final_track;
+  if (!finalTrack?.file) return null;
+
+  return {
+    slug: finalTrack.slug || `${convo.slug}-final`,
+    title: finalTrack.title || convo.title || convo.slug,
+    artist: finalTrack.artist || convo.subtitle || "",
+    displayTitle: convo.title || convo.slug,
+    description: "Final song",
+    file: finalTrack.file,
+    playlistSongSlug: finalTrack.playlist_song_slug || finalTrack.slug || null,
+    analyticsSongSlug: finalTrack.analytics_song_slug || finalTrack.playlist_song_slug || finalTrack.slug || null,
+    sourceApp: "friends",
+    conversationSlug: convo.slug,
+    conversationRoute: `/apps/friends/${convo.slug}`,
+    isFriendsFinal: true
+  };
+}
+
 export default function GlobalPlayer({ email }: Props) {
+  const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<GlobalTrack[]>([]);
@@ -139,6 +180,7 @@ export default function GlobalPlayer({ email }: Props) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [friendsFinalQueue, setFriendsFinalQueue] = useState<GlobalTrack[]>([]);
 
   const currentTrack = useMemo(() => {
     if (currentIndex < 0 || currentIndex >= queue.length) return null;
@@ -151,6 +193,27 @@ export default function GlobalPlayer({ email }: Props) {
       currentTrack?.artist
     );
   }, [currentTrack]);
+
+  async function loadFriendsFinalQueue() {
+    try {
+      const res = await fetch("/api/apps/friends/conversations", {
+        cache: "no-store"
+      });
+
+      const data = await res.json();
+      const conversations = Array.isArray(data?.conversations) ? data.conversations : [];
+
+      const normalized = conversations
+        .map((convo: FriendsConversationListItem) => normalizeFriendsFinalTrack(convo))
+        .filter(Boolean) as GlobalTrack[];
+
+      setFriendsFinalQueue(normalized);
+      return normalized;
+    } catch (error) {
+      console.error("Failed to load Friends final queue", error);
+      return [];
+    }
+  }
 
   function broadcastState() {
     const audio = audioRef.current;
@@ -175,7 +238,9 @@ export default function GlobalPlayer({ email }: Props) {
       duration: audio?.duration || 0,
       clipElapsed: elapsed,
       clipDuration,
-      clipProgress: clipDuration > 0 ? Math.min(1, elapsed / clipDuration) : 0
+      clipProgress: clipDuration > 0 ? Math.min(1, elapsed / clipDuration) : 0,
+      sourceApp: currentTrack?.sourceApp || null,
+      conversationSlug: currentTrack?.conversationSlug || null
     };
 
     window.postMessage(payload, "*");
@@ -302,7 +367,13 @@ export default function GlobalPlayer({ email }: Props) {
         })
       });
     }
-  }, [currentTrack, email]);
+
+    if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
+      if (window.location.pathname !== currentTrack.conversationRoute) {
+        router.push(currentTrack.conversationRoute);
+      }
+    }
+  }, [currentTrack, email, router]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -340,13 +411,63 @@ export default function GlobalPlayer({ email }: Props) {
     };
   }, [currentTrack]);
 
-  function playPrev() {
+  async function playPrev() {
+    if (!currentTrack) return;
+
+    if (currentTrack.sourceApp === "friends") {
+      const finals = friendsFinalQueue.length ? friendsFinalQueue : await loadFriendsFinalQueue();
+      if (!finals.length) return;
+
+      const currentConversationSlug =
+        currentTrack.conversationSlug ||
+        currentTrack.playlistSongSlug ||
+        currentTrack.slug;
+
+      const currentFinalIndex = finals.findIndex(
+        (track) => track.conversationSlug === currentConversationSlug
+      );
+
+      const nextFinalIndex =
+        currentFinalIndex <= 0 ? finals.length - 1 : currentFinalIndex - 1;
+
+      setQueue(finals);
+      setCurrentIndex(nextFinalIndex);
+      setIsVisible(true);
+      setIsExpanded(true);
+      return;
+    }
+
     if (!queue.length) return;
     const next = currentIndex <= 0 ? queue.length - 1 : currentIndex - 1;
     setCurrentIndex(next);
   }
 
-  function playNext() {
+  async function playNext() {
+    if (!currentTrack) return;
+
+    if (currentTrack.sourceApp === "friends") {
+      const finals = friendsFinalQueue.length ? friendsFinalQueue : await loadFriendsFinalQueue();
+      if (!finals.length) return;
+
+      const currentConversationSlug =
+        currentTrack.conversationSlug ||
+        currentTrack.playlistSongSlug ||
+        currentTrack.slug;
+
+      const currentFinalIndex = finals.findIndex(
+        (track) => track.conversationSlug === currentConversationSlug
+      );
+
+      const nextFinalIndex =
+        currentFinalIndex >= finals.length - 1 || currentFinalIndex === -1 ? 0 : currentFinalIndex + 1;
+
+      setQueue(finals);
+      setCurrentIndex(nextFinalIndex);
+      setIsVisible(true);
+      setIsExpanded(true);
+      return;
+    }
+
     if (!queue.length) return;
     const next = currentIndex >= queue.length - 1 ? 0 : currentIndex + 1;
     setCurrentIndex(next);
