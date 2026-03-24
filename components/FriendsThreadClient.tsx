@@ -1,4 +1,3 @@
-
 "use client";
 
 import Link from "next/link";
@@ -100,10 +99,34 @@ export default function FriendsThreadClient({
     const el = messagesWrapRef.current;
     if (!el) return;
 
-    requestAnimationFrame(() => {
-      el.scrollTop = el.scrollHeight;
+    let cancelled = false;
+
+    const scrollToBottom = () => {
+      if (cancelled || !messagesWrapRef.current) return;
+      messagesWrapRef.current.scrollTop = messagesWrapRef.current.scrollHeight;
+    };
+
+    scrollToBottom();
+
+    const raf1 = requestAnimationFrame(() => {
+      scrollToBottom();
+
+      const raf2 = requestAnimationFrame(() => {
+        scrollToBottom();
+      });
+
+      setTimeout(scrollToBottom, 0);
+      setTimeout(scrollToBottom, 80);
+      setTimeout(scrollToBottom, 180);
+
+      return () => cancelAnimationFrame(raf2);
     });
-  }, [messages]);
+
+    return () => {
+      cancelled = true;
+      cancelAnimationFrame(raf1);
+    };
+  }, [conversation.slug, messages.length]);
 
   function playClip(msg: Message) {
     const clip = msg.clip;
