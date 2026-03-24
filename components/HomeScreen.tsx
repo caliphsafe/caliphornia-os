@@ -39,8 +39,11 @@ export default function HomeScreen({ email }: { email: string }) {
           </div>
         </section>
 
-        <section className="widget-row">
-  <a href={`/apps/music?email=${encodeURIComponent(email)}`} className="widget-card widget-now-playing">
+       <section className="widget-row">
+  <a
+    href={`/apps/music?email=${encodeURIComponent(email)}`}
+    className="widget-card widget-now-playing"
+  >
     <div className="widget-label">Library</div>
     <div className="widget-title">Music</div>
     <div className="widget-subtitle">Build personal playlists across projects</div>
