@@ -320,7 +320,7 @@ export default function FriendsThreadClient({
               return renderText(msg);
             })}
 
-            <div ref={bottomAnchorRef} style={{ height: 1 }} />
+            <div ref={bottomAnchorRef} style={{ height: 120 }} />
           </div>
         </main>
 
