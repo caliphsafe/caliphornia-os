@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
-import type { GlobalTrack } from "@/components/GlobalPlayer";
 
 type MusicSong = {
   favorite_id: string;
@@ -13,6 +12,18 @@ type MusicSong = {
   artist: string;
   cover_image: string | null;
   file: string | null;
+};
+
+type GlobalTrack = {
+  slug?: string | null;
+  title: string;
+  artist?: string;
+  displayTitle?: string;
+  description?: string;
+  file: string;
+  playlistSongSlug?: string | null;
+  analyticsSongSlug?: string | null;
+  sourceApp?: string | null;
 };
 
 type Props = {
@@ -111,7 +122,11 @@ export default function MusicLibraryClient({ email }: Props) {
   return (
     <div className="music-app-shell">
       <div className="music-top-chrome">
-        <Link href="/home" className="music-nav-round" aria-label="Back">
+        <Link
+          href={`/home?email=${encodeURIComponent(email)}`}
+          className="music-nav-round"
+          aria-label="Back"
+        >
           <span className="music-back-chevron" />
         </Link>
 
@@ -162,12 +177,10 @@ export default function MusicLibraryClient({ email }: Props) {
 
         <section className="music-list-section">
           {loading ? (
-            <div className="music-empty-state">
-              Loading your library...
-            </div>
+            <div className="music-empty-state">Loading your library...</div>
           ) : !songs.length ? (
             <div className="music-empty-state">
-              This is where your favorited songs will live.
+              This is where the favorited songs will live.
             </div>
           ) : (
             <div className="music-song-list">
