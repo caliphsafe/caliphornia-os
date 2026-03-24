@@ -6,26 +6,39 @@ export type GlobalTrack = {
   id?: string | null;
   slug?: string | null;
   title: string;
+  artist?: string;
+  displayTitle?: string;
   date?: string;
   duration?: string;
   file: string;
   transcript?: string;
   description?: string;
+  clipId?: string | null;
+  clipStartSeconds?: number | null;
+  clipEndSeconds?: number | null;
+  playlistSongSlug?: string | null;
+  analyticsSongSlug?: string | null;
 };
 
 type Props = {
   email: string;
 };
 
-function getTrackParts(title: string) {
+function getTrackParts(title: string, artist?: string) {
+  if (artist && artist.trim()) {
+    return { artist: artist.trim(), song: String(title || "").trim() };
+  }
+
   const raw = String(title || "").trim();
   const parts = raw.split(/\s*-\s*/);
+
   if (parts.length >= 2) {
     return {
       artist: parts[0].trim(),
       song: parts.slice(1).join(" - ").trim()
     };
   }
+
   return {
     artist: "Caliph",
     song: raw
@@ -133,18 +146,39 @@ export default function GlobalPlayer({ email }: Props) {
   }, [queue, currentIndex]);
 
   const trackParts = useMemo(() => {
-    return getTrackParts(currentTrack?.title || "");
+    return getTrackParts(
+      currentTrack?.displayTitle || currentTrack?.title || "",
+      currentTrack?.artist
+    );
   }, [currentTrack]);
 
   function broadcastState() {
     const audio = audioRef.current;
+    const start = currentTrack?.clipStartSeconds || 0;
+    const end = currentTrack?.clipEndSeconds ?? null;
+    const current = audio?.currentTime || 0;
+    const elapsed = Math.max(0, current - start);
+    const clipDuration =
+      end != null
+        ? Math.max(0, end - start)
+        : audio?.duration && Number.isFinite(audio.duration)
+          ? Math.max(0, audio.duration - start)
+          : 0;
+
     const payload = {
       type: "CALIPH_PLAYER_STATE",
       slug: currentTrack?.slug || null,
+      clipId: currentTrack?.clipId || null,
+      playlistSongSlug: currentTrack?.playlistSongSlug || null,
       isPlaying: audio ? !audio.paused : false,
-      currentTime: audio?.currentTime || 0,
-      duration: audio?.duration || 0
+      currentTime: current,
+      duration: audio?.duration || 0,
+      clipElapsed: elapsed,
+      clipDuration,
+      clipProgress: clipDuration > 0 ? Math.min(1, elapsed / clipDuration) : 0
     };
+
+    window.postMessage(payload, "*");
 
     document.querySelectorAll("iframe").forEach((frame) => {
       frame.contentWindow?.postMessage(payload, "*");
@@ -176,9 +210,8 @@ export default function GlobalPlayer({ email }: Props) {
         const same =
           currentTrack &&
           incoming &&
-          currentTrack.slug &&
-          incoming.slug &&
-          currentTrack.slug === incoming.slug;
+          ((currentTrack.clipId && incoming.clipId && currentTrack.clipId === incoming.clipId) ||
+            (currentTrack.slug && incoming.slug && currentTrack.slug === incoming.slug));
 
         if (same && audioRef.current) {
           if (audioRef.current.paused) {
@@ -217,50 +250,80 @@ export default function GlobalPlayer({ email }: Props) {
   }, [currentTrack]);
 
   useEffect(() => {
-    if (!audioRef.current || !currentTrack?.file) return;
-
     const audio = audioRef.current;
-    audio.src = currentTrack.file;
-    audio.load();
-    audio.play().catch(() => {});
+    if (!audio || !currentTrack?.file) return;
+
+    const start = currentTrack.clipStartSeconds || 0;
+    const sameSrc = audio.src === currentTrack.file;
+
+    const beginPlayback = async () => {
+      try {
+        audio.currentTime = start;
+      } catch {}
+
+      audio.play().catch(() => {});
+      setIsVisible(true);
+      setIsExpanded(true);
+      setTimeout(() => broadcastState(), 50);
+    };
+
+    if (!sameSrc) {
+      audio.pause();
+      audio.src = currentTrack.file;
+      audio.load();
+
+      const onCanPlay = async () => {
+        audio.removeEventListener("canplay", onCanPlay);
+        await beginPlayback();
+      };
+
+      audio.addEventListener("canplay", onCanPlay, { once: true });
+    } else {
+      void beginPlayback();
+    }
+
     setIsSaved(false);
-    setIsVisible(true);
-    setIsExpanded(true);
 
-    void fetch("/api/events/song-play", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        userEmail: email,
-        songSlug: currentTrack.slug || null,
-        sourcePath: window.location.pathname
-      })
-    });
+    const analyticsSlug =
+      currentTrack.analyticsSongSlug ||
+      currentTrack.playlistSongSlug ||
+      currentTrack.slug;
 
-    setTimeout(() => broadcastState(), 50);
+    if (analyticsSlug) {
+      void fetch("/api/events/song-play", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userEmail: email,
+          songSlug: analyticsSlug,
+          sourcePath: window.location.pathname
+        })
+      });
+    }
   }, [currentTrack, email]);
 
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
 
-    const sync = () => {
+    function sync() {
       setIsPlaying(!audio.paused);
-      broadcastState();
-    };
 
-    const onEnded = () => {
-      playNext();
-    };
+      if (currentTrack?.clipEndSeconds != null && audio.currentTime >= currentTrack.clipEndSeconds) {
+        audio.pause();
+        audio.currentTime = currentTrack.clipEndSeconds;
+      }
+
+      broadcastState();
+    }
 
     audio.addEventListener("play", sync);
     audio.addEventListener("pause", sync);
     audio.addEventListener("timeupdate", sync);
     audio.addEventListener("loadedmetadata", sync);
     audio.addEventListener("seeked", sync);
-    audio.addEventListener("ended", onEnded);
 
     return () => {
       audio.removeEventListener("play", sync);
@@ -268,9 +331,8 @@ export default function GlobalPlayer({ email }: Props) {
       audio.removeEventListener("timeupdate", sync);
       audio.removeEventListener("loadedmetadata", sync);
       audio.removeEventListener("seeked", sync);
-      audio.removeEventListener("ended", onEnded);
     };
-  }, [currentTrack, queue, currentIndex]);
+  }, [currentTrack]);
 
   function playPrev() {
     if (!queue.length) return;
@@ -285,7 +347,8 @@ export default function GlobalPlayer({ email }: Props) {
   }
 
   async function togglePlaylistSave() {
-    if (!currentTrack?.slug) return;
+    const targetSlug = currentTrack?.playlistSongSlug || currentTrack?.slug;
+    if (!targetSlug) return;
 
     const res = await fetch("/api/playlists/toggle-favorite", {
       method: "POST",
@@ -294,7 +357,7 @@ export default function GlobalPlayer({ email }: Props) {
       },
       body: JSON.stringify({
         userEmail: email,
-        songSlug: currentTrack.slug
+        songSlug: targetSlug
       })
     });
 
@@ -326,7 +389,11 @@ export default function GlobalPlayer({ email }: Props) {
               </div>
 
               <div className="global-player-controls">
-                <button onClick={togglePlaylistSave} className={`gp-btn gp-btn-star ${isSaved ? "is-saved" : ""}`} aria-label="Add to favorites">
+                <button
+                  onClick={togglePlaylistSave}
+                  className={`gp-btn gp-btn-star ${isSaved ? "is-saved" : ""}`}
+                  aria-label="Add to favorites"
+                >
                   <IconStar filled={isSaved} />
                 </button>
 
