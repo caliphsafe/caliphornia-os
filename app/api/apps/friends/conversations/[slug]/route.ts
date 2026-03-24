@@ -77,19 +77,29 @@ export async function GET(
 
     const normalizedMessages = await Promise.all(
       (messages || []).map(async (msg: any) => {
-        const clip = Array.isArray(msg.message_audio_clips) ? msg.message_audio_clips[0] : null;
+        const clip = Array.isArray(msg.message_audio_clips)
+          ? msg.message_audio_clips[0]
+          : null;
+
         const asset = clip?.audio_assets
           ? (Array.isArray(clip.audio_assets) ? clip.audio_assets[0] : clip.audio_assets)
           : null;
 
         let signedUrl: string | null = null;
+        let signingError: string | null = null;
 
         if (asset?.storage_path) {
-          const { data: signed } = await supabaseAdmin.storage
+          const { data: signed, error: signedError } = await supabaseAdmin.storage
             .from("songs")
             .createSignedUrl(asset.storage_path, 60 * 60);
 
-          signedUrl = signed?.signedUrl || null;
+          if (signedError) {
+            signingError = signedError.message;
+          } else {
+            signedUrl = signed?.signedUrl || null;
+          }
+        } else if (asset) {
+          signingError = "Missing storage_path on audio asset.";
         }
 
         return {
@@ -111,11 +121,13 @@ export async function GET(
                 end_seconds: clip.end_seconds != null ? Number(clip.end_seconds) : null,
                 display_duration: clip.display_duration,
                 file: signedUrl,
+                signing_error: signingError,
                 asset: asset
                   ? {
                       id: asset.id,
                       slug: asset.slug,
                       title: asset.title,
+                      storage_path: asset.storage_path,
                       version_label: asset.version_label,
                       is_final_version: asset.is_final_version,
                       is_playlistable: asset.is_playlistable,
