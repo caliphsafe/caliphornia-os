@@ -1700,9 +1700,16 @@ img {
     background: #000;
   }
 
+  .friends-original-topbar,
+  .friends-original-inbox-header,
   .friends-original-thread-list,
-  .friends-original-messages-wrap {
-    max-width: 100%;
+  .friends-original-bottombar,
+  .friends-original-thread-topbar,
+  .friends-original-messages-wrap,
+  .friends-original-message-composer {
+    width: min(100%, 430px);
+    margin-left: auto;
+    margin-right: auto;
   }
 
   .friends-original-message-bubble {
