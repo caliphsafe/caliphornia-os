@@ -1118,7 +1118,7 @@ img {
   cursor: pointer;
 }
 
-/* FRI.ENDS THREAD STYLING */
+/* ORIGINAL FRI.ENDS THREAD UI */
 
 .friends-thread-screen {
   min-height: 100vh;
@@ -1138,34 +1138,87 @@ img {
   background: #000;
 }
 
-.friends-thread-header {
-  position: sticky;
-  top: 0;
-  z-index: 20;
+.app-shell {
+  position: relative;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  background: #000;
+  overflow: hidden;
+}
+
+.screen {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  background: #000;
+  opacity: 0;
+  pointer-events: none;
+  transform: translateX(18px);
+  transition:
+    transform 0.28s ease,
+    opacity 0.28s ease;
+}
+
+.screen.is-active {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateX(0);
+}
+
+.screen-thread {
+  transform: translateX(0);
+}
+
+.top-safe {
+  padding-top: calc(10px + env(safe-area-inset-top, 0px));
+}
+
+.bottom-safe {
+  padding-bottom: calc(10px + env(safe-area-inset-bottom, 0px));
+}
+
+.thread-topbar {
   display: grid;
   grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
+  padding-left: 12px;
+  padding-right: 12px;
   min-height: 72px;
-  padding: 0 12px;
   border-bottom: 1px solid rgba(255,255,255,0.05);
   background: rgba(0,0,0,0.78);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
 }
 
-.friends-thread-back {
+.back-btn {
   display: inline-flex;
   align-items: center;
+  gap: 4px;
   min-height: 44px;
   color: #4da2ff;
   font-size: 18px;
   font-weight: 400;
+  padding: 0 2px;
   text-decoration: none;
+}
+
+.back-chevron {
+  width: 12px;
+  height: 12px;
+  border-left: 2px solid #4da2ff;
+  border-bottom: 2px solid #4da2ff;
+  transform: rotate(45deg);
+  margin-right: 2px;
+}
+
+.back-text {
   white-space: nowrap;
 }
 
-.friends-thread-center {
+.thread-header-meta {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1173,9 +1226,9 @@ img {
   min-width: 0;
 }
 
-.friends-thread-avatar {
-  width: 34px;
-  height: 34px;
+.thread-avatar {
+  width: 52px;
+  height: 52px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 30% 25%, rgba(255,255,255,0.15), transparent 45%),
@@ -1184,19 +1237,25 @@ img {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 15px;
+  font-size: 22px;
   font-weight: 700;
   letter-spacing: -0.03em;
-  flex: 0 0 auto;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
-.friends-thread-meta {
+.thread-avatar--header {
+  width: 34px;
+  height: 34px;
+  font-size: 15px;
+  flex: 0 0 auto;
+}
+
+.thread-header-text {
   min-width: 0;
   text-align: center;
 }
 
-.friends-thread-title {
+.thread-header-title {
   font-size: 16px;
   line-height: 1.1;
   font-weight: 700;
@@ -1205,7 +1264,7 @@ img {
   text-overflow: ellipsis;
 }
 
-.friends-thread-subtitle {
+.thread-header-subtitle {
   margin-top: 2px;
   font-size: 12px;
   line-height: 1.1;
@@ -1215,79 +1274,124 @@ img {
   text-overflow: ellipsis;
 }
 
-.friends-thread-actions {
+.thread-actions {
   display: flex;
   align-items: center;
   gap: 8px;
 }
 
-.friends-thread-action {
+.circle-icon-btn {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 0;
   background: rgba(31,140,255,0.14);
-  color: #59a9ff;
-  font-size: 15px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  border: 0;
 }
 
-.friends-thread-messages {
+.phone-icon,
+.video-icon {
+  display: inline-block;
+  position: relative;
+}
+
+.phone-icon {
+  width: 12px;
+  height: 12px;
+  border: 2px solid #59a9ff;
+  border-radius: 4px;
+  transform: rotate(45deg);
+  border-top-color: transparent;
+  border-left-color: transparent;
+}
+
+.video-icon {
+  width: 14px;
+  height: 10px;
+  border: 2px solid #59a9ff;
+  border-radius: 3px;
+}
+
+.video-icon::after {
+  content: "";
+  position: absolute;
+  right: -5px;
+  top: 1px;
+  width: 0;
+  height: 0;
+  border-left: 5px solid #59a9ff;
+  border-top: 3px solid transparent;
+  border-bottom: 3px solid transparent;
+}
+
+.messages-wrap {
   flex: 1;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
   padding: 14px 12px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 10px;
   background:
     radial-gradient(circle at top, rgba(255,255,255,0.02), transparent 30%),
     #000;
 }
 
-.friends-thread-messages::-webkit-scrollbar {
+.messages-wrap::-webkit-scrollbar {
   width: 0;
   height: 0;
 }
 
-.friends-center-line {
+.messages {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  width: 100%;
+  max-width: 860px;
+  margin: 0 auto;
+}
+
+.timestamp {
   align-self: center;
   font-size: 12px;
   line-height: 1.2;
   color: #7d7d85;
   margin: 8px 0 2px;
-  text-align: center;
 }
 
-.friends-message-block {
+.message-row {
   display: flex;
   width: 100%;
+}
+
+.message-row.incoming {
+  justify-content: flex-start;
+}
+
+.message-row.outgoing {
+  justify-content: flex-end;
+}
+
+.message-group {
+  display: inline-flex;
   flex-direction: column;
-  gap: 2px;
-}
-
-.friends-message-block.incoming {
   align-items: flex-start;
+  width: auto;
+  max-width: min(82%, 480px);
+  min-width: 0;
 }
 
-.friends-message-block.outgoing {
+.message-row.outgoing .message-group {
   align-items: flex-end;
 }
 
-.friends-sender-label {
-  font-size: 13px;
-  line-height: 1.1;
-  color: #9b9ba3;
-  margin: 2px 0 6px 10px;
-  padding-left: 0;
+.message-row.incoming .message-group {
+  align-items: flex-start;
 }
 
-.friends-bubble {
+.message-bubble {
   display: inline-block;
   width: auto;
-  max-width: min(82%, 480px);
+  max-width: 100%;
   min-width: 0;
   padding: 12px 16px;
   border-radius: 22px;
@@ -1299,109 +1403,94 @@ img {
   overflow-wrap: normal;
 }
 
-.friends-bubble.incoming {
+.message-row.incoming .message-bubble {
   background: #272730;
   color: #fff;
   border-bottom-left-radius: 8px;
 }
 
-.friends-bubble.outgoing {
+.message-row.outgoing .message-bubble {
   background: #1f8cff;
   color: #fff;
   border-bottom-right-radius: 8px;
 }
 
-/* audio bubble matches original layout more closely */
-.friends-audio-bubble {
+.message-label {
+  font-size: 13px;
+  line-height: 1.1;
+  color: #9b9ba3;
+  margin: 2px 0 6px 10px;
+}
+
+.audio-card {
   min-width: 250px;
   max-width: min(82vw, 460px);
-  width: auto;
-  border: 0;
-  text-align: left;
   border-radius: 24px;
   padding: 16px 16px 14px;
   box-shadow: 0 12px 30px rgba(0,0,0,0.26);
-  display: grid;
-  grid-template-columns: 42px 1fr auto;
-  grid-template-rows: 34px auto;
-  column-gap: 12px;
-  row-gap: 10px;
-  cursor: pointer;
+  border: 0;
+  text-align: left;
 }
 
-.friends-audio-bubble.incoming {
+.message-row.incoming .audio-card {
   background: #24242d;
   border-bottom-left-radius: 8px;
-  color: #fff;
 }
 
-.friends-audio-bubble.outgoing {
+.message-row.outgoing .audio-card {
   background: #1f8cff;
   border-bottom-right-radius: 8px;
-  color: #fff;
 }
 
-.friends-audio-bubble.is-playing {
-  box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 12px 30px rgba(0,0,0,0.26);
+.audio-card-top {
+  display: flex;
+  align-items: center;
+  gap: 14px;
 }
 
-.friends-audio-play {
-  grid-column: 1;
-  grid-row: 1;
+.audio-play {
+  flex: 0 0 auto;
   width: 42px;
   height: 42px;
   border-radius: 50%;
   background: rgba(255,255,255,0.14);
+  position: relative;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  font-size: 16px;
-  line-height: 1;
-  color: #fff;
-  align-self: start;
 }
 
-.friends-audio-bubble.incoming .friends-audio-play {
+.audio-play::before {
+  content: "";
+  width: 0;
+  height: 0;
+  border-left: 12px solid #fff;
+  border-top: 8px solid transparent;
+  border-bottom: 8px solid transparent;
+  margin-left: 3px;
+}
+
+.message-row.incoming .audio-play {
   background: #1f8cff;
 }
 
-.friends-audio-play.is-playing {
-  font-size: 14px;
-}
-
-.friends-audio-wave-wrap {
-  grid-column: 2 / 4;
-  grid-row: 1;
+.wave-wrap {
+  flex: 1;
   min-width: 0;
-  position: relative;
   display: flex;
   align-items: center;
-  height: 34px;
-  overflow: hidden;
-  padding-left: 2px;
+  gap: 12px;
 }
 
-.friends-audio-wave-progress {
-  position: absolute;
-  left: 0;
-  top: 0;
-  bottom: 0;
-  background: rgba(255,255,255,0.12);
-  border-radius: 999px;
-  pointer-events: none;
-}
-
-.friends-audio-wave {
-  position: relative;
-  z-index: 1;
-  width: 100%;
+.waveform {
+  flex: 1;
   height: 34px;
   display: flex;
   align-items: center;
   gap: 3px;
 }
 
-.friends-audio-bar {
+.waveform span {
   display: block;
   width: 3px;
   border-radius: 999px;
@@ -1409,67 +1498,61 @@ img {
   transition: background-color 0.12s ease, opacity 0.12s ease;
 }
 
-.friends-audio-time {
-  position: absolute;
-  right: 0;
-  top: 50%;
-  transform: translateY(-50%);
-  font-size: 16px;
-  color: rgba(255,255,255,0.82);
-  padding-left: 10px;
-  background: transparent;
+.waveform span.is-played {
+  background: rgba(255,255,255,0.96);
 }
 
-.friends-audio-bubble.incoming .friends-audio-time {
+.audio-duration {
+  flex: 0 0 auto;
+  font-size: 16px;
+  color: rgba(255,255,255,0.82);
+}
+
+.message-row.incoming .audio-duration {
   color: rgba(255,255,255,0.78);
 }
 
-.friends-audio-meta {
-  grid-column: 2 / 4;
-  grid-row: 2;
+.audio-meta {
+  margin-top: 10px;
+  padding-left: 56px;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 10px;
-  padding-left: 0;
 }
 
-.friends-audio-label {
+.audio-file-name {
   font-size: 14px;
   color: rgba(255,255,255,0.88);
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  max-width: 62%;
 }
 
-.friends-audio-kind {
+.audio-kind {
   font-size: 12px;
   color: rgba(255,255,255,0.58);
   text-transform: uppercase;
   letter-spacing: 0.06em;
-  text-align: right;
-  flex: 0 0 auto;
 }
 
-.friends-thread-inputbar {
-  position: sticky;
-  bottom: 0;
+.message-composer {
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 10px 12px calc(10px + env(safe-area-inset-bottom, 0px));
+  padding-left: 12px;
+  padding-right: 12px;
+  padding-top: 10px;
   background:
     linear-gradient(to top, rgba(0,0,0,0.92), rgba(0,0,0,0.76), rgba(0,0,0,0));
   backdrop-filter: blur(16px);
   -webkit-backdrop-filter: blur(16px);
 }
 
-.friends-plus-btn {
+.composer-plus {
   width: 36px;
   height: 36px;
   border-radius: 50%;
-  border: 0;
   background: #212127;
   color: #fff;
   display: inline-flex;
@@ -1477,9 +1560,10 @@ img {
   justify-content: center;
   font-size: 28px;
   line-height: 1;
+  border: 0;
 }
 
-.friends-input-pill {
+.composer-input-wrap {
   flex: 1;
   min-height: 44px;
   border-radius: 999px;
@@ -1487,43 +1571,89 @@ img {
   border: 1px solid rgba(255,255,255,0.06);
   display: flex;
   align-items: center;
-  justify-content: space-between;
   padding: 0 14px 0 16px;
 }
 
-.friends-input-placeholder {
+.composer-input {
   flex: 1;
   color: rgba(255,255,255,0.38);
   font-size: 18px;
 }
 
-.friends-input-mic {
+.composer-mic {
   width: 28px;
   height: 28px;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  color: rgba(255,255,255,0.85);
-  font-size: 18px;
+  border: 0;
+  background: transparent;
+}
+
+.mini-mic {
+  width: 10px;
+  height: 14px;
+  border: 2px solid #fff;
+  border-radius: 8px;
+  opacity: 0.85;
+  position: relative;
+}
+
+.mini-mic::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -4px;
+  width: 10px;
+  height: 2px;
+  background: #fff;
+  transform: translateX(-50%);
+  border-radius: 2px;
+}
+
+.mini-mic::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  bottom: -7px;
+  width: 2px;
+  height: 4px;
+  background: #fff;
+  transform: translateX(-50%);
+}
+
+.audio-card.is-playing {
+  box-shadow: 0 0 0 1px rgba(255,255,255,0.16), 0 12px 30px rgba(0,0,0,0.26);
+}
+
+.audio-card.is-playing .audio-play::before {
+  width: 10px;
+  height: 14px;
+  border-left: 4px solid #fff;
+  border-right: 4px solid #fff;
+  border-top: 0;
+  border-bottom: 0;
+  margin-left: 0;
 }
 
 @media (min-width: 768px) {
-  .friends-thread-shell {
+  .app-shell {
     max-width: 430px;
+    margin: 0 auto;
     box-shadow: 0 0 0 1px rgba(255,255,255,0.06);
   }
 
-  .friends-bubble {
+  .message-bubble {
     font-size: 19px;
   }
 }
 
 @media (max-width: 380px) {
-  .friends-bubble {
+  .message-bubble {
     font-size: 17px;
   }
 
-  .friends-audio-bubble {
+  .audio-card {
     min-width: 230px;
   }
 }
