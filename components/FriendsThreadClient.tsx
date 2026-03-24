@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Clip = {
   id: string;
@@ -60,7 +60,7 @@ export default function FriendsThreadClient({
   const [clipProgress, setClipProgress] = useState<Record<string, number>>({});
   const [clipTimes, setClipTimes] = useState<Record<string, number>>({});
 
-  const messagesWrapRef = useRef<HTMLElement | null>(null);
+  const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
 
   function formatTime(seconds: number) {
     const s = Math.max(0, Math.floor(seconds));
@@ -95,36 +95,24 @@ export default function FriendsThreadClient({
     return () => window.removeEventListener("message", onPlayerState);
   }, []);
 
-  useEffect(() => {
-    const el = messagesWrapRef.current;
-    if (!el) return;
-
-    let cancelled = false;
-
+  useLayoutEffect(() => {
     const scrollToBottom = () => {
-      if (cancelled || !messagesWrapRef.current) return;
-      messagesWrapRef.current.scrollTop = messagesWrapRef.current.scrollHeight;
+      bottomAnchorRef.current?.scrollIntoView({
+        block: "end",
+        behavior: "auto"
+      });
     };
 
     scrollToBottom();
 
-    const raf1 = requestAnimationFrame(() => {
-      scrollToBottom();
-
-      const raf2 = requestAnimationFrame(() => {
-        scrollToBottom();
-      });
-
-      setTimeout(scrollToBottom, 0);
-      setTimeout(scrollToBottom, 80);
-      setTimeout(scrollToBottom, 180);
-
-      return () => cancelAnimationFrame(raf2);
-    });
+    const t1 = window.setTimeout(scrollToBottom, 0);
+    const t2 = window.setTimeout(scrollToBottom, 60);
+    const t3 = window.setTimeout(scrollToBottom, 180);
 
     return () => {
-      cancelled = true;
-      cancelAnimationFrame(raf1);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
+      window.clearTimeout(t3);
     };
   }, [conversation.slug, messages.length]);
 
@@ -314,7 +302,7 @@ export default function FriendsThreadClient({
           </div>
         </div>
 
-        <main className="friends-original-messages-wrap" ref={messagesWrapRef}>
+        <main className="friends-original-messages-wrap">
           <div className="friends-original-messages">
             {messages.map((msg) => {
               if (
@@ -331,6 +319,8 @@ export default function FriendsThreadClient({
 
               return renderText(msg);
             })}
+
+            <div ref={bottomAnchorRef} style={{ height: 1 }} />
           </div>
         </main>
 
