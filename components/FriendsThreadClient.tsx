@@ -330,11 +330,15 @@ export default function FriendsThreadClient({
 
         <div className="friends-original-message-composer bottom-safe">
           <button
-            className="friends-original-composer-plus"
+            className="friends-original-composer-plus friends-original-circle-btn"
             type="button"
             aria-label="Add"
           >
-            <span>+</span>
+            <img
+              src="/apps/friends/plus.png"
+              alt="Add"
+              className="friends-compose-icon"
+            />
           </button>
 
           <div className="friends-original-composer-input-wrap">
@@ -344,7 +348,11 @@ export default function FriendsThreadClient({
               type="button"
               aria-label="Voice message"
             >
-              <span className="friends-original-mini-mic"></span>
+              <img
+                src="/apps/friends/mic_convo.png"
+                alt="Mic"
+                className="friends-convo-mic-icon"
+              />
             </button>
           </div>
         </div>
