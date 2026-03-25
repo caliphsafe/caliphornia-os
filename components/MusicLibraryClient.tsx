@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 
 type MusicSong = {
@@ -24,7 +24,6 @@ type GlobalTrack = {
   playlistSongSlug?: string | null;
   analyticsSongSlug?: string | null;
   sourceApp?: string | null;
-  resumeSeconds?: number | null;
 };
 
 type Props = {
@@ -44,47 +43,12 @@ function stripCaliphPrefix(title: string) {
   return String(title || "").replace(/^CALIPH\s*-\s*/i, "").trim();
 }
 
-function formatTime(seconds: number) {
-  const safe = Math.max(0, Math.floor(seconds || 0));
-  const mm = Math.floor(safe / 60);
-  const ss = safe % 60;
-  return `${mm}:${String(ss).padStart(2, "0")}`;
-}
-
-function MarqueeText({
-  text,
-  active = false
-}: {
-  text: string;
-  active?: boolean;
-}) {
-  const shouldMarquee = active && text.length > 22;
-
-  if (!shouldMarquee) {
-    return <span className="music-ellipsis">{text}</span>;
-  }
-
-  return (
-    <span className="music-marquee-shell">
-      <span className="music-marquee-track">
-        <span>{text}</span>
-        <span aria-hidden="true">{text}</span>
-      </span>
-    </span>
-  );
-}
-
 export default function MusicLibraryClient({ email }: Props) {
   const router = useRouter();
-  const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [songs, setSongs] = useState<MusicSong[]>([]);
   const [loading, setLoading] = useState(true);
-
-  const [localQueue, setLocalQueue] = useState<MusicSong[]>([]);
-  const [currentIndex, setCurrentIndex] = useState<number>(-1);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [currentTime, setCurrentTime] = useState(0);
+  const [activeSongSlug, setActiveSongSlug] = useState<string | null>(null);
 
   useEffect(() => {
     async function loadFavorites() {
@@ -118,13 +82,30 @@ export default function MusicLibraryClient({ email }: Props) {
     void loadFavorites();
   }, [email]);
 
-  const currentSong = useMemo(() => {
-    if (currentIndex < 0 || currentIndex >= localQueue.length) return null;
-    return localQueue[currentIndex];
-  }, [localQueue, currentIndex]);
+  useEffect(() => {
+    function onPlayerState(event: MessageEvent) {
+      const data = event.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type !== "CALIPH_PLAYER_STATE") return;
 
-  const globalQueue = useMemo<GlobalTrack[]>(() => {
-    return localQueue
+      const slug =
+        data.playlistSongSlug ||
+        data.slug ||
+        null;
+
+      setActiveSongSlug(slug);
+    }
+
+    window.addEventListener("message", onPlayerState);
+    return () => window.removeEventListener("message", onPlayerState);
+  }, []);
+
+  const playableSongs = useMemo(() => {
+    return songs.filter((song) => song.file);
+  }, [songs]);
+
+  function buildQueue(items: MusicSong[]): GlobalTrack[] {
+    return items
       .filter((song) => song.file)
       .map((song) => ({
         slug: song.slug,
@@ -137,159 +118,49 @@ export default function MusicLibraryClient({ email }: Props) {
         analyticsSongSlug: song.slug,
         sourceApp: "music"
       }));
-  }, [localQueue]);
-
-  function loadLocalQueue(startIndex = 0, useShuffle = false) {
-    const playable = songs.filter((song) => song.file);
-    if (!playable.length) return;
-
-    const queue = useShuffle ? shuffleArray(playable) : playable;
-    setLocalQueue(queue);
-    setCurrentIndex(startIndex);
   }
 
-  function playSongFromMainList(index: number) {
-    const playable = songs.filter((song) => song.file);
-    if (!playable.length) return;
+  function playQueue(items: MusicSong[], startIndex = 0) {
+    const tracks = buildQueue(items);
+    if (!tracks.length) return;
 
-    setLocalQueue(playable);
-    setCurrentIndex(index);
+    window.postMessage(
+      {
+        type: "CALIPH_PLAYER_LOAD_QUEUE",
+        tracks,
+        startIndex
+      },
+      "*"
+    );
   }
 
-  function playPrevLocal() {
-    if (!localQueue.length) return;
-    setCurrentIndex((prev) => (prev <= 0 ? localQueue.length - 1 : prev - 1));
+  function playListedQueue() {
+    playQueue(playableSongs, 0);
   }
 
-  function playNextLocal() {
-    if (!localQueue.length) return;
-    setCurrentIndex((prev) => (prev >= localQueue.length - 1 ? 0 : prev + 1));
+  function playShuffledQueue() {
+    const shuffled = shuffleArray(playableSongs);
+    playQueue(shuffled, 0);
   }
 
-  function handoffToGlobalAndGoHome() {
-    const audio = audioRef.current;
-    const resumeSeconds = audio?.currentTime || 0;
-
-    if (globalQueue.length && currentIndex > -1) {
-      const tracks = globalQueue.map((track, index) => ({
-        ...track,
-        resumeSeconds: index === currentIndex ? resumeSeconds : 0
-      }));
-
-      window.postMessage(
-        {
-          type: "CALIPH_PLAYER_LOAD_QUEUE",
-          startIndex: currentIndex,
-          tracks
-        },
-        "*"
-      );
-
-      window.postMessage(
-        {
-          type: "CALIPH_PLAYER_PLAY"
-        },
-        "*"
-      );
-    }
-
-    window.requestAnimationFrame(() => {
-      window.requestAnimationFrame(() => {
-        router.push(`/home?email=${encodeURIComponent(email)}`);
-
-        window.setTimeout(() => {
-          window.postMessage(
-            {
-              type: "CALIPH_PLAYER_PLAY"
-            },
-            "*"
-          );
-
-          if (audio) {
-            audio.pause();
-          }
-        }, 160);
-      });
-    });
+  function playSongFromMainList(song: MusicSong) {
+    const index = playableSongs.findIndex((item) => item.slug === song.slug);
+    if (index === -1) return;
+    playQueue(playableSongs, index);
   }
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentSong?.file) return;
-
-    audio.pause();
-    audio.src = currentSong.file;
-    audio.load();
-
-    const onCanPlay = async () => {
-      audio.removeEventListener("canplay", onCanPlay);
-      setCurrentTime(0);
-
-      try {
-        await audio.play();
-      } catch (error) {
-        console.error("Music app local playback failed", error);
-      }
-    };
-
-    audio.addEventListener("canplay", onCanPlay, { once: true });
-
-    return () => {
-      audio.removeEventListener("canplay", onCanPlay);
-    };
-  }, [currentSong]);
-
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-
-    function onPlay() {
-      setIsPlaying(true);
-    }
-
-    function onPause() {
-      setIsPlaying(false);
-    }
-
-    function onTimeUpdate() {
-      const currentAudio = audioRef.current;
-      if (!currentAudio) return;
-      setCurrentTime(currentAudio.currentTime || 0);
-    }
-
-    function onEnded() {
-      const currentAudio = audioRef.current;
-      if (!currentAudio) return;
-
-      setCurrentTime(0);
-      setCurrentIndex((prev) =>
-        prev >= localQueue.length - 1 ? 0 : prev + 1
-      );
-    }
-
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onPause);
-    audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("ended", onEnded);
-
-    return () => {
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("ended", onEnded);
-    };
-  }, [localQueue.length]);
+  function goHome() {
+    router.push(`/home?email=${encodeURIComponent(email)}`);
+  }
 
   return (
     <div className="music-app-shell">
-      <audio ref={audioRef} preload="metadata" />
-
       <div className="music-top-chrome">
         <button
           type="button"
           className="music-nav-round"
           aria-label="Back"
-          onClick={handoffToGlobalAndGoHome}
+          onClick={goHome}
         >
           <span className="music-back-chevron" />
         </button>
@@ -322,8 +193,8 @@ export default function MusicLibraryClient({ email }: Props) {
             <button
               type="button"
               className="music-action-pill"
-              onClick={() => loadLocalQueue(0, false)}
-              disabled={!songs.length}
+              onClick={playListedQueue}
+              disabled={!playableSongs.length}
             >
               ▶ Play
             </button>
@@ -331,8 +202,8 @@ export default function MusicLibraryClient({ email }: Props) {
             <button
               type="button"
               className="music-action-pill"
-              onClick={() => loadLocalQueue(0, true)}
-              disabled={!songs.length}
+              onClick={playShuffledQueue}
+              disabled={!playableSongs.length}
             >
               ⇄ Shuffle
             </button>
@@ -348,16 +219,16 @@ export default function MusicLibraryClient({ email }: Props) {
             </div>
           ) : (
             <div className="music-song-list">
-              {songs.map((song, index) => {
-                const active = currentSong?.favorite_id === song.favorite_id;
+              {songs.map((song) => {
                 const cleanTitle = stripCaliphPrefix(song.title);
+                const active = activeSongSlug === song.slug;
 
                 return (
                   <button
                     key={song.favorite_id}
                     type="button"
                     className={`music-song-row ${active ? "is-active" : ""}`}
-                    onClick={() => playSongFromMainList(index)}
+                    onClick={() => playSongFromMainList(song)}
                   >
                     <div className="music-song-left">
                       <div className="music-song-cover">
@@ -388,81 +259,6 @@ export default function MusicLibraryClient({ email }: Props) {
           )}
         </section>
       </main>
-
-      {currentSong ? (
-        <div className="music-inline-player-shell">
-          <div className="music-inline-player">
-            <div className="music-inline-player-left">
-              <div className="music-inline-cover">
-                {currentSong.cover_image ? (
-                  <img
-                    src={currentSong.cover_image}
-                    alt={stripCaliphPrefix(currentSong.title)}
-                  />
-                ) : (
-                  <div className="music-inline-cover-fallback">
-                    {stripCaliphPrefix(currentSong.title)?.[0] || "♪"}
-                  </div>
-                )}
-              </div>
-
-              <div className="music-inline-copy">
-                <div className="music-inline-title">
-                  <MarqueeText
-                    text={stripCaliphPrefix(currentSong.title)}
-                    active={true}
-                  />
-                </div>
-                <div className="music-inline-artist music-ellipsis">
-                  {currentSong.artist}
-                </div>
-              </div>
-            </div>
-
-            <div className="music-inline-controls">
-              <button
-                type="button"
-                className="music-inline-btn"
-                aria-label="Previous"
-                onClick={playPrevLocal}
-              >
-                ‹‹
-              </button>
-
-              <button
-                type="button"
-                className="music-inline-btn music-inline-btn-main"
-                aria-label="Play or pause"
-                onClick={() => {
-                  const audio = audioRef.current;
-                  if (!audio) return;
-
-                  if (audio.paused) {
-                    audio.play().catch(() => {});
-                  } else {
-                    audio.pause();
-                  }
-                }}
-              >
-                {isPlaying ? "❚❚" : "▶"}
-              </button>
-
-              <button
-                type="button"
-                className="music-inline-btn"
-                aria-label="Next"
-                onClick={playNextLocal}
-              >
-                ››
-              </button>
-            </div>
-          </div>
-
-          <div className="music-inline-progress-row">
-            <span>{formatTime(currentTime)}</span>
-          </div>
-        </div>
-      ) : null}
     </div>
   );
 }
