@@ -189,46 +189,72 @@ export default function MusicLibraryClient({ email }: Props) {
     router.push(`/home?email=${encodeURIComponent(email)}`);
   }
 
- useEffect(() => {
-  const audio = audioRef.current;
-  if (!audio) return;
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio || !currentSong?.file) return;
 
-  function onPlay() {
-    setIsPlaying(true);
-  }
+    audio.pause();
+    audio.src = currentSong.file;
+    audio.load();
 
-  function onPause() {
-    setIsPlaying(false);
-  }
+    const onCanPlay = async () => {
+      audio.removeEventListener("canplay", onCanPlay);
+      setCurrentTime(0);
 
-  function onTimeUpdate() {
-    const currentAudio = audioRef.current;
-    if (!currentAudio) return;
-    setCurrentTime(currentAudio.currentTime || 0);
-  }
+      try {
+        await audio.play();
+      } catch (error) {
+        console.error("Music app local playback failed", error);
+      }
+    };
 
-  function onEnded() {
-    const currentAudio = audioRef.current;
-    if (!currentAudio) return;
+    audio.addEventListener("canplay", onCanPlay, { once: true });
 
-    setCurrentTime(0);
-    setCurrentIndex((prev) =>
-      prev >= localQueue.length - 1 ? 0 : prev + 1
-    );
-  }
+    return () => {
+      audio.removeEventListener("canplay", onCanPlay);
+    };
+  }, [currentSong]);
 
-  audio.addEventListener("play", onPlay);
-  audio.addEventListener("pause", onPause);
-  audio.addEventListener("timeupdate", onTimeUpdate);
-  audio.addEventListener("ended", onEnded);
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
 
-  return () => {
-    audio.removeEventListener("play", onPlay);
-    audio.removeEventListener("pause", onPause);
-    audio.removeEventListener("timeupdate", onTimeUpdate);
-    audio.removeEventListener("ended", onEnded);
-  };
-}, [localQueue.length]);
+    function onPlay() {
+      setIsPlaying(true);
+    }
+
+    function onPause() {
+      setIsPlaying(false);
+    }
+
+    function onTimeUpdate() {
+      const currentAudio = audioRef.current;
+      if (!currentAudio) return;
+      setCurrentTime(currentAudio.currentTime || 0);
+    }
+
+    function onEnded() {
+      const currentAudio = audioRef.current;
+      if (!currentAudio) return;
+
+      setCurrentTime(0);
+      setCurrentIndex((prev) =>
+        prev >= localQueue.length - 1 ? 0 : prev + 1
+      );
+    }
+
+    audio.addEventListener("play", onPlay);
+    audio.addEventListener("pause", onPause);
+    audio.addEventListener("timeupdate", onTimeUpdate);
+    audio.addEventListener("ended", onEnded);
+
+    return () => {
+      audio.removeEventListener("play", onPlay);
+      audio.removeEventListener("pause", onPause);
+      audio.removeEventListener("timeupdate", onTimeUpdate);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [localQueue.length]);
 
   return (
     <div className="music-app-shell">
