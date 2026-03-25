@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
-import FartherhoodEmbed from "@/components/FartherhoodEmbed";
+import FartherhoodClient from "@/components/FartherhoodClient";
 
 export default async function FartherhoodPage() {
   const cookieStore = await cookies();
@@ -11,5 +11,5 @@ export default async function FartherhoodPage() {
     redirect("/");
   }
 
-  return <FartherhoodEmbed />;
+  return <FartherhoodClient />;
 }
