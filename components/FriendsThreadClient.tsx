@@ -305,7 +305,7 @@ export default function FriendsThreadClient({
         className="screen screen-thread is-active"
         aria-label="Conversation thread"
       >
-      <div className="friends-original-thread-topbar top-safe">
+     <div className="friends-original-thread-topbar top-safe">
   <button
     type="button"
     onClick={handleBackToInbox}
