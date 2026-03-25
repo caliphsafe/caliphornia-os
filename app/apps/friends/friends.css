@@ -862,3 +862,43 @@ body.has-global-player .friends-original-bottombar {
 body.has-global-player .friends-original-message-composer {
   padding-bottom: calc(env(safe-area-inset-bottom) + 98px) !important;
 }
+
+.friends-thread-transition {
+  opacity: 0;
+  transform: translateX(18px);
+  transition:
+    opacity 0.26s ease,
+    transform 0.32s cubic-bezier(0.22, 1, 0.36, 1);
+  will-change: opacity, transform;
+}
+
+.friends-thread-transition.is-entered {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.friends-thread-transition .friends-original-thread-topbar,
+.friends-thread-transition .friends-original-message-composer {
+  transition:
+    opacity 0.3s ease,
+    transform 0.34s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.friends-thread-transition:not(.is-entered) .friends-original-thread-topbar,
+.friends-thread-transition:not(.is-entered) .friends-original-message-composer {
+  opacity: 0;
+  transform: translateX(14px);
+}
+
+.friends-thread-transition .friends-original-messages {
+  transition:
+    opacity 0.28s ease,
+    transform 0.36s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.friends-thread-transition:not(.is-entered) .friends-original-messages {
+  opacity: 0;
+  transform: translateX(10px);
+}
+
+
