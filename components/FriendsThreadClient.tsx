@@ -319,36 +319,21 @@ export default function FriendsThreadClient({
             <span className="friends-original-back-text">Fri.ends</span>
           </button>
 
-          <div className="friends-original-thread-header-meta">
-            <div className="friends-original-thread-avatar friends-original-thread-avatar--header">
-              {conversation.avatar_letter || conversation.title?.[0] || "F"}
-            </div>
-
-            <div className="friends-original-thread-header-text">
-              <div className="friends-original-thread-header-title">
-                {conversation.title}
+          <div className="friends-original-thread-header-card">
+            <div className="friends-original-thread-header-meta">
+              <div className="friends-original-thread-avatar friends-original-thread-avatar--header">
+                {conversation.avatar_letter || conversation.title?.[0] || "F"}
               </div>
-              <div className="friends-original-thread-header-subtitle">
-                {conversation.subtitle || ""}
+
+              <div className="friends-original-thread-header-text">
+                <div className="friends-original-thread-header-title">
+                  {conversation.title}
+                </div>
+                <div className="friends-original-thread-header-subtitle">
+                  {conversation.subtitle || ""}
+                </div>
               </div>
             </div>
-          </div>
-
-          <div className="friends-original-thread-actions">
-            <button
-              className="friends-original-circle-icon-btn"
-              type="button"
-              aria-label="Call"
-            >
-              <span className="friends-original-phone-icon"></span>
-            </button>
-            <button
-              className="friends-original-circle-icon-btn"
-              type="button"
-              aria-label="Video"
-            >
-              <span className="friends-original-video-icon"></span>
-            </button>
           </div>
         </div>
 
