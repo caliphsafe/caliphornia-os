@@ -55,12 +55,13 @@ export default async function FriendsPage() {
             <button
               className="friends-original-icon-btn ghost-btn"
               type="button"
-              aria-label="Filter"
+              aria-label="More"
             >
-              <span
-                className="friends-original-filter-icon"
-                aria-hidden="true"
-              ></span>
+              <img
+                src="/apps/friends/more.png"
+                alt="More"
+                className="friends-topbar-icon"
+              />
             </button>
           </div>
 
@@ -109,11 +110,15 @@ export default async function FriendsPage() {
             <div className="friends-original-search-pill" aria-hidden="true">
               <span className="friends-original-search-icon"></span>
               <span className="friends-original-search-text">Search</span>
-              <span className="friends-original-mic-icon"></span>
+              <img
+                src="/apps/friends/mic.png"
+                alt="Mic"
+                className="friends-search-mic-icon"
+              />
             </div>
 
             <button
-              className="friends-original-compose-btn"
+              className="friends-original-compose-btn friends-original-circle-btn"
               type="button"
               aria-label="Compose"
             >
@@ -128,4 +133,4 @@ export default async function FriendsPage() {
       </div>
     </main>
   );
-}
+}}
