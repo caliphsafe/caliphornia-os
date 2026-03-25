@@ -123,15 +123,40 @@
   position: relative;
   display: grid;
   grid-template-columns: auto 1fr auto;
-  gap: 14px;
+  gap: 12px;
   align-items: center;
   width: 100%;
-  padding: 16px 20px;
-  border-bottom: 1px solid rgba(255,255,255,0.06);
+  min-width: 0;
+  padding: 16px 20px 16px 20px;
   background: transparent;
   text-align: left;
   color: inherit;
   text-decoration: none;
+  transition: background-color 0.18s ease, transform 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.friends-original-thread-row::after {
+  content: "";
+  position: absolute;
+  left: 86px;
+  right: 0;
+  bottom: 0;
+  height: 1px;
+  background: rgba(255,255,255,0.12);
+}
+
+.friends-original-thread-row:hover {
+  background: rgba(255,255,255,0.04);
+}
+
+.friends-original-thread-row:active {
+  background: rgba(44,44,46,0.9);
+}
+
+.friends-original-thread-row:focus-visible {
+  outline: none;
+  background: rgba(44,44,46,0.9);
 }
 
 .friends-original-thread-unread-dot {
@@ -146,8 +171,8 @@
 }
 
 .friends-original-thread-avatar {
-  width: 52px;
-  height: 52px;
+  width: 54px;
+  height: 54px;
   border-radius: 50%;
   background:
     radial-gradient(circle at 30% 25%, rgba(255,255,255,0.15), transparent 45%),
@@ -164,6 +189,7 @@
 
 .friends-original-thread-main {
   min-width: 0;
+  overflow: hidden;
 }
 
 .friends-original-thread-topline {
@@ -199,6 +225,8 @@
   line-height: 1;
   color: #9b9ba3;
   white-space: nowrap;
+  align-self: start;
+  padding-top: 2px;
 }
 
 /* ===== floating inbox bottom controls ===== */
