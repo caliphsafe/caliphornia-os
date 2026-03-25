@@ -166,34 +166,52 @@ export default function MusicLibraryClient({ email }: Props) {
     setCurrentIndex((prev) => (prev >= localQueue.length - 1 ? 0 : prev + 1));
   }
 
- function handoffToGlobalAndGoHome() {
-  const audio = audioRef.current;
-  const resumeSeconds = audio?.currentTime || 0;
+  function handoffToGlobalAndGoHome() {
+    const audio = audioRef.current;
+    const resumeSeconds = audio?.currentTime || 0;
 
-  if (globalQueue.length && currentIndex > -1) {
-    const tracks = globalQueue.map((track, index) => ({
-      ...track,
-      resumeSeconds: index === currentIndex ? resumeSeconds : 0
-    }));
+    if (globalQueue.length && currentIndex > -1) {
+      const tracks = globalQueue.map((track, index) => ({
+        ...track,
+        resumeSeconds: index === currentIndex ? resumeSeconds : 0
+      }));
 
-    window.postMessage(
-      {
-        type: "CALIPH_PLAYER_LOAD_QUEUE",
-        startIndex: currentIndex,
-        tracks
-      },
-      "*"
-    );
+      window.postMessage(
+        {
+          type: "CALIPH_PLAYER_LOAD_QUEUE",
+          startIndex: currentIndex,
+          tracks
+        },
+        "*"
+      );
+
+      window.postMessage(
+        {
+          type: "CALIPH_PLAYER_PLAY"
+        },
+        "*"
+      );
+    }
+
+    window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        router.push(`/home?email=${encodeURIComponent(email)}`);
+
+        window.setTimeout(() => {
+          window.postMessage(
+            {
+              type: "CALIPH_PLAYER_PLAY"
+            },
+            "*"
+          );
+
+          if (audio) {
+            audio.pause();
+          }
+        }, 160);
+      });
+    });
   }
-
-  if (audio) {
-    audio.pause();
-  }
-
-  window.setTimeout(() => {
-    router.push(`/home?email=${encodeURIComponent(email)}`);
-  }, 80);
-}
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -353,8 +371,8 @@ export default function MusicLibraryClient({ email }: Props) {
                       </div>
 
                       <div className="music-song-copy">
-                        <div className="music-song-title">
-                          <MarqueeText text={cleanTitle} active={active} />
+                        <div className="music-song-title music-ellipsis">
+                          {cleanTitle}
                         </div>
                         <div className="music-song-artist music-ellipsis">
                           {song.artist}
