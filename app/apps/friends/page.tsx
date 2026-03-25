@@ -44,6 +44,7 @@ export default async function FriendsPage() {
               href="/home"
               className="friends-notes-back-btn"
               aria-label="Back to home"
+              prefetch
             >
               <img
                 src="/apps/friends/back.png"
@@ -78,6 +79,8 @@ export default async function FriendsPage() {
                 key={thread.id}
                 href={`/apps/friends/${thread.slug}`}
                 className="friends-original-thread-row"
+                aria-label={`Open conversation with ${thread.title}`}
+                prefetch
               >
                 {thread.sort_order === 1 ? (
                   <span className="friends-original-thread-unread-dot"></span>
