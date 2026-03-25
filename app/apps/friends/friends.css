@@ -356,7 +356,7 @@
   padding-left: 0;
   padding-right: 0;
   display: grid;
-  grid-template-columns: auto 1fr;
+  grid-template-columns: auto 1fr auto;
   align-items: center;
   gap: 10px;
   z-index: 1200;
@@ -369,6 +369,13 @@
 
 .friends-original-thread-topbar > * {
   pointer-events: auto;
+}
+
+.friends-original-thread-topbar::after {
+  content: "";
+  width: 46px;
+  height: 46px;
+  justify-self: end;
 }
 
 .friends-original-back-btn {
@@ -422,7 +429,10 @@
 }
 .friends-original-thread-header-card {
   min-width: 0;
+  width: fit-content;
+  max-width: 100%;
   min-height: 46px;
+  justify-self: center;
   border-radius: 999px;
   background: rgba(24,24,26,0.58);
   border: 1px solid rgba(255,255,255,0.12);
@@ -440,7 +450,8 @@
   justify-content: center;
   gap: 10px;
   min-width: 0;
-  width: 100%;
+  width: auto;
+  max-width: 100%;
 }
 
 .friends-original-thread-avatar--header {
