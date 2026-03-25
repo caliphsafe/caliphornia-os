@@ -23,6 +23,7 @@ export type GlobalTrack = {
   conversationSlug?: string | null;
   conversationRoute?: string | null;
   isFriendsFinal?: boolean;
+  resumeSeconds?: number | null;
 };
 
 type Props = {
@@ -251,7 +252,10 @@ export default function GlobalPlayer({ email }: Props) {
 
   function broadcastState() {
     const audio = audioRef.current;
-    const start = currentTrack?.clipStartSeconds || 0;
+    const start =
+      currentTrack?.resumeSeconds ??
+      currentTrack?.clipStartSeconds ??
+      0;
     const end = currentTrack?.clipEndSeconds ?? null;
     const current = audio?.currentTime || 0;
     const elapsed = Math.max(0, current - start);
@@ -406,10 +410,18 @@ export default function GlobalPlayer({ email }: Props) {
     const audio = audioRef.current;
     if (!audio || !currentTrack?.file) return;
 
-    const start = currentTrack.clipStartSeconds || 0;
-    const sameSrc = audio.src === currentTrack.file;
+    const start =
+      currentTrack.resumeSeconds ??
+      currentTrack.clipStartSeconds ??
+      0;
 
-    const beginPlayback = async () => {
+    audio.pause();
+    audio.src = currentTrack.file;
+    audio.load();
+
+    const onCanPlay = async () => {
+      audio.removeEventListener("canplay", onCanPlay);
+
       try {
         audio.currentTime = start;
       } catch {}
@@ -420,20 +432,7 @@ export default function GlobalPlayer({ email }: Props) {
       setTimeout(() => broadcastState(), 50);
     };
 
-    if (!sameSrc) {
-      audio.pause();
-      audio.src = currentTrack.file;
-      audio.load();
-
-      const onCanPlay = async () => {
-        audio.removeEventListener("canplay", onCanPlay);
-        await beginPlayback();
-      };
-
-      audio.addEventListener("canplay", onCanPlay, { once: true });
-    } else {
-      void beginPlayback();
-    }
+    audio.addEventListener("canplay", onCanPlay, { once: true });
 
     const analyticsSlug =
       currentTrack.analyticsSongSlug ||
@@ -465,6 +464,10 @@ export default function GlobalPlayer({ email }: Props) {
         router.push(currentTrack.conversationRoute);
       }
     }
+
+    return () => {
+      audio.removeEventListener("canplay", onCanPlay);
+    };
   }, [currentTrack, email, router]);
 
   useEffect(() => {
@@ -539,7 +542,7 @@ export default function GlobalPlayer({ email }: Props) {
 
   const isOnMusicPage = pathname?.startsWith("/apps/music");
 
-if ((!isVisible || !currentTrack) || isOnMusicPage) return null;
+  if ((!isVisible || !currentTrack) || isOnMusicPage) return null;
 
   return (
     <>
