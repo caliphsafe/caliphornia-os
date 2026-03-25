@@ -1,6 +1,6 @@
 "use client";
 
-import { usePathname, useRouter } from "next/navigation";
+import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
 export type GlobalTrack = {
@@ -111,20 +111,6 @@ function IconPause() {
   );
 }
 
-function IconMinimize() {
-  return (
-    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon gp-icon-small">
-      <path
-        d="M7 12h10"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.9"
-        strokeLinecap="round"
-      />
-    </svg>
-  );
-}
-
 function IconStar({ filled }: { filled: boolean }) {
   if (filled) {
     return (
@@ -174,15 +160,36 @@ function normalizeFriendsFinalTrack(convo: FriendsConversationListItem): GlobalT
   };
 }
 
+function MarqueeText({
+  text,
+  active = true
+}: {
+  text: string;
+  active?: boolean;
+}) {
+  const shouldMarquee = active && text.length > 22;
+
+  if (!shouldMarquee) {
+    return <span className="music-ellipsis">{text}</span>;
+  }
+
+  return (
+    <span className="music-marquee-shell">
+      <span className="music-marquee-track">
+        <span>{text}</span>
+        <span aria-hidden="true">{text}</span>
+      </span>
+    </span>
+  );
+}
+
 export default function GlobalPlayer({ email }: Props) {
   const router = useRouter();
-  const pathname = usePathname();
   const audioRef = useRef<HTMLAudioElement | null>(null);
 
   const [queue, setQueue] = useState<GlobalTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState<number>(-1);
   const [isPlaying, setIsPlaying] = useState(false);
-  const [isExpanded, setIsExpanded] = useState(true);
   const [isVisible, setIsVisible] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [friendsFinalQueue, setFriendsFinalQueue] = useState<GlobalTrack[]>([]);
@@ -319,7 +326,6 @@ export default function GlobalPlayer({ email }: Props) {
       setQueue(finals);
       setCurrentIndex(nextFinalIndex);
       setIsVisible(true);
-      setIsExpanded(true);
       return;
     }
 
@@ -336,7 +342,6 @@ export default function GlobalPlayer({ email }: Props) {
 
     setCurrentIndex(nextIndex);
     setIsVisible(true);
-    setIsExpanded(true);
   }
 
   useEffect(() => {
@@ -352,7 +357,6 @@ export default function GlobalPlayer({ email }: Props) {
         setQueue(tracks);
         setCurrentIndex(startIndex);
         setIsVisible(true);
-        setIsExpanded(true);
       }
 
       if (data.type === "CALIPH_PLAYER_TOGGLE_TRACK") {
@@ -379,7 +383,6 @@ export default function GlobalPlayer({ email }: Props) {
         setQueue(tracks);
         setCurrentIndex(startIndex);
         setIsVisible(true);
-        setIsExpanded(true);
       }
 
       if (data.type === "CALIPH_PLAYER_PLAY") {
@@ -428,7 +431,6 @@ export default function GlobalPlayer({ email }: Props) {
 
       audio.play().catch(() => {});
       setIsVisible(true);
-      setIsExpanded(true);
       setTimeout(() => broadcastState(), 50);
     };
 
@@ -540,74 +542,73 @@ export default function GlobalPlayer({ email }: Props) {
     if (data?.ok) setIsSaved(Boolean(data.saved));
   }
 
-  const isOnMusicPage = pathname?.startsWith("/apps/music");
-
-  if ((!isVisible || !currentTrack) || isOnMusicPage) return null;
+  if (!isVisible || !currentTrack) return null;
 
   return (
     <>
       <audio ref={audioRef} />
 
-      <div className={`global-player-shell ${isExpanded ? "is-expanded" : "is-collapsed"}`}>
-        {isExpanded ? (
-          <div className="global-player-card">
-            <button
-              className="global-player-collapse"
-              onClick={() => setIsExpanded(false)}
-              aria-label="Minimize player"
-            >
-              <IconMinimize />
-            </button>
+      <div className="music-inline-player-shell global-player">
+        <div className="music-inline-player">
+          <div className="music-inline-player-left">
+            <div className="music-inline-cover">
+              <div className="music-inline-cover-fallback">
+                {trackParts.song?.[0] || "♪"}
+              </div>
+            </div>
 
-            <div className="global-player-main">
-              <div className="global-player-copy">
-                <div className="global-player-title">{trackParts.song}</div>
-                <div className="global-player-artist">{trackParts.artist}</div>
+            <div className="music-inline-copy">
+              <div className="music-inline-title">
+                <MarqueeText text={trackParts.song} active={true} />
               </div>
 
-              <div className="global-player-controls">
-                <button
-                  onClick={togglePlaylistSave}
-                  className={`gp-btn gp-btn-star ${isSaved ? "is-saved" : ""}`}
-                  aria-label="Add to favorites"
-                >
-                  <IconStar filled={isSaved} />
-                </button>
-
-                <button onClick={playPrev} className="gp-btn" aria-label="Previous">
-                  <IconPrev />
-                </button>
-
-                <button
-                  onClick={() => {
-                    if (!audioRef.current) return;
-                    if (audioRef.current.paused) {
-                      audioRef.current.play().catch(() => {});
-                    } else {
-                      audioRef.current.pause();
-                    }
-                  }}
-                  className="gp-btn gp-btn-main"
-                  aria-label="Play or pause"
-                >
-                  {isPlaying ? <IconPause /> : <IconPlay />}
-                </button>
-
-                <button onClick={playNext} className="gp-btn" aria-label="Next">
-                  <IconNext />
-                </button>
+              <div className="music-inline-artist music-ellipsis">
+                {trackParts.artist}
               </div>
             </div>
           </div>
-        ) : (
-          <button
-            className="global-player-orb"
-            onClick={() => setIsExpanded(true)}
-            aria-label="Open player"
-          >
-            {isPlaying ? <IconPause /> : <IconPlay />}
-          </button>
-        )}
+
+          <div className="music-inline-controls">
+            <button
+              onClick={togglePlaylistSave}
+              className={`music-inline-btn ${isSaved ? "is-saved" : ""}`}
+              aria-label="Favorite"
+            >
+              <IconStar filled={isSaved} />
+            </button>
+
+            <button
+              onClick={playPrev}
+              className="music-inline-btn"
+              aria-label="Previous"
+            >
+              <IconPrev />
+            </button>
+
+            <button
+              onClick={() => {
+                if (!audioRef.current) return;
+                if (audioRef.current.paused) {
+                  audioRef.current.play().catch(() => {});
+                } else {
+                  audioRef.current.pause();
+                }
+              }}
+              className="music-inline-btn music-inline-btn-main"
+              aria-label="Play or pause"
+            >
+              {isPlaying ? <IconPause /> : <IconPlay />}
+            </button>
+
+            <button
+              onClick={playNext}
+              className="music-inline-btn"
+              aria-label="Next"
+            >
+              <IconNext />
+            </button>
+          </div>
+        </div>
       </div>
     </>
   );
