@@ -59,7 +59,8 @@ export async function GET() {
         title,
         storage_path,
         is_final_version,
-        is_playlistable
+        is_playlistable,
+        linked_song_id
       `)
       .in("conversation_id", conversationIds)
       .eq("is_final_version", true)
@@ -70,6 +71,27 @@ export async function GET() {
         { ok: false, error: finalAssetsError.message },
         { status: 500 }
       );
+    }
+
+    const linkedSongIds = Array.from(
+      new Set(
+        (finalAssets || [])
+          .map((asset) => asset.linked_song_id)
+          .filter(Boolean)
+      )
+    );
+
+    const songMap = new Map<string, { slug: string; title: string; artist_name: string | null }>();
+
+    if (linkedSongIds.length) {
+      const { data: songs } = await supabaseAdmin
+        .from("songs")
+        .select("id, slug, title, artist_name")
+        .in("id", linkedSongIds);
+
+      for (const song of songs || []) {
+        songMap.set(song.id, song);
+      }
     }
 
     const finalTrackMap = new Map<string, any>();
@@ -87,23 +109,24 @@ export async function GET() {
         signedUrl = signed?.signedUrl || null;
       }
 
+      const linkedSong = asset.linked_song_id
+        ? songMap.get(asset.linked_song_id)
+        : null;
+
       finalTrackMap.set(asset.conversation_id, {
-        slug: asset.slug,
-        title: asset.title,
-        artist: null,
+        slug: linkedSong?.slug || asset.slug,
+        title: linkedSong?.title || asset.title,
+        artist: linkedSong?.artist_name || null,
         file: signedUrl,
-        playlist_song_slug: asset.slug,
-        analytics_song_slug: asset.slug
+        playlist_song_slug: linkedSong?.slug || asset.slug,
+        analytics_song_slug: linkedSong?.slug || asset.slug
       });
     }
 
     const normalizedConversations = (conversations || []).map((conversation) => ({
       ...conversation,
       final_track: finalTrackMap.has(conversation.id)
-        ? {
-            ...finalTrackMap.get(conversation.id),
-            artist: conversation.subtitle || null
-          }
+        ? finalTrackMap.get(conversation.id)
         : null
     }));
 
