@@ -305,37 +305,53 @@ export default function FriendsThreadClient({
         className="screen screen-thread is-active"
         aria-label="Conversation thread"
       >
-        <div className="friends-original-thread-topbar top-safe">
-          <button
-            type="button"
-            onClick={handleBackToInbox}
-            className="friends-original-back-btn"
-            aria-label="Back to inbox"
-          >
-            <span
-              className="friends-original-back-chevron"
-              aria-hidden="true"
-            ></span>
-            <span className="friends-original-back-text">Fri.ends</span>
-          </button>
+      <div className="friends-original-thread-topbar top-safe">
+  <button
+    type="button"
+    onClick={handleBackToInbox}
+    className="friends-original-back-btn"
+    aria-label="Back to inbox"
+  >
+    <span
+      className="friends-original-back-chevron"
+      aria-hidden="true"
+    ></span>
+    <span className="friends-original-back-text">Fri.ends</span>
+  </button>
 
-          <div className="friends-original-thread-header-card">
-            <div className="friends-original-thread-header-meta">
-              <div className="friends-original-thread-avatar friends-original-thread-avatar--header">
-                {conversation.avatar_letter || conversation.title?.[0] || "F"}
-              </div>
+  <button
+    type="button"
+    className="friends-original-thread-header-card"
+    aria-label="Open conversation info"
+  >
+    <div className="friends-original-thread-header-meta">
+      <div className="friends-original-thread-avatar friends-original-thread-avatar--header">
+        {conversation.avatar_letter || conversation.title?.[0] || "F"}
+      </div>
 
-              <div className="friends-original-thread-header-text">
-                <div className="friends-original-thread-header-title">
-                  {conversation.title}
-                </div>
-                <div className="friends-original-thread-header-subtitle">
-                  {conversation.subtitle || ""}
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="friends-original-thread-header-text">
+        <div className="friends-original-thread-header-title">
+          {conversation.title}
         </div>
+        <div className="friends-original-thread-header-subtitle">
+          {conversation.subtitle || ""}
+        </div>
+      </div>
+    </div>
+  </button>
+
+  <button
+    type="button"
+    className="friends-original-thread-face-btn"
+    aria-label="FaceTime"
+  >
+    <img
+      src="/apps/friends/face.png"
+      alt="FaceTime"
+      className="friends-topbar-icon"
+    />
+  </button>
+</div>
 
         <main className="friends-original-messages-wrap">
           <div className="friends-original-messages">
