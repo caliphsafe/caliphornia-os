@@ -57,7 +57,10 @@ export default async function FriendsPage() {
               type="button"
               aria-label="Filter"
             >
-              <span className="friends-original-filter-icon" aria-hidden="true"></span>
+              <span
+                className="friends-original-filter-icon"
+                aria-hidden="true"
+              ></span>
             </button>
           </div>
 
@@ -65,7 +68,10 @@ export default async function FriendsPage() {
             <h1>Fri.ends</h1>
           </header>
 
-          <main className="friends-original-thread-list" aria-label="Track list">
+          <main
+            className="friends-original-thread-list"
+            aria-label="Track list"
+          >
             {conversations.map((thread: any) => (
               <Link
                 key={thread.id}
@@ -106,13 +112,17 @@ export default async function FriendsPage() {
               <span className="friends-original-mic-icon"></span>
             </div>
 
-            <button className="friends-original-compose-btn">
-  <img
-    src="/apps/friends/note.png"
-    alt="Compose"
-    className="friends-compose-icon"
-  />
-</button>
+            <button
+              className="friends-original-compose-btn"
+              type="button"
+              aria-label="Compose"
+            >
+              <img
+                src="/apps/friends/note.png"
+                alt="Compose"
+                className="friends-compose-icon"
+              />
+            </button>
           </div>
         </section>
       </div>
