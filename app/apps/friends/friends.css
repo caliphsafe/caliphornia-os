@@ -356,7 +356,7 @@
   padding-left: 0;
   padding-right: 0;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto 1fr;
   align-items: center;
   gap: 10px;
   z-index: 1200;
@@ -420,29 +420,43 @@
 .friends-original-back-text {
   white-space: nowrap;
 }
-
+.friends-original-thread-header-card {
+  min-width: 0;
+  min-height: 46px;
+  border-radius: 999px;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+  padding: 6px 14px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
 .friends-original-thread-header-meta {
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 10px;
   min-width: 0;
+  width: 100%;
 }
 
 .friends-original-thread-avatar--header {
-  width: 34px;
-  height: 34px;
-  font-size: 15px;
+  width: 32px;
+  height: 32px;
+  font-size: 14px;
   flex: 0 0 auto;
 }
 
 .friends-original-thread-header-text {
   min-width: 0;
-  text-align: center;
+  text-align: left;
 }
 
 .friends-original-thread-header-title {
-  font-size: 16px;
+  font-size: 15px;
   line-height: 1.1;
   font-weight: 700;
   white-space: nowrap;
@@ -452,7 +466,7 @@
 
 .friends-original-thread-header-subtitle {
   margin-top: 2px;
-  font-size: 12px;
+  font-size: 11px;
   line-height: 1.1;
   color: #9b9ba3;
   white-space: nowrap;
@@ -460,68 +474,7 @@
   text-overflow: ellipsis;
 }
 
-.friends-original-thread-actions {
-  display: flex;
-  align-items: center;
-  gap: 0;
-  border-radius: 999px;
-  background: rgba(24,24,26,0.58);
-  border: 1px solid rgba(255,255,255,0.12);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-  overflow: hidden;
-}
 
-.friends-original-circle-icon-btn {
-  width: 54px;
-  height: 46px;
-  border-radius: 0;
-  background: transparent;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border: 0;
-}
-
-.friends-original-circle-icon-btn + .friends-original-circle-icon-btn {
-  border-left: 1px solid rgba(255,255,255,0.10);
-}
-
-.friends-original-phone-icon,
-.friends-original-video-icon {
-  display: inline-block;
-  position: relative;
-}
-
-.friends-original-phone-icon {
-  width: 12px;
-  height: 12px;
-  border: 2px solid #59a9ff;
-  border-radius: 4px;
-  transform: rotate(45deg);
-  border-top-color: transparent;
-  border-left-color: transparent;
-}
-
-.friends-original-video-icon {
-  width: 14px;
-  height: 10px;
-  border: 2px solid #59a9ff;
-  border-radius: 3px;
-}
-
-.friends-original-video-icon::after {
-  content: "";
-  position: absolute;
-  right: -5px;
-  top: 1px;
-  width: 0;
-  height: 0;
-  border-left: 5px solid #59a9ff;
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-}
 
 /* ===== thread content ===== */
 .friends-original-messages-wrap {
