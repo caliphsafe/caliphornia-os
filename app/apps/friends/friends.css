@@ -80,46 +80,17 @@
   border: 1px solid rgba(255,255,255,0.12);
   display: grid;
   place-items: center;
+  padding: 0;
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
-.friends-original-filter-icon {
-  display: inline-block;
-  width: 20px;
-  height: 20px;
-  position: relative;
-}
-
-.friends-original-filter-icon::before,
-.friends-original-filter-icon::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  border-radius: 999px;
-  background: #fff;
-}
-
-.friends-original-filter-icon::before {
-  top: 4px;
-  width: 18px;
-  height: 2px;
-  box-shadow:
-    0 6px 0 #fff,
-    0 12px 0 #fff;
-}
-
-.friends-original-filter-icon::after {
-  top: 2px;
-  width: 4px;
-  height: 4px;
-  background: #fff;
-  box-shadow:
-    -4px 6px 0 0 #fff,
-    5px 12px 0 0 #fff;
-  opacity: 0.85;
+.friends-topbar-icon {
+  width: 22px;
+  height: 22px;
+  display: block;
+  object-fit: contain;
 }
 
 /* ===== inbox ===== */
@@ -273,13 +244,9 @@
   box-shadow: 0 18px 44px rgba(0,0,0,0.55);
 }
 
-.friends-original-search-icon,
-.friends-original-mic-icon {
+.friends-original-search-icon {
   display: inline-block;
   position: relative;
-}
-
-.friends-original-search-icon {
   width: 15px;
   height: 15px;
   border: 2px solid #9b9ba3;
@@ -303,53 +270,31 @@
   font-size: 18px;
 }
 
-.friends-original-mic-icon {
-  margin-left: auto;
-  width: 12px;
+.friends-search-mic-icon {
+  width: 18px;
   height: 18px;
-  border: 2px solid #fff;
-  border-top-left-radius: 8px;
-  border-top-right-radius: 8px;
-  border-bottom-left-radius: 8px;
-  border-bottom-right-radius: 8px;
-  opacity: 0.9;
-}
-
-.friends-original-mic-icon::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -6px;
-  width: 12px;
-  height: 2px;
-  background: #fff;
-  transform: translateX(-50%);
-  border-radius: 3px;
-}
-
-.friends-original-mic-icon::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -10px;
-  width: 2px;
-  height: 6px;
-  background: #fff;
-  transform: translateX(-50%);
-  border-radius: 2px;
+  display: block;
+  object-fit: contain;
+  margin-left: auto;
+  opacity: 0.92;
 }
 
 .friends-original-compose-btn {
   flex: 0 0 auto;
   width: 56px;
   height: 56px;
-  border-radius: 18px;
-  background: rgba(24,24,26,0.58);
-  border: 1px solid rgba(255,255,255,0.12);
+  border: 0;
+  background: transparent;
   position: relative;
   display: grid;
   place-items: center;
   padding: 0;
+}
+
+.friends-original-circle-btn {
+  border-radius: 999px;
+  background: rgba(24,24,26,0.58);
+  border: 1px solid rgba(255,255,255,0.12);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 18px 44px rgba(0,0,0,0.55);
@@ -775,18 +720,11 @@
 .friends-original-composer-plus {
   width: 46px;
   height: 46px;
-  border-radius: 999px;
-  background: rgba(24,24,26,0.58);
-  border: 1px solid rgba(255,255,255,0.12);
-  color: #fff;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 28px;
-  line-height: 1;
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+  border: 0;
+  background: transparent;
+  display: inline-grid;
+  place-items: center;
+  padding: 0;
 }
 
 .friends-original-composer-input-wrap {
@@ -817,38 +755,15 @@
   justify-content: center;
   border: 0;
   background: transparent;
+  padding: 0;
 }
 
-.friends-original-mini-mic {
-  width: 10px;
-  height: 14px;
-  border: 2px solid #fff;
-  border-radius: 8px;
-  opacity: 0.85;
-  position: relative;
-}
-
-.friends-original-mini-mic::before {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -4px;
-  width: 10px;
-  height: 2px;
-  background: #fff;
-  transform: translateX(-50%);
-  border-radius: 2px;
-}
-
-.friends-original-mini-mic::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  bottom: -7px;
-  width: 2px;
-  height: 4px;
-  background: #fff;
-  transform: translateX(-50%);
+.friends-convo-mic-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
+  object-fit: contain;
+  opacity: 0.92;
 }
 
 /* ===== responsive ===== */
