@@ -346,25 +346,19 @@
 .friends-original-thread-topbar {
   position: fixed;
   top: 0;
-  left: 0;
-  right: 0;
+  left: 50%;
+  transform: translateX(-50%);
   width: min(720px, calc(100vw - 28px));
-  margin-left: auto;
-  margin-right: auto;
   min-height: calc(env(safe-area-inset-top) + 64px);
   padding-top: env(safe-area-inset-top);
-  padding-left: 0;
-  padding-right: 0;
-  display: grid;
-  grid-template-columns: auto 1fr auto;
-  align-items: center;
-  gap: 10px;
   z-index: 1200;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
   pointer-events: none;
   background: transparent;
-  border-bottom: 0;
-  backdrop-filter: none;
-  -webkit-backdrop-filter: none;
 }
 
 .friends-original-thread-topbar > * {
@@ -376,6 +370,11 @@
   width: 46px;
   height: 46px;
   justify-self: end;
+}
+.friends-original-back-btn {
+  position: absolute;
+  left: 0;
+  top: calc(env(safe-area-inset-top) + 9px);
 }
 
 .friends-original-back-btn {
@@ -428,17 +427,20 @@
   white-space: nowrap;
 }
 .friends-original-thread-header-card {
+  position: relative;
+  margin: 0 auto;
   min-width: 0;
   width: fit-content;
-  max-width: 100%;
+  max-width: calc(100% - 120px); /* prevents overlap with back button */
+
   min-height: 46px;
-  justify-self: center;
   border-radius: 999px;
   background: rgba(24,24,26,0.58);
   border: 1px solid rgba(255,255,255,0.12);
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+
   padding: 6px 14px;
   display: flex;
   align-items: center;
@@ -450,8 +452,7 @@
   justify-content: center;
   gap: 10px;
   min-width: 0;
-  width: auto;
-  max-width: 100%;
+  width: fit-content;
 }
 
 .friends-original-thread-avatar--header {
