@@ -43,7 +43,8 @@ export async function GET(
       .eq("is_final_version", true)
       .maybeSingle();
 
-    let playlistSong: {
+    let conversationFinalSong: {
+      id?: string;
       slug: string;
       title: string;
       artist_name: string | null;
@@ -52,12 +53,12 @@ export async function GET(
     if (finalAsset?.linked_song_id) {
       const { data: song } = await supabaseAdmin
         .from("songs")
-        .select("slug, title, artist_name")
+        .select("id, slug, title, artist_name")
         .eq("id", finalAsset.linked_song_id)
         .maybeSingle();
 
       if (song) {
-        playlistSong = song;
+        conversationFinalSong = song;
       }
     }
 
@@ -108,6 +109,49 @@ export async function GET(
       );
     }
 
+    const clipLinkedSongIds = Array.from(
+      new Set(
+        (messages || [])
+          .flatMap((msg: any) => {
+            const clips = Array.isArray(msg.message_audio_clips)
+              ? msg.message_audio_clips
+              : msg.message_audio_clips
+                ? [msg.message_audio_clips]
+                : [];
+
+            return clips
+              .map((clip: any) => {
+                const asset = Array.isArray(clip.audio_assets)
+                  ? clip.audio_assets[0]
+                  : clip.audio_assets;
+
+                return asset?.linked_song_id || null;
+              })
+              .filter(Boolean);
+          })
+      )
+    );
+
+    const allSongIds = Array.from(
+      new Set([
+        ...clipLinkedSongIds,
+        ...(conversationFinalSong?.id ? [conversationFinalSong.id] : [])
+      ])
+    );
+
+    const songMap = new Map<string, { id: string; slug: string; title: string; artist_name: string | null }>();
+
+    if (allSongIds.length) {
+      const { data: songs } = await supabaseAdmin
+        .from("songs")
+        .select("id, slug, title, artist_name")
+        .in("id", allSongIds);
+
+      for (const song of songs || []) {
+        songMap.set(song.id, song);
+      }
+    }
+
     const normalizedMessages = await Promise.all(
       (messages || []).map(async (msg: any) => {
         const clip = Array.isArray(msg.message_audio_clips)
@@ -135,6 +179,14 @@ export async function GET(
           signingError = "Missing storage_path on audio asset.";
         }
 
+        const clipSong = asset?.linked_song_id
+          ? songMap.get(asset.linked_song_id)
+          : null;
+
+        const fallbackSong = conversationFinalSong?.id
+          ? songMap.get(conversationFinalSong.id)
+          : conversationFinalSong;
+
         return {
           id: msg.id,
           message_type: msg.message_type,
@@ -158,9 +210,9 @@ export async function GET(
                 display_duration: clip.display_duration,
                 file: signedUrl,
                 signing_error: signingError,
-                playlist_song_slug: playlistSong?.slug || null,
-                playlist_song_title: playlistSong?.title || null,
-                playlist_song_artist: playlistSong?.artist_name || null,
+                playlist_song_slug: clipSong?.slug || fallbackSong?.slug || null,
+                playlist_song_title: clipSong?.title || fallbackSong?.title || null,
+                playlist_song_artist: clipSong?.artist_name || fallbackSong?.artist_name || null,
                 asset: asset
                   ? {
                       id: asset.id,
