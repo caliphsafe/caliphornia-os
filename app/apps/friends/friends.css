@@ -387,6 +387,25 @@
   backdrop-filter: blur(18px);
   -webkit-backdrop-filter: blur(18px);
   box-shadow: 0 18px 44px rgba(0,0,0,0.55);
+  transition:
+    background-color 0.16s ease,
+    transform 0.16s ease,
+    opacity 0.16s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.friends-original-back-btn:hover {
+  background: rgba(255,255,255,0.08);
+}
+
+.friends-original-back-btn:active {
+  background: rgba(44,44,46,0.92);
+  transform: scale(0.985);
+}
+
+.friends-original-back-btn:focus-visible {
+  outline: none;
+  background: rgba(44,44,46,0.92);
 }
 
 .friends-original-back-chevron {
@@ -883,12 +902,6 @@ body.has-global-player .friends-original-message-composer {
   will-change: opacity, transform;
 }
 
-.friends-thread-transition:not(.is-entered) .friends-original-thread-topbar,
-.friends-thread-transition:not(.is-entered) .friends-original-message-composer {
-  opacity: 0;
-  transform: translateX(14px);
-}
-
 .friends-thread-transition .friends-original-messages-wrap {
   transition:
     opacity 0.28s ease,
@@ -896,8 +909,24 @@ body.has-global-player .friends-original-message-composer {
   will-change: opacity, transform;
 }
 
+.friends-thread-transition:not(.is-entered) .friends-original-thread-topbar,
+.friends-thread-transition:not(.is-entered) .friends-original-message-composer {
+  opacity: 0;
+  transform: translateX(14px);
+}
+
 .friends-thread-transition:not(.is-entered) .friends-original-messages-wrap {
   opacity: 0;
   transform: translateX(10px);
 }
 
+.friends-thread-transition.is-leaving-back .friends-original-thread-topbar,
+.friends-thread-transition.is-leaving-back .friends-original-message-composer {
+  opacity: 0;
+  transform: translateX(14px);
+}
+
+.friends-thread-transition.is-leaving-back .friends-original-messages-wrap {
+  opacity: 0;
+  transform: translateX(18px);
+}
