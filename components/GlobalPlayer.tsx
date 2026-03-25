@@ -515,6 +515,16 @@ export default function GlobalPlayer({ email }: Props) {
     };
   }, [currentTrack, currentIndex, queue, friendsFinalQueue]);
 
+  useEffect(() => {
+    const shouldOffset = Boolean(isVisible && currentTrack);
+
+    document.body.classList.toggle("has-global-player", shouldOffset);
+
+    return () => {
+      document.body.classList.remove("has-global-player");
+    };
+  }, [isVisible, currentTrack]);
+
   async function playPrev() {
     await advanceWithinCurrentProject("prev");
   }
