@@ -166,28 +166,34 @@ export default function MusicLibraryClient({ email }: Props) {
     setCurrentIndex((prev) => (prev >= localQueue.length - 1 ? 0 : prev + 1));
   }
 
-  function handoffToGlobalAndGoHome() {
-    if (globalQueue.length && currentIndex > -1) {
-      const audio = audioRef.current;
-      const resumeSeconds = audio?.currentTime || 0;
+ function handoffToGlobalAndGoHome() {
+  const audio = audioRef.current;
+  const resumeSeconds = audio?.currentTime || 0;
 
-      const tracks = globalQueue.map((track, index) => ({
-        ...track,
-        resumeSeconds: index === currentIndex ? resumeSeconds : 0
-      }));
+  if (globalQueue.length && currentIndex > -1) {
+    const tracks = globalQueue.map((track, index) => ({
+      ...track,
+      resumeSeconds: index === currentIndex ? resumeSeconds : 0
+    }));
 
-      window.postMessage(
-        {
-          type: "CALIPH_PLAYER_LOAD_QUEUE",
-          startIndex: currentIndex,
-          tracks
-        },
-        "*"
-      );
-    }
-
-    router.push(`/home?email=${encodeURIComponent(email)}`);
+    window.postMessage(
+      {
+        type: "CALIPH_PLAYER_LOAD_QUEUE",
+        startIndex: currentIndex,
+        tracks
+      },
+      "*"
+    );
   }
+
+  if (audio) {
+    audio.pause();
+  }
+
+  window.setTimeout(() => {
+    router.push(`/home?email=${encodeURIComponent(email)}`);
+  }, 80);
+}
 
   useEffect(() => {
     const audio = audioRef.current;
