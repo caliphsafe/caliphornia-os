@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+import "../friends.css";import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
 import FriendsThreadClient from "@/components/FriendsThreadClient";
