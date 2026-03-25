@@ -133,4 +133,4 @@ export default async function FriendsPage() {
       </div>
     </main>
   );
-}}
+}
