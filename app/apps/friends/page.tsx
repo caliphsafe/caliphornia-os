@@ -106,11 +106,13 @@ export default async function FriendsPage() {
               <span className="friends-original-mic-icon"></span>
             </div>
 
-            <button
-              className="friends-original-compose-btn"
-              type="button"
-              aria-label="Compose"
-            ></button>
+            <button className="friends-original-compose-btn">
+  <img
+    src="/apps/friends/note.png"
+    alt="Compose"
+    className="friends-compose-icon"
+  />
+</button>
           </div>
         </section>
       </div>
