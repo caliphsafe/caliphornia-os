@@ -95,14 +95,14 @@
 
 /* ===== inbox ===== */
 .friends-original-inbox-header {
-  padding: calc(env(safe-area-inset-top) + 82px) 18px 10px;
+  padding: calc(env(safe-area-inset-top) + 86px) 18px 12px;
 }
 
 .friends-original-inbox-header h1 {
   margin: 0;
-  font-size: clamp(40px, 7vw, 64px);
-  line-height: 0.95;
-  letter-spacing: -0.04em;
+  font-size: clamp(42px, 7.4vw, 64px);
+  line-height: 0.94;
+  letter-spacing: -0.055em;
   font-weight: 700;
 }
 
@@ -110,7 +110,7 @@
   flex: 1;
   overflow: auto;
   -webkit-overflow-scrolling: touch;
-  padding: 8px 18px 150px;
+  padding: 4px 18px 150px;
 }
 
 .friends-original-thread-list::-webkit-scrollbar,
@@ -122,24 +122,24 @@
 .friends-original-thread-row {
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr auto;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   gap: 12px;
   align-items: center;
   width: 100%;
   min-width: 0;
-  padding: 16px 20px 16px 20px;
+  padding: 14px 0 14px 0;
   background: transparent;
   text-align: left;
   color: inherit;
   text-decoration: none;
-  transition: background-color 0.18s ease, transform 0.12s ease;
+  transition: background-color 0.18s ease;
   -webkit-tap-highlight-color: transparent;
 }
 
 .friends-original-thread-row::after {
   content: "";
   position: absolute;
-  left: 86px;
+  left: 66px;
   right: 0;
   bottom: 0;
   height: 1px;
@@ -147,21 +147,18 @@
 }
 
 .friends-original-thread-row:hover {
-  background: rgba(255,255,255,0.04);
+  background: rgba(255,255,255,0.03);
 }
 
-.friends-original-thread-row:active {
-  background: rgba(44,44,46,0.9);
-}
-
+.friends-original-thread-row:active,
 .friends-original-thread-row:focus-visible {
+  background: rgba(44,44,46,0.92);
   outline: none;
-  background: rgba(44,44,46,0.9);
 }
 
 .friends-original-thread-unread-dot {
   position: absolute;
-  left: 10px;
+  left: -14px;
   top: 50%;
   width: 10px;
   height: 10px;
@@ -185,11 +182,13 @@
   font-weight: 700;
   letter-spacing: -0.03em;
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
+  flex: 0 0 auto;
 }
 
 .friends-original-thread-main {
   min-width: 0;
   overflow: hidden;
+  padding-right: 8px;
 }
 
 .friends-original-thread-topline {
@@ -200,10 +199,10 @@
 }
 
 .friends-original-thread-title {
-  font-size: 18px;
-  line-height: 1.15;
+  font-size: 19px;
+  line-height: 1.08;
   font-weight: 700;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   color: #fff;
   white-space: nowrap;
   overflow: hidden;
@@ -213,8 +212,8 @@
 .friends-original-thread-preview {
   margin-top: 3px;
   font-size: 16px;
-  line-height: 1.25;
-  color: #9b9ba3;
+  line-height: 1.22;
+  color: #8e8e93;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -223,10 +222,10 @@
 .friends-original-thread-time {
   font-size: 14px;
   line-height: 1;
-  color: #9b9ba3;
+  color: #8e8e93;
   white-space: nowrap;
   align-self: start;
-  padding-top: 2px;
+  padding-top: 4px;
 }
 
 /* ===== floating inbox bottom controls ===== */
@@ -818,8 +817,20 @@
   }
 
   .friends-original-thread-row {
-    padding-left: 18px;
-    padding-right: 18px;
+    padding-left: 0;
+    padding-right: 0;
+  }
+
+  .friends-original-thread-row::after {
+    left: 66px;
+  }
+
+  .friends-original-thread-title {
+    font-size: 18px;
+  }
+
+  .friends-original-thread-preview {
+    font-size: 15px;
   }
 
   .friends-original-message-bubble {
