@@ -176,7 +176,9 @@ export default function FriendsThreadClient({
       <div key={msg.id} className={`friends-original-message-row ${side}`}>
         <div className="friends-original-message-group">
           {side === "incoming" && msg.sender_label ? (
-            <div className="friends-original-message-label">{msg.sender_label}</div>
+            <div className="friends-original-message-label">
+              {msg.sender_label}
+            </div>
           ) : null}
 
           <div className="friends-original-message-bubble">{msg.body}</div>
@@ -211,7 +213,9 @@ export default function FriendsThreadClient({
       <div key={msg.id} className={`friends-original-message-row ${side}`}>
         <div className="friends-original-message-group">
           {side === "incoming" && msg.sender_label ? (
-            <div className="friends-original-message-label">{msg.sender_label}</div>
+            <div className="friends-original-message-label">
+              {msg.sender_label}
+            </div>
           ) : null}
 
           <button
