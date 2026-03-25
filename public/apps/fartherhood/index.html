@@ -225,7 +225,7 @@
         title: "CALIPH - STORY TIME",
         date: "Feb 28, 2025 at 12:40 AM",
         duration: "02:07",
-        file: "audio/storytime.mp3",
+        file: "/apps/fartherhood/audio/storytime.mp3",
         transcript:
 `(Little little place between the oh) 
 Let's switch the conversation up a bit
@@ -247,7 +247,7 @@ But somehow I'm the one that turned her to a mama`,
         title: "CALIPH - EATER JAMES",
         date: "Feb 28, 2025 at 12:45 AM",
         duration: "02:00",
-        file: "audio/eaterjames.mp3",
+        file: "/apps/fartherhood/audio/eaterjames.mp3",
         transcript:
 `All right, okay, all right…
 (All right, okay, all right…)
@@ -259,7 +259,7 @@ go, go, okay, right, go…`,
         title: "CALIPH - BLUE CORNER",
         date: "Feb 13, 2025 at 5:03 PM",
         duration: "02:00",
-        file: "audio/bluecorner.mp3",
+        file: "/apps/fartherhood/audio/bluecorner.mp3",
         transcript:
 `The streets talking…
 I could care less where I'm from…
@@ -271,7 +271,7 @@ we find peace in comparing Nike Air…`,
         title: "CALIPH - OBESERVATIONS / A DOLLAR AND A DAD",
         date: "Feb 28, 2025 at 12:55 AM",
         duration: "02:00",
-        file: "audio/dollardad.mp3",
+        file: "/apps/fartherhood/audio/dollardad.mp3",
         transcript:
 `Conversations switchin up…
 niggas always act weird when it's time to give it up…`,
@@ -282,7 +282,7 @@ niggas always act weird when it's time to give it up…`,
         title: "CALIPH - SEEDS",
         date: "Feb 28, 2025 at 12:43 AM",
         duration: "02:00",
-        file: "audio/seeds.mp3",
+        file: "/apps/fartherhood/audio/seeds.mp3",
         transcript:
 `The world getting colder than ever…
 it's getting harder to hold the dinero…`,
@@ -301,6 +301,13 @@ it's getting harder to hold the dinero…`,
       currentTime: 0,
       duration: 0
     };
+
+    function normalizeTrackFile(file) {
+      if (!file) return file;
+      if (String(file).startsWith("http://") || String(file).startsWith("https://")) return file;
+      if (String(file).startsWith("/")) return file;
+      return `/apps/fartherhood/${String(file).replace(/^\.?\//, "")}`;
+    }
 
     function getTrackIndexBySlug(slug) {
       return tracks.findIndex((track) => track.slug === slug);
@@ -374,7 +381,8 @@ it's getting harder to hold the dinero…`,
         tracks = data.tracks.map((track, i) => ({
           ...track,
           slug: track.slug || defaultTracks[i]?.slug || null,
-          transcript: track.transcript || defaultTracks[i]?.transcript || ""
+          transcript: track.transcript || defaultTracks[i]?.transcript || "",
+          file: normalizeTrackFile(track.file || defaultTracks[i]?.file || "")
         }));
 
         currentIndex = -1;
