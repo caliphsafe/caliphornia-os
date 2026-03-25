@@ -322,7 +322,13 @@ mark{
   pointer-events: auto;
   z-index: 1200;
 }
+body.has-global-player .bottom-pill{
+  bottom: calc(env(safe-area-inset-bottom) + 98px);
+}
 
+body.has-global-player .compose-fab{
+  bottom: calc(env(safe-area-inset-bottom) + 98px);
+}
 .bottom-icon{
   width: 44px;
   height: 44px;
