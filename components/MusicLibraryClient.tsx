@@ -189,70 +189,46 @@ export default function MusicLibraryClient({ email }: Props) {
     router.push(`/home?email=${encodeURIComponent(email)}`);
   }
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !currentSong?.file) return;
+ useEffect(() => {
+  const audio = audioRef.current;
+  if (!audio) return;
 
-    const sameSrc = audio.src === currentSong.file;
+  function onPlay() {
+    setIsPlaying(true);
+  }
 
-    const beginPlayback = async () => {
-      try {
-        await audio.play();
-      } catch {}
-    };
+  function onPause() {
+    setIsPlaying(false);
+  }
 
-    if (!sameSrc) {
-      audio.pause();
-      audio.src = currentSong.file;
-      audio.load();
+  function onTimeUpdate() {
+    const currentAudio = audioRef.current;
+    if (!currentAudio) return;
+    setCurrentTime(currentAudio.currentTime || 0);
+  }
 
-      const onCanPlay = async () => {
-        audio.removeEventListener("canplay", onCanPlay);
-        setCurrentTime(0);
-        await beginPlayback();
-      };
+  function onEnded() {
+    const currentAudio = audioRef.current;
+    if (!currentAudio) return;
 
-      audio.addEventListener("canplay", onCanPlay, { once: true });
-    } else {
-      void beginPlayback();
-    }
-  }, [currentSong]);
+    setCurrentTime(0);
+    setCurrentIndex((prev) =>
+      prev >= localQueue.length - 1 ? 0 : prev + 1
+    );
+  }
 
-  useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+  audio.addEventListener("play", onPlay);
+  audio.addEventListener("pause", onPause);
+  audio.addEventListener("timeupdate", onTimeUpdate);
+  audio.addEventListener("ended", onEnded);
 
-    function onPlay() {
-      setIsPlaying(true);
-    }
-
-    function onPause() {
-      setIsPlaying(false);
-    }
-
-    function onTimeUpdate() {
-      setCurrentTime(audio.currentTime || 0);
-    }
-
-    function onEnded() {
-      setCurrentTime(0);
-      setCurrentIndex((prev) =>
-        prev >= localQueue.length - 1 ? 0 : prev + 1
-      );
-    }
-
-    audio.addEventListener("play", onPlay);
-    audio.addEventListener("pause", onPause);
-    audio.addEventListener("timeupdate", onTimeUpdate);
-    audio.addEventListener("ended", onEnded);
-
-    return () => {
-      audio.removeEventListener("play", onPlay);
-      audio.removeEventListener("pause", onPause);
-      audio.removeEventListener("timeupdate", onTimeUpdate);
-      audio.removeEventListener("ended", onEnded);
-    };
-  }, [localQueue.length]);
+  return () => {
+    audio.removeEventListener("play", onPlay);
+    audio.removeEventListener("pause", onPause);
+    audio.removeEventListener("timeupdate", onTimeUpdate);
+    audio.removeEventListener("ended", onEnded);
+  };
+}, [localQueue.length]);
 
   return (
     <div className="music-app-shell">
