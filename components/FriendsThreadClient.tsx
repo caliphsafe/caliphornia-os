@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
 
 type Clip = {
@@ -55,13 +55,17 @@ export default function FriendsThreadClient({
   conversation: Conversation;
   messages: Message[];
 }) {
+  const router = useRouter();
+
   const [activeClipId, setActiveClipId] = useState<string | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [clipProgress, setClipProgress] = useState<Record<string, number>>({});
   const [clipTimes, setClipTimes] = useState<Record<string, number>>({});
   const [isEntered, setIsEntered] = useState(false);
+  const [isLeavingBack, setIsLeavingBack] = useState(false);
 
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
+  const backTimeoutRef = useRef<number | null>(null);
 
   function formatTime(seconds: number) {
     const s = Math.max(0, Math.floor(seconds));
@@ -76,6 +80,14 @@ export default function FriendsThreadClient({
     });
 
     return () => window.cancelAnimationFrame(raf);
+  }, []);
+
+  useEffect(() => {
+    return () => {
+      if (backTimeoutRef.current) {
+        window.clearTimeout(backTimeoutRef.current);
+      }
+    };
   }, []);
 
   useEffect(() => {
@@ -124,6 +136,16 @@ export default function FriendsThreadClient({
       window.clearTimeout(t3);
     };
   }, [conversation.slug, messages.length]);
+
+  function handleBackToInbox() {
+    if (isLeavingBack) return;
+
+    setIsLeavingBack(true);
+
+    backTimeoutRef.current = window.setTimeout(() => {
+      router.push("/apps/friends");
+    }, 220);
+  }
 
   function playClip(msg: Message) {
     const clip = msg.clip;
@@ -269,15 +291,24 @@ export default function FriendsThreadClient({
 
   return (
     <div
-      className={`app-shell friends-original-app-shell friends-thread-transition ${isEntered ? "is-entered" : ""}`}
+      className={[
+        "app-shell",
+        "friends-original-app-shell",
+        "friends-thread-transition",
+        isEntered ? "is-entered" : "",
+        isLeavingBack ? "is-leaving-back" : ""
+      ]
+        .filter(Boolean)
+        .join(" ")}
     >
       <section
         className="screen screen-thread is-active"
         aria-label="Conversation thread"
       >
         <div className="friends-original-thread-topbar top-safe">
-          <Link
-            href="/apps/friends"
+          <button
+            type="button"
+            onClick={handleBackToInbox}
             className="friends-original-back-btn"
             aria-label="Back to inbox"
           >
@@ -286,7 +317,7 @@ export default function FriendsThreadClient({
               aria-hidden="true"
             ></span>
             <span className="friends-original-back-text">Fri.ends</span>
-          </Link>
+          </button>
 
           <div className="friends-original-thread-header-meta">
             <div className="friends-original-thread-avatar friends-original-thread-avatar--header">
