@@ -370,7 +370,7 @@
 .friends-original-thread-topbar > * {
   pointer-events: auto;
 }
-}
+
 .friends-original-thread-topbar::after {
   content: "";
   width: 46px;
