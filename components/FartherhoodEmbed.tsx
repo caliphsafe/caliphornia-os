@@ -14,7 +14,12 @@ export default function FartherhoodEmbed() {
 
       if (data.type === "CALIPH_NAVIGATE" && typeof data.href === "string") {
         try {
-          event.source?.postMessage?.({ type: "CALIPH_NAVIGATE_ACK" }, "*");
+          if (event.source && "postMessage" in event.source) {
+            (event.source as WindowProxy).postMessage(
+              { type: "CALIPH_NAVIGATE_ACK" },
+              "*"
+            );
+          }
         } catch {}
 
         router.push(data.href);
