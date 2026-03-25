@@ -59,6 +59,7 @@ export default function FriendsThreadClient({
   const [isPlaying, setIsPlaying] = useState(false);
   const [clipProgress, setClipProgress] = useState<Record<string, number>>({});
   const [clipTimes, setClipTimes] = useState<Record<string, number>>({});
+  const [isEntered, setIsEntered] = useState(false);
 
   const bottomAnchorRef = useRef<HTMLDivElement | null>(null);
 
@@ -68,6 +69,14 @@ export default function FriendsThreadClient({
     const ss = s % 60;
     return `${mm}:${String(ss).padStart(2, "0")}`;
   }
+
+  useEffect(() => {
+    const raf = window.requestAnimationFrame(() => {
+      setIsEntered(true);
+    });
+
+    return () => window.cancelAnimationFrame(raf);
+  }, []);
 
   useEffect(() => {
     function onPlayerState(event: MessageEvent) {
@@ -259,7 +268,9 @@ export default function FriendsThreadClient({
   }
 
   return (
-    <div className="app-shell friends-original-app-shell">
+    <div
+      className={`app-shell friends-original-app-shell friends-thread-transition ${isEntered ? "is-entered" : ""}`}
+    >
       <section
         className="screen screen-thread is-active"
         aria-label="Conversation thread"
