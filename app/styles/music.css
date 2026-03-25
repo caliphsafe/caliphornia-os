@@ -161,6 +161,8 @@
 .music-song-list {
   display: grid;
   gap: 0;
+  width: 100%;
+  min-width: 0;
 }
 
 .music-song-row {
@@ -169,6 +171,7 @@
   justify-content: space-between;
   gap: 14px;
   width: 100%;
+  min-width: 0;
   padding: 14px 0;
   background: transparent;
   border: 0;
@@ -176,6 +179,7 @@
   color: inherit;
   text-align: left;
   transition: background 0.2s ease, transform 0.2s ease;
+  overflow: hidden;
 }
 
 .music-song-row.is-active {
@@ -187,7 +191,8 @@
   display: flex;
   align-items: center;
   gap: 14px;
-  flex: 1;
+  flex: 1 1 auto;
+  overflow: hidden;
 }
 
 .music-song-cover {
@@ -220,11 +225,13 @@
 .music-song-copy,
 .music-inline-copy {
   min-width: 0;
+  flex: 1 1 auto;
   overflow: hidden;
 }
 
 .music-song-title,
 .music-inline-title {
+  min-width: 0;
   font-size: 22px;
   line-height: 1.08;
   letter-spacing: -0.03em;
@@ -234,6 +241,7 @@
 
 .music-song-artist,
 .music-inline-artist {
+  min-width: 0;
   margin-top: 4px;
   font-size: 16px;
   color: rgba(255,255,255,0.62);
@@ -261,6 +269,7 @@
 
 .music-ellipsis {
   display: block;
+  min-width: 0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -297,6 +306,10 @@
   z-index: 1100;
 }
 
+.global-player.music-inline-player-shell {
+  z-index: 5000;
+}
+
 .music-inline-player {
   display: flex;
   align-items: center;
@@ -313,10 +326,11 @@
 
 .music-inline-player-left {
   min-width: 0;
-  flex: 1;
+  flex: 1 1 auto;
   display: flex;
   align-items: center;
   gap: 12px;
+  overflow: hidden;
 }
 
 .music-inline-cover {
@@ -349,6 +363,15 @@
   background: rgba(255,255,255,0.08);
   color: #fff;
   font-size: 16px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.music-inline-btn .gp-icon {
+  width: 18px;
+  height: 18px;
+  display: block;
 }
 
 .music-inline-btn-main {
@@ -357,6 +380,17 @@
   background: rgba(255,255,255,0.96);
   color: #000;
   font-weight: 700;
+}
+
+.music-inline-btn-main .gp-icon {
+  width: 20px;
+  height: 20px;
+}
+
+.music-inline-btn.is-saved {
+  background: rgba(255,255,255,0.16);
+  color: rgba(250, 204, 21, 0.98);
+  border-color: rgba(250, 204, 21, 0.28);
 }
 
 .music-inline-progress-row {
@@ -390,5 +424,19 @@
   .music-song-artist,
   .music-inline-artist {
     font-size: 15px;
+  }
+
+  .music-inline-controls {
+    gap: 8px;
+  }
+
+  .music-inline-btn {
+    width: 40px;
+    height: 40px;
+  }
+
+  .music-inline-btn-main {
+    width: 48px;
+    height: 48px;
   }
 }
