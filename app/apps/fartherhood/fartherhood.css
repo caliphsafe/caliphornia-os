@@ -262,19 +262,16 @@ mark{
 
 .play-pill:active{ transform: scale(0.99); }
 
-/* ======= Bottom chrome ======= */
+/*/* ======= Bottom chrome ======= */
 /* ✅ No bar background — only the pill + compose are glass */
 .bottom-chrome{
   position: fixed;
   left: 0;
   right: 0;
   bottom: 0;
-
-  /* let the elements sit “free” like top chrome */
   height: auto;
   padding: 0;
   background: transparent;
-
   z-index: 1000;
   pointer-events: none;
 }
@@ -283,7 +280,7 @@ mark{
 .bottom-pill{
   position: fixed;
   left: 14px;
-  bottom: calc(env(safe-area-inset-bottom) + 98px);
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
 
   display: flex;
   gap: 22px;
@@ -298,12 +295,13 @@ mark{
 
   pointer-events: auto;
   z-index: 1200;
+  transition: bottom 0.28s ease;
 }
 
 .compose-fab{
   position: fixed;
   right: 14px;
-  bottom: calc(env(safe-area-inset-bottom) + 98px);
+  bottom: calc(env(safe-area-inset-bottom) + 14px);
 
   width: 56px;
   height: 56px;
@@ -321,6 +319,7 @@ mark{
 
   pointer-events: auto;
   z-index: 1200;
+  transition: bottom 0.28s ease;
 }
 
 .bottom-icon{
@@ -332,18 +331,13 @@ mark{
   border-radius: 999px;
 }
 
-.compose-fab{
-  width: 56px;
-  height: 56px;
-  border-radius: 18px;
-  background: var(--glass);
-  border: 1px solid var(--glass-stroke);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-  box-shadow: 0 18px 44px rgba(0,0,0,0.55);
-  display: grid;
-  place-items: center;
-  text-decoration: none;
+/* move controls up only when the global player is active */
+body.has-global-player .bottom-pill{
+  bottom: calc(env(safe-area-inset-bottom) + 98px) !important;
+}
+
+body.has-global-player .compose-fab{
+  bottom: calc(env(safe-area-inset-bottom) + 98px) !important;
 }
 
 /* ======= Listener notes section ======= */
