@@ -1,12 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
-
-type AppOption = {
-  id: string;
-  slug: string;
-  name: string;
-};
+import { FormEvent, useEffect, useState } from "react";
 
 type SongOption = {
   slug: string;
@@ -48,12 +42,6 @@ type MessageRow = {
   displayDuration: string;
 };
 
-type AppOrderRow = {
-  song_slug: string;
-  title: string;
-  position: number | null;
-};
-
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
@@ -86,7 +74,6 @@ const EMPTY_ASSET = (): AssetRow => ({
 });
 
 export default function FriendsBuilderPage() {
-  const [apps, setApps] = useState<AppOption[]>([]);
   const [songs, setSongs] = useState<SongOption[]>([]);
   const [conversations, setConversations] = useState<ConversationOption[]>([]);
   const [selectedConversationSlug, setSelectedConversationSlug] = useState("");
@@ -106,38 +93,23 @@ export default function FriendsBuilderPage() {
   const [assets, setAssets] = useState<AssetRow[]>([]);
   const [messages, setMessages] = useState<MessageRow[]>([]);
 
-  const [orderAppSlug, setOrderAppSlug] = useState("friends");
-  const [orderRows, setOrderRows] = useState<AppOrderRow[]>([]);
-  const [savingOrder, setSavingOrder] = useState(false);
-
-  const selectedSong = useMemo(
-    () => songs.find((s) => s.slug === primarySongSlug) || null,
-    [songs, primarySongSlug]
-  );
-
   async function loadBoot() {
     setLoading(true);
     setResult("");
 
     try {
-      const [appsRes, songsRes, convosRes, orderRes] = await Promise.all([
-        fetch("/api/dashboard/friends-builder?mode=apps", { cache: "no-store" }),
+      const [songsRes, convosRes] = await Promise.all([
         fetch("/api/dashboard/friends-builder?mode=songs", { cache: "no-store" }),
-        fetch("/api/dashboard/friends-builder?mode=conversations", { cache: "no-store" }),
-        fetch("/api/dashboard/friends-builder?mode=app-order&appSlug=friends", {
+        fetch("/api/dashboard/friends-builder?mode=conversations", {
           cache: "no-store"
         })
       ]);
 
-      const appsData = await appsRes.json();
       const songsData = await songsRes.json();
       const convosData = await convosRes.json();
-      const orderData = await orderRes.json();
 
-      if (appsData?.ok) setApps(appsData.apps || []);
       if (songsData?.ok) setSongs(songsData.songs || []);
       if (convosData?.ok) setConversations(convosData.conversations || []);
-      if (orderData?.ok) setOrderRows(orderData.rows || []);
     } catch {
       setResult("Could not load builder data.");
     } finally {
@@ -222,25 +194,6 @@ export default function FriendsBuilderPage() {
       );
     } catch {
       setResult("Could not load conversation.");
-    }
-  }
-
-  async function loadAppOrder(appSlug: string) {
-    try {
-      const res = await fetch(
-        `/api/dashboard/friends-builder?mode=app-order&appSlug=${encodeURIComponent(
-          appSlug
-        )}`,
-        { cache: "no-store" }
-      );
-      const data = await res.json();
-      if (data?.ok) {
-        setOrderRows(data.rows || []);
-      } else {
-        setResult(data?.error || "Could not load app order.");
-      }
-    } catch {
-      setResult("Could not load app order.");
     }
   }
 
@@ -370,46 +323,12 @@ export default function FriendsBuilderPage() {
     }
   }
 
-  async function handleSaveOrder() {
-    setSavingOrder(true);
-    setResult("");
-
-    try {
-      const res = await fetch("/api/dashboard/friends-builder", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          action: "save-order",
-          appSlug: orderAppSlug,
-          rows: orderRows.map((row) => ({
-            songSlug: row.song_slug,
-            position: row.position
-          }))
-        })
-      });
-
-      const data = await res.json();
-
-      if (!data?.ok) {
-        setResult(data?.error || "Could not save order.");
-        setSavingOrder(false);
-        return;
-      }
-
-      setResult(`Saved ${orderAppSlug} order.`);
-      await loadAppOrder(orderAppSlug);
-    } catch {
-      setResult("Server error while saving order.");
-    } finally {
-      setSavingOrder(false);
-    }
-  }
-
   return (
     <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
       <h1 style={{ marginBottom: 8 }}>Fri.ends Conversation Builder</h1>
       <p style={{ marginTop: 0, marginBottom: 24, opacity: 0.75 }}>
-        Build full Fri.ends conversations and manage song order for all apps.
+        Build full Fri.ends conversations with alternate audio versions, messages,
+        timestamps, and clip timing.
       </p>
 
       {loading ? (
@@ -1026,80 +945,6 @@ export default function FriendsBuilderPage() {
               {saving ? "Saving…" : "Save Conversation"}
             </button>
           </form>
-
-          <section
-            style={{
-              marginTop: 32,
-              border: "1px solid rgba(255,255,255,0.12)",
-              borderRadius: 16,
-              padding: 16
-            }}
-          >
-            <h2 style={{ marginTop: 0 }}>App Order Manager</h2>
-
-            <div
-              style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}
-            >
-              <select
-                value={orderAppSlug}
-                onChange={async (e) => {
-                  const next = e.target.value;
-                  setOrderAppSlug(next);
-                  await loadAppOrder(next);
-                }}
-                style={{ padding: 10 }}
-              >
-                {apps.map((app) => (
-                  <option key={app.id} value={app.slug}>
-                    {app.name} ({app.slug})
-                  </option>
-                ))}
-              </select>
-
-              <button type="button" onClick={handleSaveOrder} disabled={savingOrder}>
-                {savingOrder ? "Saving…" : "Save Order"}
-              </button>
-            </div>
-
-            <div style={{ display: "grid", gap: 10 }}>
-              {orderRows.map((row) => (
-                <div
-                  key={row.song_slug}
-                  style={{
-                    display: "grid",
-                    gridTemplateColumns: "1fr 140px",
-                    gap: 12,
-                    alignItems: "center"
-                  }}
-                >
-                  <div>
-                    {row.title}{" "}
-                    <span style={{ opacity: 0.6 }}>({row.song_slug})</span>
-                  </div>
-
-                  <input
-                    type="number"
-                    value={row.position ?? ""}
-                    onChange={(e) =>
-                      setOrderRows((prev) =>
-                        prev.map((r) =>
-                          r.song_slug === row.song_slug
-                            ? {
-                                ...r,
-                                position: e.target.value
-                                  ? Number(e.target.value)
-                                  : null
-                              }
-                            : r
-                        )
-                      )
-                    }
-                    style={{ width: "100%", padding: 10 }}
-                  />
-                </div>
-              ))}
-            </div>
-          </section>
 
           {result ? <p style={{ marginTop: 20 }}>{result}</p> : null}
         </>
