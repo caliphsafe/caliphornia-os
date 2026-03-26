@@ -522,20 +522,25 @@ function getCurrentTrackSongSlug(track: GlobalTrack | null) {
     };
   }, [currentTrack, currentIndex, queue, friendsFinalQueue]);
 useEffect(() => {
-  const songSlug = getCurrentTrackSongSlug(currentTrack);
+  const rawSongSlug = getCurrentTrackSongSlug(currentTrack);
 
-  if (!songSlug) {
+  if (!rawSongSlug) {
     setResolvedCoverUrl(null);
     return;
   }
+
+  const songSlug = rawSongSlug;
 
   let isCancelled = false;
 
   async function fetchCover() {
     try {
-      const res = await fetch(`/api/songs/by-slug/${encodeURIComponent(songSlug)}`, {
-        cache: "no-store"
-      });
+      const res = await fetch(
+        `/api/songs/by-slug/${encodeURIComponent(songSlug)}`,
+        {
+          cache: "no-store"
+        }
+      );
 
       const data = await res.json();
 
