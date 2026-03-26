@@ -10,6 +10,17 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+async function createSignedAudioUrl(storagePath: string | null | undefined) {
+  if (!storagePath) return null;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from("songs")
+    .createSignedUrl(storagePath, 60 * 60);
+
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
 export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode");
 
@@ -24,9 +35,16 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
     }
 
+    const songs = await Promise.all(
+      (data || []).map(async (song: any) => ({
+        ...song,
+        audio_url: await createSignedAudioUrl(song.audio_path)
+      }))
+    );
+
     return NextResponse.json({
       ok: true,
-      songs: data || []
+      songs
     });
   }
 
@@ -95,6 +113,7 @@ export async function GET(request: NextRequest) {
         id,
         slug,
         title,
+        storage_path,
         version_label,
         is_final_version,
         is_playlistable,
@@ -103,6 +122,14 @@ export async function GET(request: NextRequest) {
       .eq("conversation_id", conversation.id)
       .eq("is_final_version", false)
       .order("created_at", { ascending: true });
+
+    const assetsWithUrls = await Promise.all(
+      (assets || []).map(async (a: any) => ({
+        slug: a.slug,
+        title: a.title,
+        audio_url: await createSignedAudioUrl(a.storage_path)
+      }))
+    );
 
     const { data: messages } = await supabaseAdmin
       .from("conversation_messages")
@@ -158,10 +185,7 @@ export async function GET(request: NextRequest) {
       detail: {
         conversation,
         primarySongSlug,
-        assets: (assets || []).map((a) => ({
-          slug: a.slug,
-          title: a.title
-        })),
+        assets: assetsWithUrls,
         messages: normalizedMessages
       }
     });
@@ -178,10 +202,6 @@ export async function POST(request: NextRequest) {
     if (action !== "save-conversation") {
       return NextResponse.json({ ok: false, error: "Invalid action." }, { status: 400 });
     }
-
-    const selectedConversationSlug = String(
-      formData.get("selectedConversationSlug") || ""
-    ).trim();
 
     const primarySongSlug = String(formData.get("primarySongSlug") || "").trim();
     const conversationSlug = slugify(String(formData.get("conversationSlug") || "").trim());
@@ -320,7 +340,7 @@ export async function POST(request: NextRequest) {
 
     const assetSlugToId = new Map<string, string>();
 
-       for (const asset of assets || []) {
+    for (const asset of assets || []) {
       const cleanSlug = slugify(String(asset.slug || "").trim());
       const cleanTitle = String(asset.title || "").trim();
 
@@ -385,6 +405,8 @@ export async function POST(request: NextRequest) {
           : String(msg.messageSide || "incoming").trim();
 
       const body = String(msg.body || "").trim();
+      const senderName = String(msg.senderName || "").trim();
+      const senderLabel = String(msg.senderLabel || "").trim();
       const audioLabel = String(msg.audioLabel || "").trim();
       const audioKind = String(msg.audioKind || "Song").trim();
       const assetSlug = slugify(String(msg.assetSlug || "").trim());
@@ -394,18 +416,8 @@ export async function POST(request: NextRequest) {
         .insert({
           conversation_id: savedConversation.id,
           message_type: messageType,
-          sender_name:
-            messageType === "timestamp"
-              ? null
-              : messageSide === "outgoing"
-              ? "Caliph"
-              : null,
-          sender_label:
-            messageType === "timestamp"
-              ? null
-              : messageSide === "incoming"
-              ? primarySong.artist_name || null
-              : null,
+          sender_name: messageType === "timestamp" ? null : senderName || null,
+          sender_label: messageType === "timestamp" ? null : senderLabel || null,
           body: body || null,
           position: Number(msg.position),
           is_published: true,
@@ -438,15 +450,21 @@ export async function POST(request: NextRequest) {
           );
         }
 
+        const parsedStart = Number(msg.startSeconds || 0);
+        const parsedEnd =
+          msg.endSeconds === "" || msg.endSeconds === null || msg.endSeconds === undefined
+            ? null
+            : Number(msg.endSeconds);
+
         const { error: clipError } = await supabaseAdmin
           .from("message_audio_clips")
           .insert({
             message_id: savedMessage.id,
             audio_asset_id: audioAssetId,
-            clip_title: audioLabel || audioKind || "Audio",
-            start_seconds: 0,
-            end_seconds: null,
-            display_duration: null
+            clip_title: String(msg.clipTitle || audioLabel || audioKind || "Audio"),
+            start_seconds: Number.isFinite(parsedStart) ? parsedStart : 0,
+            end_seconds: parsedEnd !== null && Number.isFinite(parsedEnd) ? parsedEnd : null,
+            display_duration: String(msg.displayDuration || "").trim() || null
           });
 
         if (clipError) {
