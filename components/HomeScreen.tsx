@@ -30,11 +30,10 @@ export default function HomeScreen({ email }: { email: string }) {
           <div className="feature-blur-orb feature-orb-two" />
 
           <div className="feature-copy">
-            <span className="feature-kicker">Direct to fan</span>
-            <h1>Your music as an operating system</h1>
+            <span className="feature-kicker">Welcome To Caliphornia</span>
+            <h1>cOS 1.8</h1>
             <p>
-              Text worlds, lyric games, playlists, visuals, drops, and future apps
-              living inside one cinematic ecosystem.
+              A cinematic ecosystem of text worlds, music experiences, evolving playlists, visual drops, and future apps.
             </p>
           </div>
         </section>
