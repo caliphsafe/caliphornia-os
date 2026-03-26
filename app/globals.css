@@ -1380,3 +1380,8 @@ img {
     height: 48px;
   }
 }
+.music-inline-cover img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
