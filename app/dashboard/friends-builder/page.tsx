@@ -2,6 +2,12 @@
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
 
+type AppOption = {
+  id: string;
+  slug: string;
+  name: string;
+};
+
 type SongOption = {
   slug: string;
   title: string;
@@ -80,6 +86,7 @@ const EMPTY_ASSET = (): AssetRow => ({
 });
 
 export default function FriendsBuilderPage() {
+  const [apps, setApps] = useState<AppOption[]>([]);
   const [songs, setSongs] = useState<SongOption[]>([]);
   const [conversations, setConversations] = useState<ConversationOption[]>([]);
   const [selectedConversationSlug, setSelectedConversationSlug] = useState("");
@@ -111,17 +118,23 @@ export default function FriendsBuilderPage() {
   async function loadBoot() {
     setLoading(true);
     setResult("");
+
     try {
-      const [songsRes, convosRes, orderRes] = await Promise.all([
+      const [appsRes, songsRes, convosRes, orderRes] = await Promise.all([
+        fetch("/api/dashboard/friends-builder?mode=apps", { cache: "no-store" }),
         fetch("/api/dashboard/friends-builder?mode=songs", { cache: "no-store" }),
         fetch("/api/dashboard/friends-builder?mode=conversations", { cache: "no-store" }),
-        fetch("/api/dashboard/friends-builder?mode=app-order&appSlug=friends", { cache: "no-store" })
+        fetch("/api/dashboard/friends-builder?mode=app-order&appSlug=friends", {
+          cache: "no-store"
+        })
       ]);
 
+      const appsData = await appsRes.json();
       const songsData = await songsRes.json();
       const convosData = await convosRes.json();
       const orderData = await orderRes.json();
 
+      if (appsData?.ok) setApps(appsData.apps || []);
       if (songsData?.ok) setSongs(songsData.songs || []);
       if (convosData?.ok) setConversations(convosData.conversations || []);
       if (orderData?.ok) setOrderRows(orderData.rows || []);
@@ -143,7 +156,9 @@ export default function FriendsBuilderPage() {
 
     try {
       const res = await fetch(
-        `/api/dashboard/friends-builder?mode=conversation-detail&slug=${encodeURIComponent(slug)}`,
+        `/api/dashboard/friends-builder?mode=conversation-detail&slug=${encodeURIComponent(
+          slug
+        )}`,
         { cache: "no-store" }
       );
       const data = await res.json();
@@ -163,7 +178,8 @@ export default function FriendsBuilderPage() {
       setAvatarLetter(detail.conversation.avatar_letter || "");
       setLastActivityLabel(detail.conversation.last_activity_label || "");
       setSortOrder(
-        detail.conversation.sort_order !== null && detail.conversation.sort_order !== undefined
+        detail.conversation.sort_order !== null &&
+          detail.conversation.sort_order !== undefined
           ? String(detail.conversation.sort_order)
           : ""
       );
@@ -194,9 +210,13 @@ export default function FriendsBuilderPage() {
           assetSlug: m.asset_slug || "",
           clipTitle: m.clip_title || "",
           startSeconds:
-            m.start_seconds !== null && m.start_seconds !== undefined ? String(m.start_seconds) : "",
+            m.start_seconds !== null && m.start_seconds !== undefined
+              ? String(m.start_seconds)
+              : "",
           endSeconds:
-            m.end_seconds !== null && m.end_seconds !== undefined ? String(m.end_seconds) : "",
+            m.end_seconds !== null && m.end_seconds !== undefined
+              ? String(m.end_seconds)
+              : "",
           displayDuration: m.display_duration || ""
         }))
       );
@@ -208,12 +228,16 @@ export default function FriendsBuilderPage() {
   async function loadAppOrder(appSlug: string) {
     try {
       const res = await fetch(
-        `/api/dashboard/friends-builder?mode=app-order&appSlug=${encodeURIComponent(appSlug)}`,
+        `/api/dashboard/friends-builder?mode=app-order&appSlug=${encodeURIComponent(
+          appSlug
+        )}`,
         { cache: "no-store" }
       );
       const data = await res.json();
       if (data?.ok) {
         setOrderRows(data.rows || []);
+      } else {
+        setResult(data?.error || "Could not load app order.");
       }
     } catch {
       setResult("Could not load app order.");
@@ -262,7 +286,9 @@ export default function FriendsBuilderPage() {
 
     try {
       if (!primarySongSlug || !conversationSlug || !conversationTitle) {
-        setResult("Primary song, conversation slug, and conversation title are required.");
+        setResult(
+          "Primary song, conversation slug, and conversation title are required."
+        );
         setSaving(false);
         return;
       }
@@ -383,7 +409,7 @@ export default function FriendsBuilderPage() {
     <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
       <h1 style={{ marginBottom: 8 }}>Fri.ends Conversation Builder</h1>
       <p style={{ marginTop: 0, marginBottom: 24, opacity: 0.75 }}>
-        Build full Fri.ends conversations and manage song order for your apps.
+        Build full Fri.ends conversations and manage song order for all apps.
       </p>
 
       {loading ? (
@@ -391,7 +417,11 @@ export default function FriendsBuilderPage() {
       ) : (
         <>
           <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
-            <button type="button" onClick={resetBuilder} style={{ padding: "10px 14px", borderRadius: 10 }}>
+            <button
+              type="button"
+              onClick={resetBuilder}
+              style={{ padding: "10px 14px", borderRadius: 10 }}
+            >
               New Conversation
             </button>
 
@@ -414,7 +444,13 @@ export default function FriendsBuilderPage() {
           </div>
 
           <form onSubmit={handleSaveConversation} style={{ display: "grid", gap: 16 }}>
-            <section style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 16 }}>
+            <section
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 16,
+                padding: 16
+              }}
+            >
               <h2 style={{ marginTop: 0 }}>Conversation Basics</h2>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
@@ -429,9 +465,11 @@ export default function FriendsBuilderPage() {
                       if (song) {
                         if (!conversationSlug) setConversationSlug(song.slug);
                         if (!conversationTitle) setConversationTitle(song.title);
-                        if (!conversationSubtitle) setConversationSubtitle(song.artist_name || "");
+                        if (!conversationSubtitle)
+                          setConversationSubtitle(song.artist_name || "");
                         if (!listPreview) setListPreview(song.description || "");
-                        if (!avatarLetter) setAvatarLetter((song.title?.[0] || "F").toUpperCase());
+                        if (!avatarLetter)
+                          setAvatarLetter((song.title?.[0] || "F").toUpperCase());
                       }
                     }}
                     style={{ width: "100%", padding: 12 }}
@@ -455,7 +493,14 @@ export default function FriendsBuilderPage() {
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16, marginTop: 16 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 16,
+                  marginTop: 16
+                }}
+              >
                 <label>
                   <div>Conversation Title</div>
                   <input
@@ -475,7 +520,14 @@ export default function FriendsBuilderPage() {
                 </label>
               </div>
 
-              <div style={{ display: "grid", gridTemplateColumns: "2fr 1fr 1fr 1fr", gap: 16, marginTop: 16 }}>
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "2fr 1fr 1fr 1fr",
+                  gap: 16,
+                  marginTop: 16
+                }}
+              >
                 <label>
                   <div>List Preview</div>
                   <input
@@ -516,28 +568,49 @@ export default function FriendsBuilderPage() {
               </div>
             </section>
 
-            <section style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <section
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 16,
+                padding: 16
+              }}
+            >
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
                 <h2 style={{ marginTop: 0 }}>Additional Audio Assets</h2>
-                <button type="button" onClick={() => setAssets((prev) => [...prev, EMPTY_ASSET()])}>
+                <button
+                  type="button"
+                  onClick={() => setAssets((prev) => [...prev, EMPTY_ASSET()])}
+                >
                   Add Asset
                 </button>
               </div>
 
-              {!assets.length ? <p style={{ opacity: 0.7 }}>No extra assets yet.</p> : null}
+              {!assets.length ? (
+                <p style={{ opacity: 0.7 }}>No extra assets yet.</p>
+              ) : null}
 
               <div style={{ display: "grid", gap: 16 }}>
                 {assets.map((asset) => (
                   <div
                     key={asset.clientId}
-                    style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 12 }}
+                    style={{
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 12,
+                      padding: 12
+                    }}
                   >
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <div
+                      style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}
+                    >
                       <label>
                         <div>Asset Slug</div>
                         <input
                           value={asset.slug}
-                          onChange={(e) => updateAsset(asset.clientId, { slug: e.target.value })}
+                          onChange={(e) =>
+                            updateAsset(asset.clientId, { slug: e.target.value })
+                          }
                           style={{ width: "100%", padding: 10 }}
                         />
                       </label>
@@ -546,7 +619,9 @@ export default function FriendsBuilderPage() {
                         <div>Title</div>
                         <input
                           value={asset.title}
-                          onChange={(e) => updateAsset(asset.clientId, { title: e.target.value })}
+                          onChange={(e) =>
+                            updateAsset(asset.clientId, { title: e.target.value })
+                          }
                           style={{ width: "100%", padding: 10 }}
                         />
                       </label>
@@ -555,33 +630,57 @@ export default function FriendsBuilderPage() {
                         <div>Version Label</div>
                         <input
                           value={asset.versionLabel}
-                          onChange={(e) => updateAsset(asset.clientId, { versionLabel: e.target.value })}
+                          onChange={(e) =>
+                            updateAsset(asset.clientId, {
+                              versionLabel: e.target.value
+                            })
+                          }
                           placeholder="Demo / Open Verse / Main"
                           style={{ width: "100%", padding: 10 }}
                         />
                       </label>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr auto auto", gap: 12, marginTop: 12 }}>
+                    <div
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "1fr auto auto",
+                        gap: 12,
+                        marginTop: 12
+                      }}
+                    >
                       <label>
                         <div>Linked Song Slug (optional)</div>
                         <input
                           value={asset.linkedSongSlug}
-                          onChange={(e) => updateAsset(asset.clientId, { linkedSongSlug: e.target.value })}
+                          onChange={(e) =>
+                            updateAsset(asset.clientId, {
+                              linkedSongSlug: e.target.value
+                            })
+                          }
                           style={{ width: "100%", padding: 10 }}
                         />
                       </label>
 
-                      <label style={{ display: "flex", alignItems: "end", gap: 8 }}>
+                      <label
+                        style={{ display: "flex", alignItems: "end", gap: 8 }}
+                      >
                         <input
                           type="checkbox"
                           checked={asset.isPlaylistable}
-                          onChange={(e) => updateAsset(asset.clientId, { isPlaylistable: e.target.checked })}
+                          onChange={(e) =>
+                            updateAsset(asset.clientId, {
+                              isPlaylistable: e.target.checked
+                            })
+                          }
                         />
                         Playlistable
                       </label>
 
-                      <button type="button" onClick={() => removeAsset(asset.clientId)}>
+                      <button
+                        type="button"
+                        onClick={() => removeAsset(asset.clientId)}
+                      >
                         Remove
                       </button>
                     </div>
@@ -591,20 +690,37 @@ export default function FriendsBuilderPage() {
                         type="file"
                         accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac"
                         onChange={(e) =>
-                          updateAsset(asset.clientId, { file: e.target.files?.[0] || null })
+                          updateAsset(asset.clientId, {
+                            file: e.target.files?.[0] || null
+                          })
                         }
                       />
-                      {asset.file ? <div style={{ marginTop: 6, opacity: 0.7 }}>{asset.file.name}</div> : null}
+                      {asset.file ? (
+                        <div style={{ marginTop: 6, opacity: 0.7 }}>
+                          {asset.file.name}
+                        </div>
+                      ) : null}
                     </div>
                   </div>
                 ))}
               </div>
             </section>
 
-            <section style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 16 }}>
-              <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+            <section
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 16,
+                padding: 16
+              }}
+            >
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
                 <h2 style={{ marginTop: 0 }}>Messages</h2>
-                <button type="button" onClick={() => setMessages((prev) => [...prev, EMPTY_MESSAGE()])}>
+                <button
+                  type="button"
+                  onClick={() => setMessages((prev) => [...prev, EMPTY_MESSAGE()])}
+                >
                   Add Message
                 </button>
               </div>
@@ -613,16 +729,32 @@ export default function FriendsBuilderPage() {
                 {messages.map((msg, index) => (
                   <div
                     key={msg.clientId}
-                    style={{ border: "1px solid rgba(255,255,255,0.08)", borderRadius: 12, padding: 12 }}
+                    style={{
+                      border: "1px solid rgba(255,255,255,0.08)",
+                      borderRadius: 12,
+                      padding: 12
+                    }}
                   >
-                    <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 12 }}>
+                    <div
+                      style={{
+                        display: "flex",
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        marginBottom: 12
+                      }}
+                    >
                       <strong>Message {index + 1}</strong>
-                      <button type="button" onClick={() => removeMessage(msg.clientId)}>
+                      <button
+                        type="button"
+                        onClick={() => removeMessage(msg.clientId)}
+                      >
                         Remove
                       </button>
                     </div>
 
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                    <div
+                      style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}
+                    >
                       <label>
                         <div>Type</div>
                         <select
@@ -661,7 +793,11 @@ export default function FriendsBuilderPage() {
                         <div>Display Time</div>
                         <input
                           value={msg.displayTime}
-                          onChange={(e) => updateMessage(msg.clientId, { displayTime: e.target.value })}
+                          onChange={(e) =>
+                            updateMessage(msg.clientId, {
+                              displayTime: e.target.value
+                            })
+                          }
                           style={{ width: "100%", padding: 10 }}
                         />
                       </label>
@@ -673,7 +809,9 @@ export default function FriendsBuilderPage() {
                           <div>Timestamp Text</div>
                           <input
                             value={msg.body}
-                            onChange={(e) => updateMessage(msg.clientId, { body: e.target.value })}
+                            onChange={(e) =>
+                              updateMessage(msg.clientId, { body: e.target.value })
+                            }
                             style={{ width: "100%", padding: 10 }}
                           />
                         </label>
@@ -681,12 +819,23 @@ export default function FriendsBuilderPage() {
                     ) : null}
 
                     {msg.messageType === "text" ? (
-                      <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 12, marginTop: 12 }}>
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: 12,
+                          marginTop: 12
+                        }}
+                      >
                         <label>
                           <div>Sender Name</div>
                           <input
                             value={msg.senderName}
-                            onChange={(e) => updateMessage(msg.clientId, { senderName: e.target.value })}
+                            onChange={(e) =>
+                              updateMessage(msg.clientId, {
+                                senderName: e.target.value
+                              })
+                            }
                             style={{ width: "100%", padding: 10 }}
                           />
                         </label>
@@ -695,7 +844,11 @@ export default function FriendsBuilderPage() {
                           <div>Sender Label</div>
                           <input
                             value={msg.senderLabel}
-                            onChange={(e) => updateMessage(msg.clientId, { senderLabel: e.target.value })}
+                            onChange={(e) =>
+                              updateMessage(msg.clientId, {
+                                senderLabel: e.target.value
+                              })
+                            }
                             style={{ width: "100%", padding: 10 }}
                           />
                         </label>
@@ -704,7 +857,9 @@ export default function FriendsBuilderPage() {
                           <div>Body</div>
                           <textarea
                             value={msg.body}
-                            onChange={(e) => updateMessage(msg.clientId, { body: e.target.value })}
+                            onChange={(e) =>
+                              updateMessage(msg.clientId, { body: e.target.value })
+                            }
                             rows={3}
                             style={{ width: "100%", padding: 10 }}
                           />
@@ -714,12 +869,22 @@ export default function FriendsBuilderPage() {
 
                     {msg.messageType === "audio" ? (
                       <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
+                            gap: 12
+                          }}
+                        >
                           <label>
                             <div>Sender Name</div>
                             <input
                               value={msg.senderName}
-                              onChange={(e) => updateMessage(msg.clientId, { senderName: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  senderName: e.target.value
+                                })
+                              }
                               style={{ width: "100%", padding: 10 }}
                             />
                           </label>
@@ -728,7 +893,11 @@ export default function FriendsBuilderPage() {
                             <div>Sender Label</div>
                             <input
                               value={msg.senderLabel}
-                              onChange={(e) => updateMessage(msg.clientId, { senderLabel: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  senderLabel: e.target.value
+                                })
+                              }
                               style={{ width: "100%", padding: 10 }}
                             />
                           </label>
@@ -737,19 +906,33 @@ export default function FriendsBuilderPage() {
                             <div>Asset Slug</div>
                             <input
                               value={msg.assetSlug}
-                              onChange={(e) => updateMessage(msg.clientId, { assetSlug: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  assetSlug: e.target.value
+                                })
+                              }
                               placeholder="Use one of the asset slugs above"
                               style={{ width: "100%", padding: 10 }}
                             />
                           </label>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
+                            gap: 12
+                          }}
+                        >
                           <label>
                             <div>Audio Label</div>
                             <input
                               value={msg.audioLabel}
-                              onChange={(e) => updateMessage(msg.clientId, { audioLabel: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  audioLabel: e.target.value
+                                })
+                              }
                               style={{ width: "100%", padding: 10 }}
                             />
                           </label>
@@ -758,7 +941,11 @@ export default function FriendsBuilderPage() {
                             <div>Audio Kind</div>
                             <input
                               value={msg.audioKind}
-                              onChange={(e) => updateMessage(msg.clientId, { audioKind: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  audioKind: e.target.value
+                                })
+                              }
                               style={{ width: "100%", padding: 10 }}
                             />
                           </label>
@@ -767,18 +954,32 @@ export default function FriendsBuilderPage() {
                             <div>Clip Title</div>
                             <input
                               value={msg.clipTitle}
-                              onChange={(e) => updateMessage(msg.clientId, { clipTitle: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  clipTitle: e.target.value
+                                })
+                              }
                               style={{ width: "100%", padding: 10 }}
                             />
                           </label>
                         </div>
 
-                        <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}>
+                        <div
+                          style={{
+                            display: "grid",
+                            gridTemplateColumns: "1fr 1fr 1fr",
+                            gap: 12
+                          }}
+                        >
                           <label>
                             <div>Start Seconds</div>
                             <input
                               value={msg.startSeconds}
-                              onChange={(e) => updateMessage(msg.clientId, { startSeconds: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  startSeconds: e.target.value
+                                })
+                              }
                               type="number"
                               step="0.01"
                               style={{ width: "100%", padding: 10 }}
@@ -789,7 +990,11 @@ export default function FriendsBuilderPage() {
                             <div>End Seconds</div>
                             <input
                               value={msg.endSeconds}
-                              onChange={(e) => updateMessage(msg.clientId, { endSeconds: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  endSeconds: e.target.value
+                                })
+                              }
                               type="number"
                               step="0.01"
                               style={{ width: "100%", padding: 10 }}
@@ -800,7 +1005,11 @@ export default function FriendsBuilderPage() {
                             <div>Display Duration</div>
                             <input
                               value={msg.displayDuration}
-                              onChange={(e) => updateMessage(msg.clientId, { displayDuration: e.target.value })}
+                              onChange={(e) =>
+                                updateMessage(msg.clientId, {
+                                  displayDuration: e.target.value
+                                })
+                              }
                               placeholder="0:26"
                               style={{ width: "100%", padding: 10 }}
                             />
@@ -828,7 +1037,9 @@ export default function FriendsBuilderPage() {
           >
             <h2 style={{ marginTop: 0 }}>App Order Manager</h2>
 
-            <div style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}>
+            <div
+              style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}
+            >
               <select
                 value={orderAppSlug}
                 onChange={async (e) => {
@@ -838,8 +1049,11 @@ export default function FriendsBuilderPage() {
                 }}
                 style={{ padding: 10 }}
               >
-                <option value="friends">friends</option>
-                <option value="fartherhood">fartherhood</option>
+                {apps.map((app) => (
+                  <option key={app.id} value={app.slug}>
+                    {app.name} ({app.slug})
+                  </option>
+                ))}
               </select>
 
               <button type="button" onClick={handleSaveOrder} disabled={savingOrder}>
@@ -848,7 +1062,7 @@ export default function FriendsBuilderPage() {
             </div>
 
             <div style={{ display: "grid", gap: 10 }}>
-              {orderRows.map((row, index) => (
+              {orderRows.map((row) => (
                 <div
                   key={row.song_slug}
                   style={{
@@ -859,7 +1073,8 @@ export default function FriendsBuilderPage() {
                   }}
                 >
                   <div>
-                    {row.title} <span style={{ opacity: 0.6 }}>({row.song_slug})</span>
+                    {row.title}{" "}
+                    <span style={{ opacity: 0.6 }}>({row.song_slug})</span>
                   </div>
 
                   <input
@@ -871,7 +1086,9 @@ export default function FriendsBuilderPage() {
                           r.song_slug === row.song_slug
                             ? {
                                 ...r,
-                                position: e.target.value ? Number(e.target.value) : null
+                                position: e.target.value
+                                  ? Number(e.target.value)
+                                  : null
                               }
                             : r
                         )
