@@ -1,6 +1,8 @@
 "use client";
 
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import { supabaseBrowser } from "@/lib/supabase-browser";
 
 type SongOption = {
   slug: string;
@@ -63,6 +65,8 @@ const EMPTY_ASSET = (): AssetRow => ({
 });
 
 export default function FriendsBuilderPage() {
+  const searchParams = useSearchParams();
+  const prefillSongSlug = searchParams.get("song") || "";
   const [songs, setSongs] = useState<SongOption[]>([]);
   const [conversations, setConversations] = useState<ConversationOption[]>([]);
   const [selectedConversationSlug, setSelectedConversationSlug] = useState("");
@@ -76,15 +80,57 @@ export default function FriendsBuilderPage() {
   const [listPreview, setListPreview] = useState("");
   const [sortOrder, setSortOrder] = useState("");
 
-  const [assetsOpen, setAssetsOpen] = useState(false);
+    const [assetsOpen, setAssetsOpen] = useState(false);
   const [assets, setAssets] = useState<AssetRow[]>([]);
-  const [messages, setMessages] = useState<MessageRow[]>([]);
+  const [messages, setMessages] = useState<MessageRow[]>([EMPTY_MESSAGE()]);
 
   const selectedSong = useMemo(
     () => songs.find((s) => s.slug === primarySongSlug) || null,
     [songs, primarySongSlug]
   );
+  async function createSignedUploadTarget(bucket: string, path: string, upsert = true) {
+    const res = await fetch("/api/dashboard/storage-upload", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        bucket,
+        path,
+        upsert
+      })
+    });
 
+    const data = await res.json();
+
+    if (!data?.ok) {
+      throw new Error(data?.error || "Could not create upload target.");
+    }
+
+    return data as {
+      ok: true;
+      bucket: string;
+      path: string;
+      token: string;
+    };
+  }
+
+  async function uploadFileToSignedUrl(
+    bucket: string,
+    path: string,
+    token: string,
+    file: File
+  ) {
+    const { error } = await supabaseBrowser.storage
+      .from(bucket)
+      .uploadToSignedUrl(path, token, file, {
+        contentType: file.type || undefined
+      });
+
+    if (error) {
+      throw new Error(error.message);
+    }
+  }
   const audioSourceOptions = useMemo(() => {
     const base: { slug: string; label: string }[] = [];
     if (selectedSong) {
@@ -130,7 +176,27 @@ export default function FriendsBuilderPage() {
   useEffect(() => {
     loadBoot();
   }, []);
+  
+  useEffect(() => {
+    if (!prefillSongSlug || loading || songs.length === 0) return;
 
+    const song = songs.find((s) => s.slug === prefillSongSlug);
+    if (!song) return;
+
+    setPrimarySongSlug(song.slug);
+    setConversationSlug(song.slug);
+    setConversationTitle(song.title);
+    setListPreview(song.description || "");
+    setMessages((prev) =>
+      prev.length
+        ? prev.map((msg) =>
+            msg.messageType === "audio" && !msg.audioSourceSlug
+              ? { ...msg, audioSourceSlug: song.slug }
+              : msg
+          )
+        : [EMPTY_MESSAGE()]
+    );
+  }, [prefillSongSlug, loading, songs]);
   async function loadConversation(slug: string) {
     if (!slug) return;
     setResult("");
