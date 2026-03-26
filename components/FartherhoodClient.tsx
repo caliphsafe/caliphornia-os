@@ -12,6 +12,8 @@ type Track = {
   file: string;
   transcript: string;
   description: string;
+  artistName?: string;
+  producerNames?: string;
 };
 
 type NoteItem = {
@@ -23,7 +25,9 @@ type NoteItem = {
 const defaultTracks: Track[] = [
   {
     slug: "story-time",
-    title: "CALIPH - STORY TIME",
+    title: "Story Time",
+    artistName: "Caliph",
+    producerNames: "S. Rudolph",
     date: "Feb 28, 2025 at 12:40 AM",
     duration: "02:07",
     file: "/apps/fartherhood/audio/storytime.mp3",
@@ -45,7 +49,9 @@ But somehow I'm the one that turned her to a mama`,
   },
   {
     slug: "eater-james",
-    title: "CALIPH - EATER JAMES",
+    title: "Eater James",
+    artistName: "Caliph",
+    producerNames: "Caliph",
     date: "Feb 28, 2025 at 12:45 AM",
     duration: "02:00",
     file: "/apps/fartherhood/audio/eaterjames.mp3",
@@ -57,7 +63,9 @@ go, go, okay, right, go…`,
   },
   {
     slug: "blue-corner",
-    title: "CALIPH - BLUE CORNER",
+    title: "Blue Corner",
+    artistName: "Caliph",
+    producerNames: "Caliph",
     date: "Feb 13, 2025 at 5:03 PM",
     duration: "02:00",
     file: "/apps/fartherhood/audio/bluecorner.mp3",
@@ -68,7 +76,9 @@ we find peace in comparing Nike Air…`,
   },
   {
     slug: "observations-dollar-and-a-dad",
-    title: "CALIPH - OBESERVATIONS / A DOLLAR AND A DAD",
+    title: "Observations / A Dollar And A Dad",
+    artistName: "Caliph",
+    producerNames: "Caliph",
     date: "Feb 28, 2025 at 12:55 AM",
     duration: "02:00",
     file: "/apps/fartherhood/audio/dollardad.mp3",
@@ -78,7 +88,9 @@ niggas always act weird when it's time to give it up…`,
   },
   {
     slug: "seeds",
-    title: "CALIPH - SEEDS",
+    title: "Seeds",
+    artistName: "Caliph",
+    producerNames: "Caliph, AyyDot",
     date: "Feb 28, 2025 at 12:43 AM",
     duration: "02:00",
     file: "/apps/fartherhood/audio/seeds.mp3",
@@ -88,7 +100,6 @@ it's getting harder to hold the dinero…`,
       "Outro about wanting kids but with fear of doing it with the wrong woman."
   }
 ];
-
 function normalizeTrackFile(file: string | null | undefined) {
   if (!file) return "";
   if (file.startsWith("http://") || file.startsWith("https://")) return file;
@@ -184,15 +195,17 @@ export default function FartherhoodClient() {
         }
 
         const normalized = data.tracks.map((track: Partial<Track>, i: number) => ({
-          id: track.id || null,
-          slug: track.slug || defaultTracks[i]?.slug || `track-${i}`,
-          title: track.title || defaultTracks[i]?.title || "",
-          date: track.date || defaultTracks[i]?.date || "",
-          duration: track.duration || defaultTracks[i]?.duration || "02:00",
-          file: normalizeTrackFile(track.file || defaultTracks[i]?.file || ""),
-          transcript: track.transcript || defaultTracks[i]?.transcript || "",
-          description: track.description || defaultTracks[i]?.description || ""
-        }));
+  id: track.id || null,
+  slug: track.slug || defaultTracks[i]?.slug || `track-${i}`,
+  title: track.title || defaultTracks[i]?.title || "",
+  artistName: track.artistName || defaultTracks[i]?.artistName || "Caliph",
+  producerNames: track.producerNames || defaultTracks[i]?.producerNames || "",
+  date: track.date || defaultTracks[i]?.date || "",
+  duration: track.duration || defaultTracks[i]?.duration || "02:00",
+  file: normalizeTrackFile(track.file || defaultTracks[i]?.file || ""),
+  transcript: track.transcript || defaultTracks[i]?.transcript || "",
+  description: track.description || defaultTracks[i]?.description || ""
+}));
 
         setTracks(normalized);
       } catch {
@@ -694,65 +707,32 @@ export default function FartherhoodClient() {
         <div className="collab-section">
           <div className="collab-section-title">Credits</div>
 
-          <div className="collab-list">
-            <div className="collab-row">
-              <div className="collab-dot"></div>
-              <div className="collab-row-main">
-                <div className="collab-row-title">Story Time</div>
-                <div className="collab-row-sub">
-                  Prod. by <strong>S. Rudolph</strong>
-                </div>
-              </div>
-              <div className="collab-tag">active</div>
-            </div>
-
-            <div className="collab-row">
-              <div className="collab-dot"></div>
-              <div className="collab-row-main">
-                <div className="collab-row-title">Eater James</div>
-                <div className="collab-row-sub">
-                  Prod. by <strong>Caliph</strong>
-                </div>
-              </div>
-              <div className="collab-tag">active</div>
-            </div>
-
-            <div className="collab-row">
-              <div className="collab-dot"></div>
-              <div className="collab-row-main">
-                <div className="collab-row-title">Blue Corner</div>
-                <div className="collab-row-sub">
-                  Prod. by <strong>Caliph</strong>
-                </div>
-              </div>
-              <div className="collab-tag">active</div>
-            </div>
-
-            <div className="collab-row">
-              <div className="collab-dot"></div>
-              <div className="collab-row-main">
-                <div className="collab-row-title">Observations / A Dollar And A Dad</div>
-                <div className="collab-row-sub">
-                  Prod. by <strong>Caliph</strong>
-                </div>
-              </div>
-              <div className="collab-tag">active</div>
-            </div>
-
-            <div className="collab-row">
-              <div className="collab-dot"></div>
-              <div className="collab-row-main">
-                <div className="collab-row-title">Seeds</div>
-                <div className="collab-row-sub">
-                  Prod. by <strong>Caliph</strong>
-                  <br />
-                  Co Prod. by <strong>AyyDot</strong>
-                </div>
-              </div>
-              <div className="collab-tag">active</div>
-            </div>
-          </div>
+         <div className="collab-list">
+  {tracks.map((track) => (
+    <div className="collab-row" key={track.slug}>
+      <div className="collab-dot"></div>
+      <div className="collab-row-main">
+        <div className="collab-row-title">{track.title}</div>
+        <div className="collab-row-sub">
+          {track.artistName ? (
+            <>
+              By <strong>{track.artistName}</strong>
+              <br />
+            </>
+          ) : null}
+          {track.producerNames ? (
+            <>
+              Prod. by <strong>{track.producerNames}</strong>
+            </>
+          ) : (
+            <>Producer info coming soon</>
+          )}
         </div>
+      </div>
+      <div className="collab-tag">active</div>
+    </div>
+  ))}
+</div>
 
         <div className="collab-foot">
           <div className="collab-foot-muted">Tip: tap outside to close</div>
