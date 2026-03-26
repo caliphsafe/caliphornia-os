@@ -1,6 +1,6 @@
 "use client";
 
-import { FormEvent, useEffect, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 
 type SongOption = {
   slug: string;
@@ -19,57 +19,46 @@ type AssetRow = {
   clientId: string;
   slug: string;
   title: string;
-  versionLabel: string;
-  isPlaylistable: boolean;
-  linkedSongSlug: string;
   file: File | null;
 };
 
 type MessageRow = {
   clientId: string;
   messageType: "timestamp" | "text" | "audio";
-  senderName: string;
-  senderLabel: string;
-  body: string;
   messageSide: "incoming" | "outgoing" | "center";
-  displayTime: string;
+  body: string;
+  audioSourceSlug: string;
   audioLabel: string;
   audioKind: string;
-  assetSlug: string;
-  clipTitle: string;
-  startSeconds: string;
-  endSeconds: string;
-  displayDuration: string;
 };
 
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36);
 }
 
+function slugify(value: string) {
+  return value
+    .toLowerCase()
+    .trim()
+    .replace(/['"]/g, "")
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-+|-+$/g, "");
+}
+
 const EMPTY_MESSAGE = (): MessageRow => ({
   clientId: uid(),
   messageType: "text",
-  senderName: "",
-  senderLabel: "",
-  body: "",
   messageSide: "incoming",
-  displayTime: "",
+  body: "",
+  audioSourceSlug: "",
   audioLabel: "",
-  audioKind: "Voice note",
-  assetSlug: "",
-  clipTitle: "",
-  startSeconds: "",
-  endSeconds: "",
-  displayDuration: ""
+  audioKind: "Song"
 });
 
 const EMPTY_ASSET = (): AssetRow => ({
   clientId: uid(),
   slug: "",
   title: "",
-  versionLabel: "",
-  isPlaylistable: false,
-  linkedSongSlug: "",
   file: null
 });
 
@@ -84,14 +73,35 @@ export default function FriendsBuilderPage() {
   const [primarySongSlug, setPrimarySongSlug] = useState("");
   const [conversationSlug, setConversationSlug] = useState("");
   const [conversationTitle, setConversationTitle] = useState("");
-  const [conversationSubtitle, setConversationSubtitle] = useState("");
   const [listPreview, setListPreview] = useState("");
-  const [avatarLetter, setAvatarLetter] = useState("");
-  const [lastActivityLabel, setLastActivityLabel] = useState("");
   const [sortOrder, setSortOrder] = useState("");
 
+  const [assetsOpen, setAssetsOpen] = useState(false);
   const [assets, setAssets] = useState<AssetRow[]>([]);
   const [messages, setMessages] = useState<MessageRow[]>([]);
+
+  const selectedSong = useMemo(
+    () => songs.find((s) => s.slug === primarySongSlug) || null,
+    [songs, primarySongSlug]
+  );
+
+  const audioSourceOptions = useMemo(() => {
+    const base: { slug: string; label: string }[] = [];
+    if (selectedSong) {
+      base.push({
+        slug: selectedSong.slug,
+        label: `Main Song (${selectedSong.title})`
+      });
+    }
+    for (const asset of assets) {
+      if (!asset.slug) continue;
+      base.push({
+        slug: asset.slug,
+        label: asset.title ? asset.title : asset.slug
+      });
+    }
+    return base;
+  }, [selectedSong, assets]);
 
   async function loadBoot() {
     setLoading(true);
@@ -123,7 +133,6 @@ export default function FriendsBuilderPage() {
 
   async function loadConversation(slug: string) {
     if (!slug) return;
-
     setResult("");
 
     try {
@@ -145,10 +154,7 @@ export default function FriendsBuilderPage() {
       setPrimarySongSlug(detail.primarySongSlug || "");
       setConversationSlug(detail.conversation.slug || "");
       setConversationTitle(detail.conversation.title || "");
-      setConversationSubtitle(detail.conversation.subtitle || "");
       setListPreview(detail.conversation.list_preview || "");
-      setAvatarLetter(detail.conversation.avatar_letter || "");
-      setLastActivityLabel(detail.conversation.last_activity_label || "");
       setSortOrder(
         detail.conversation.sort_order !== null &&
           detail.conversation.sort_order !== undefined
@@ -156,40 +162,25 @@ export default function FriendsBuilderPage() {
           : ""
       );
 
-      setAssets(
-        (detail.assets || []).map((a: any) => ({
-          clientId: uid(),
-          slug: a.slug || "",
-          title: a.title || "",
-          versionLabel: a.version_label || "",
-          isPlaylistable: Boolean(a.is_playlistable),
-          linkedSongSlug: a.linked_song_slug || "",
-          file: null
-        }))
-      );
+      const loadedAssets = (detail.assets || []).map((a: any) => ({
+        clientId: uid(),
+        slug: a.slug || "",
+        title: a.title || "",
+        file: null
+      }));
+
+      setAssets(loadedAssets);
+      setAssetsOpen(loadedAssets.length > 0);
 
       setMessages(
         (detail.messages || []).map((m: any) => ({
           clientId: uid(),
           messageType: m.message_type,
-          senderName: m.sender_name || "",
-          senderLabel: m.sender_label || "",
+          messageSide: m.message_side || (m.message_type === "timestamp" ? "center" : "incoming"),
           body: m.body || "",
-          messageSide: m.message_side || "incoming",
-          displayTime: m.display_time || "",
+          audioSourceSlug: m.asset_slug || detail.primarySongSlug || "",
           audioLabel: m.audio_label || "",
-          audioKind: m.audio_kind || "Voice note",
-          assetSlug: m.asset_slug || "",
-          clipTitle: m.clip_title || "",
-          startSeconds:
-            m.start_seconds !== null && m.start_seconds !== undefined
-              ? String(m.start_seconds)
-              : "",
-          endSeconds:
-            m.end_seconds !== null && m.end_seconds !== undefined
-              ? String(m.end_seconds)
-              : "",
-          displayDuration: m.display_duration || ""
+          audioKind: m.audio_kind || "Song"
         }))
       );
     } catch {
@@ -202,11 +193,9 @@ export default function FriendsBuilderPage() {
     setPrimarySongSlug("");
     setConversationSlug("");
     setConversationTitle("");
-    setConversationSubtitle("");
     setListPreview("");
-    setAvatarLetter("");
-    setLastActivityLabel("");
     setSortOrder("");
+    setAssetsOpen(false);
     setAssets([]);
     setMessages([EMPTY_MESSAGE()]);
     setResult("");
@@ -232,6 +221,24 @@ export default function FriendsBuilderPage() {
     setMessages((prev) => prev.filter((row) => row.clientId !== clientId));
   }
 
+  function handlePrimarySongChange(nextSlug: string) {
+    setPrimarySongSlug(nextSlug);
+    const song = songs.find((s) => s.slug === nextSlug);
+    if (!song) return;
+
+    if (!conversationSlug) setConversationSlug(song.slug);
+    if (!conversationTitle) setConversationTitle(song.title);
+    if (!listPreview) setListPreview(song.description || "");
+
+    setMessages((prev) =>
+      prev.map((msg) =>
+        msg.messageType === "audio" && !msg.audioSourceSlug
+          ? { ...msg, audioSourceSlug: song.slug }
+          : msg
+      )
+    );
+  }
+
   async function handleSaveConversation(e: FormEvent) {
     e.preventDefault();
     setSaving(true);
@@ -239,9 +246,7 @@ export default function FriendsBuilderPage() {
 
     try {
       if (!primarySongSlug || !conversationSlug || !conversationTitle) {
-        setResult(
-          "Primary song, conversation slug, and conversation title are required."
-        );
+        setResult("Primary song, conversation title, and conversation slug are required.");
         setSaving(false);
         return;
       }
@@ -250,12 +255,12 @@ export default function FriendsBuilderPage() {
       payload.append("action", "save-conversation");
       payload.append("selectedConversationSlug", selectedConversationSlug);
       payload.append("primarySongSlug", primarySongSlug);
-      payload.append("conversationSlug", conversationSlug);
+      payload.append("conversationSlug", slugify(conversationSlug));
       payload.append("conversationTitle", conversationTitle);
-      payload.append("conversationSubtitle", conversationSubtitle);
+      payload.append("conversationSubtitle", selectedSong?.artist_name || "");
       payload.append("listPreview", listPreview);
-      payload.append("avatarLetter", avatarLetter);
-      payload.append("lastActivityLabel", lastActivityLabel);
+      payload.append("avatarLetter", (conversationTitle[0] || "F").toUpperCase());
+      payload.append("lastActivityLabel", "");
       payload.append("sortOrder", sortOrder);
 
       payload.append(
@@ -265,9 +270,9 @@ export default function FriendsBuilderPage() {
             clientId: a.clientId,
             slug: a.slug,
             title: a.title,
-            versionLabel: a.versionLabel,
-            isPlaylistable: a.isPlaylistable,
-            linkedSongSlug: a.linkedSongSlug
+            versionLabel: "",
+            isPlaylistable: false,
+            linkedSongSlug: ""
           }))
         )
       );
@@ -278,18 +283,35 @@ export default function FriendsBuilderPage() {
           messages.map((m, index) => ({
             position: index + 1,
             messageType: m.messageType,
-            senderName: m.senderName,
-            senderLabel: m.senderLabel,
+            senderName:
+              m.messageType === "timestamp"
+                ? ""
+                : m.messageSide === "outgoing"
+                ? "Caliph"
+                : "",
+            senderLabel:
+              m.messageType === "timestamp"
+                ? ""
+                : m.messageSide === "incoming"
+                ? selectedSong?.artist_name || ""
+                : "",
             body: m.body,
-            messageSide: m.messageSide,
-            displayTime: m.displayTime,
+            messageSide:
+              m.messageType === "timestamp" ? "center" : m.messageSide,
+            displayTime: "",
             audioLabel: m.audioLabel,
             audioKind: m.audioKind,
-            assetSlug: m.assetSlug,
-            clipTitle: m.clipTitle,
-            startSeconds: m.startSeconds,
-            endSeconds: m.endSeconds,
-            displayDuration: m.displayDuration
+            assetSlug:
+              m.messageType === "audio"
+                ? m.audioSourceSlug || primarySongSlug
+                : "",
+            clipTitle:
+              m.messageType === "audio"
+                ? m.audioLabel || m.audioKind || "Audio"
+                : "",
+            startSeconds: "",
+            endSeconds: "",
+            displayDuration: ""
           }))
         )
       );
@@ -315,7 +337,7 @@ export default function FriendsBuilderPage() {
 
       setResult(`Saved conversation "${data.conversation?.title}".`);
       await loadBoot();
-      setSelectedConversationSlug(data.conversation?.slug || conversationSlug);
+      setSelectedConversationSlug(data.conversation?.slug || slugify(conversationSlug));
     } catch {
       setResult("Server error while saving conversation.");
     } finally {
@@ -324,18 +346,17 @@ export default function FriendsBuilderPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
+    <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
       <h1 style={{ marginBottom: 8 }}>Fri.ends Conversation Builder</h1>
       <p style={{ marginTop: 0, marginBottom: 24, opacity: 0.75 }}>
-        Build full Fri.ends conversations with alternate audio versions, messages,
-        timestamps, and clip timing.
+        Build the conversation first. Add alternate versions only if you need them.
       </p>
 
       {loading ? (
         <p>Loading…</p>
       ) : (
         <>
-          <div style={{ display: "flex", gap: 12, marginBottom: 24 }}>
+          <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
             <button
               type="button"
               onClick={resetBuilder}
@@ -351,7 +372,7 @@ export default function FriendsBuilderPage() {
                 setSelectedConversationSlug(slug);
                 if (slug) loadConversation(slug);
               }}
-              style={{ padding: 10, minWidth: 260 }}
+              style={{ padding: 10, minWidth: 280 }}
             >
               <option value="">Edit Existing Conversation</option>
               {conversations.map((c) => (
@@ -370,30 +391,17 @@ export default function FriendsBuilderPage() {
                 padding: 16
               }}
             >
-              <h2 style={{ marginTop: 0 }}>Conversation Basics</h2>
+              <h2 style={{ marginTop: 0 }}>Conversation Setup</h2>
 
               <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
                 <label>
                   <div>Primary Song</div>
                   <select
                     value={primarySongSlug}
-                    onChange={(e) => {
-                      const slug = e.target.value;
-                      setPrimarySongSlug(slug);
-                      const song = songs.find((s) => s.slug === slug);
-                      if (song) {
-                        if (!conversationSlug) setConversationSlug(song.slug);
-                        if (!conversationTitle) setConversationTitle(song.title);
-                        if (!conversationSubtitle)
-                          setConversationSubtitle(song.artist_name || "");
-                        if (!listPreview) setListPreview(song.description || "");
-                        if (!avatarLetter)
-                          setAvatarLetter((song.title?.[0] || "F").toUpperCase());
-                      }
-                    }}
+                    onChange={(e) => handlePrimarySongChange(e.target.value)}
                     style={{ width: "100%", padding: 12 }}
                   >
-                    <option value="">Choose a song</option>
+                    <option value="">Choose the main song for this thread</option>
                     {songs.map((song) => (
                       <option key={song.slug} value={song.slug}>
                         {song.title} ({song.slug})
@@ -403,10 +411,11 @@ export default function FriendsBuilderPage() {
                 </label>
 
                 <label>
-                  <div>Conversation Slug</div>
+                  <div>Conversation Title</div>
                   <input
-                    value={conversationSlug}
-                    onChange={(e) => setConversationSlug(e.target.value)}
+                    value={conversationTitle}
+                    onChange={(e) => setConversationTitle(e.target.value)}
+                    placeholder="Conversation title, e.g. iMax"
                     style={{ width: "100%", padding: 12 }}
                   />
                 </label>
@@ -421,66 +430,34 @@ export default function FriendsBuilderPage() {
                 }}
               >
                 <label>
-                  <div>Conversation Title</div>
+                  <div>Conversation Slug</div>
                   <input
-                    value={conversationTitle}
-                    onChange={(e) => setConversationTitle(e.target.value)}
+                    value={conversationSlug}
+                    onChange={(e) => setConversationSlug(slugify(e.target.value))}
+                    placeholder="Auto route, e.g. imax"
                     style={{ width: "100%", padding: 12 }}
                   />
                 </label>
 
                 <label>
-                  <div>Subtitle</div>
+                  <div>Inbox Preview</div>
                   <input
-                    value={conversationSubtitle}
-                    onChange={(e) => setConversationSubtitle(e.target.value)}
+                    value={listPreview}
+                    onChange={(e) => setListPreview(e.target.value)}
+                    placeholder="What shows in the inbox preview"
                     style={{ width: "100%", padding: 12 }}
                   />
                 </label>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "2fr 1fr 1fr 1fr",
-                  gap: 16,
-                  marginTop: 16
-                }}
-              >
-                <label>
-                  <div>List Preview</div>
-                  <input
-                    value={listPreview}
-                    onChange={(e) => setListPreview(e.target.value)}
-                    style={{ width: "100%", padding: 12 }}
-                  />
-                </label>
-
-                <label>
-                  <div>Avatar Letter</div>
-                  <input
-                    value={avatarLetter}
-                    onChange={(e) => setAvatarLetter(e.target.value.slice(0, 1))}
-                    maxLength={1}
-                    style={{ width: "100%", padding: 12 }}
-                  />
-                </label>
-
-                <label>
-                  <div>Last Activity</div>
-                  <input
-                    value={lastActivityLabel}
-                    onChange={(e) => setLastActivityLabel(e.target.value)}
-                    style={{ width: "100%", padding: 12 }}
-                  />
-                </label>
-
+              <div style={{ marginTop: 16, maxWidth: 220 }}>
                 <label>
                   <div>Sort Order</div>
                   <input
                     value={sortOrder}
                     onChange={(e) => setSortOrder(e.target.value)}
                     type="number"
+                    placeholder="1 = top"
                     style={{ width: "100%", padding: 12 }}
                   />
                 </label>
@@ -497,154 +474,28 @@ export default function FriendsBuilderPage() {
               <div
                 style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
               >
-                <h2 style={{ marginTop: 0 }}>Additional Audio Assets</h2>
+                <div>
+                  <h2 style={{ margin: 0 }}>Messages</h2>
+                  <p style={{ margin: "6px 0 0", opacity: 0.7 }}>
+                    Timestamps only need timestamp text. Text and audio do not need time fields.
+                  </p>
+                </div>
+
                 <button
                   type="button"
-                  onClick={() => setAssets((prev) => [...prev, EMPTY_ASSET()])}
-                >
-                  Add Asset
-                </button>
-              </div>
-
-              {!assets.length ? (
-                <p style={{ opacity: 0.7 }}>No extra assets yet.</p>
-              ) : null}
-
-              <div style={{ display: "grid", gap: 16 }}>
-                {assets.map((asset) => (
-                  <div
-                    key={asset.clientId}
-                    style={{
-                      border: "1px solid rgba(255,255,255,0.08)",
-                      borderRadius: 12,
-                      padding: 12
-                    }}
-                  >
-                    <div
-                      style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}
-                    >
-                      <label>
-                        <div>Asset Slug</div>
-                        <input
-                          value={asset.slug}
-                          onChange={(e) =>
-                            updateAsset(asset.clientId, { slug: e.target.value })
-                          }
-                          style={{ width: "100%", padding: 10 }}
-                        />
-                      </label>
-
-                      <label>
-                        <div>Title</div>
-                        <input
-                          value={asset.title}
-                          onChange={(e) =>
-                            updateAsset(asset.clientId, { title: e.target.value })
-                          }
-                          style={{ width: "100%", padding: 10 }}
-                        />
-                      </label>
-
-                      <label>
-                        <div>Version Label</div>
-                        <input
-                          value={asset.versionLabel}
-                          onChange={(e) =>
-                            updateAsset(asset.clientId, {
-                              versionLabel: e.target.value
-                            })
-                          }
-                          placeholder="Demo / Open Verse / Main"
-                          style={{ width: "100%", padding: 10 }}
-                        />
-                      </label>
-                    </div>
-
-                    <div
-                      style={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr auto auto",
-                        gap: 12,
-                        marginTop: 12
-                      }}
-                    >
-                      <label>
-                        <div>Linked Song Slug (optional)</div>
-                        <input
-                          value={asset.linkedSongSlug}
-                          onChange={(e) =>
-                            updateAsset(asset.clientId, {
-                              linkedSongSlug: e.target.value
-                            })
-                          }
-                          style={{ width: "100%", padding: 10 }}
-                        />
-                      </label>
-
-                      <label
-                        style={{ display: "flex", alignItems: "end", gap: 8 }}
-                      >
-                        <input
-                          type="checkbox"
-                          checked={asset.isPlaylistable}
-                          onChange={(e) =>
-                            updateAsset(asset.clientId, {
-                              isPlaylistable: e.target.checked
-                            })
-                          }
-                        />
-                        Playlistable
-                      </label>
-
-                      <button
-                        type="button"
-                        onClick={() => removeAsset(asset.clientId)}
-                      >
-                        Remove
-                      </button>
-                    </div>
-
-                    <div style={{ marginTop: 12 }}>
-                      <input
-                        type="file"
-                        accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac"
-                        onChange={(e) =>
-                          updateAsset(asset.clientId, {
-                            file: e.target.files?.[0] || null
-                          })
-                        }
-                      />
-                      {asset.file ? (
-                        <div style={{ marginTop: 6, opacity: 0.7 }}>
-                          {asset.file.name}
-                        </div>
-                      ) : null}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </section>
-
-            <section
-              style={{
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 16,
-                padding: 16
-              }}
-            >
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
-                <h2 style={{ marginTop: 0 }}>Messages</h2>
-                <button
-                  type="button"
-                  onClick={() => setMessages((prev) => [...prev, EMPTY_MESSAGE()])}
+                  onClick={() => {
+                    const next = EMPTY_MESSAGE();
+                    if (next.messageType === "audio" && primarySongSlug) {
+                      next.audioSourceSlug = primarySongSlug;
+                    }
+                    setMessages((prev) => [...prev, next]);
+                  }}
                 >
                   Add Message
                 </button>
               </div>
 
-              <div style={{ display: "grid", gap: 16 }}>
+              <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
                 {messages.map((msg, index) => (
                   <div
                     key={msg.clientId}
@@ -663,67 +514,65 @@ export default function FriendsBuilderPage() {
                       }}
                     >
                       <strong>Message {index + 1}</strong>
-                      <button
-                        type="button"
-                        onClick={() => removeMessage(msg.clientId)}
-                      >
+                      <button type="button" onClick={() => removeMessage(msg.clientId)}>
                         Remove
                       </button>
                     </div>
 
                     <div
-                      style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 12 }}
+                      style={{
+                        display: "grid",
+                        gridTemplateColumns: "180px 180px 1fr",
+                        gap: 12
+                      }}
                     >
                       <label>
                         <div>Type</div>
                         <select
                           value={msg.messageType}
-                          onChange={(e) =>
+                          onChange={(e) => {
+                            const nextType = e.target.value as MessageRow["messageType"];
                             updateMessage(msg.clientId, {
-                              messageType: e.target.value as MessageRow["messageType"]
-                            })
-                          }
+                              messageType: nextType,
+                              messageSide:
+                                nextType === "timestamp" ? "center" : msg.messageSide,
+                              audioSourceSlug:
+                                nextType === "audio"
+                                  ? msg.audioSourceSlug || primarySongSlug
+                                  : "",
+                              audioLabel: nextType === "audio" ? msg.audioLabel : "",
+                              audioKind: nextType === "audio" ? msg.audioKind || "Song" : ""
+                            });
+                          }}
                           style={{ width: "100%", padding: 10 }}
                         >
                           <option value="text">Text</option>
-                          <option value="timestamp">Timestamp</option>
                           <option value="audio">Audio</option>
+                          <option value="timestamp">Timestamp</option>
                         </select>
                       </label>
 
-                      <label>
-                        <div>Side</div>
-                        <select
-                          value={msg.messageSide}
-                          onChange={(e) =>
-                            updateMessage(msg.clientId, {
-                              messageSide: e.target.value as MessageRow["messageSide"]
-                            })
-                          }
-                          style={{ width: "100%", padding: 10 }}
-                        >
-                          <option value="incoming">Incoming</option>
-                          <option value="outgoing">Outgoing</option>
-                          <option value="center">Center</option>
-                        </select>
-                      </label>
+                      {msg.messageType !== "timestamp" ? (
+                        <label>
+                          <div>Side</div>
+                          <select
+                            value={msg.messageSide}
+                            onChange={(e) =>
+                              updateMessage(msg.clientId, {
+                                messageSide: e.target.value as MessageRow["messageSide"]
+                              })
+                            }
+                            style={{ width: "100%", padding: 10 }}
+                          >
+                            <option value="incoming">Incoming</option>
+                            <option value="outgoing">Outgoing</option>
+                          </select>
+                        </label>
+                      ) : (
+                        <div />
+                      )}
 
-                      <label>
-                        <div>Display Time</div>
-                        <input
-                          value={msg.displayTime}
-                          onChange={(e) =>
-                            updateMessage(msg.clientId, {
-                              displayTime: e.target.value
-                            })
-                          }
-                          style={{ width: "100%", padding: 10 }}
-                        />
-                      </label>
-                    </div>
-
-                    {msg.messageType === "timestamp" ? (
-                      <div style={{ marginTop: 12 }}>
+                      {msg.messageType === "timestamp" ? (
                         <label>
                           <div>Timestamp Text</div>
                           <input
@@ -731,209 +580,94 @@ export default function FriendsBuilderPage() {
                             onChange={(e) =>
                               updateMessage(msg.clientId, { body: e.target.value })
                             }
+                            placeholder="e.g. Today 7:15 PM"
                             style={{ width: "100%", padding: 10 }}
                           />
                         </label>
-                      </div>
-                    ) : null}
+                      ) : msg.messageType === "text" ? (
+                        <label style={{ gridColumn: "3 / 4" }}>
+                          <div>Message</div>
+                          <input
+                            value={msg.body}
+                            onChange={(e) =>
+                              updateMessage(msg.clientId, { body: e.target.value })
+                            }
+                            placeholder={
+                              msg.messageSide === "outgoing"
+                                ? "Type your message"
+                                : "Type collaborator message"
+                            }
+                            style={{ width: "100%", padding: 10 }}
+                          />
+                        </label>
+                      ) : (
+                        <div />
+                      )}
+                    </div>
 
-                    {msg.messageType === "text" ? (
+                    {msg.messageType === "audio" ? (
                       <div
                         style={{
                           display: "grid",
-                          gridTemplateColumns: "1fr 1fr",
+                          gridTemplateColumns: "1fr 220px 180px",
                           gap: 12,
                           marginTop: 12
                         }}
                       >
                         <label>
-                          <div>Sender Name</div>
-                          <input
-                            value={msg.senderName}
+                          <div>Audio Source</div>
+                          <select
+                            value={msg.audioSourceSlug}
                             onChange={(e) =>
                               updateMessage(msg.clientId, {
-                                senderName: e.target.value
+                                audioSourceSlug: e.target.value
                               })
                             }
+                            style={{ width: "100%", padding: 10 }}
+                          >
+                            <option value="">
+                              Choose audio source
+                            </option>
+                            {audioSourceOptions.map((source) => (
+                              <option key={source.slug} value={source.slug}>
+                                {source.label}
+                              </option>
+                            ))}
+                          </select>
+                        </label>
+
+                        <label>
+                          <div>Bubble Label</div>
+                          <input
+                            value={msg.audioLabel}
+                            onChange={(e) =>
+                              updateMessage(msg.clientId, {
+                                audioLabel: e.target.value
+                              })
+                            }
+                            placeholder="e.g. Main, Open Verse, Demo"
                             style={{ width: "100%", padding: 10 }}
                           />
                         </label>
 
                         <label>
-                          <div>Sender Label</div>
-                          <input
-                            value={msg.senderLabel}
+                          <div>Kind</div>
+                          <select
+                            value={msg.audioKind}
                             onChange={(e) =>
                               updateMessage(msg.clientId, {
-                                senderLabel: e.target.value
+                                audioKind: e.target.value
                               })
                             }
                             style={{ width: "100%", padding: 10 }}
-                          />
+                          >
+                            <option value="Song">Song</option>
+                            <option value="Demo">Demo</option>
+                            <option value="Beat">Beat</option>
+                            <option value="Voice note">Voice note</option>
+                            <option value="Open Verse">Open Verse</option>
+                          </select>
                         </label>
-
-                        <label style={{ gridColumn: "1 / -1" }}>
-                          <div>Body</div>
-                          <textarea
-                            value={msg.body}
-                            onChange={(e) =>
-                              updateMessage(msg.clientId, { body: e.target.value })
-                            }
-                            rows={3}
-                            style={{ width: "100%", padding: 10 }}
-                          />
-                        </label>
-                      </div>
-                    ) : null}
-
-                    {msg.messageType === "audio" ? (
-                      <div style={{ display: "grid", gap: 12, marginTop: 12 }}>
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr 1fr",
-                            gap: 12
-                          }}
-                        >
-                          <label>
-                            <div>Sender Name</div>
-                            <input
-                              value={msg.senderName}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  senderName: e.target.value
-                                })
-                              }
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-
-                          <label>
-                            <div>Sender Label</div>
-                            <input
-                              value={msg.senderLabel}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  senderLabel: e.target.value
-                                })
-                              }
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-
-                          <label>
-                            <div>Asset Slug</div>
-                            <input
-                              value={msg.assetSlug}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  assetSlug: e.target.value
-                                })
-                              }
-                              placeholder="Use one of the asset slugs above"
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr 1fr",
-                            gap: 12
-                          }}
-                        >
-                          <label>
-                            <div>Audio Label</div>
-                            <input
-                              value={msg.audioLabel}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  audioLabel: e.target.value
-                                })
-                              }
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-
-                          <label>
-                            <div>Audio Kind</div>
-                            <input
-                              value={msg.audioKind}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  audioKind: e.target.value
-                                })
-                              }
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-
-                          <label>
-                            <div>Clip Title</div>
-                            <input
-                              value={msg.clipTitle}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  clipTitle: e.target.value
-                                })
-                              }
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-                        </div>
-
-                        <div
-                          style={{
-                            display: "grid",
-                            gridTemplateColumns: "1fr 1fr 1fr",
-                            gap: 12
-                          }}
-                        >
-                          <label>
-                            <div>Start Seconds</div>
-                            <input
-                              value={msg.startSeconds}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  startSeconds: e.target.value
-                                })
-                              }
-                              type="number"
-                              step="0.01"
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-
-                          <label>
-                            <div>End Seconds</div>
-                            <input
-                              value={msg.endSeconds}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  endSeconds: e.target.value
-                                })
-                              }
-                              type="number"
-                              step="0.01"
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-
-                          <label>
-                            <div>Display Duration</div>
-                            <input
-                              value={msg.displayDuration}
-                              onChange={(e) =>
-                                updateMessage(msg.clientId, {
-                                  displayDuration: e.target.value
-                                })
-                              }
-                              placeholder="0:26"
-                              style={{ width: "100%", padding: 10 }}
-                            />
-                          </label>
-                        </div>
                       </div>
                     ) : null}
                   </div>
@@ -941,8 +675,117 @@ export default function FriendsBuilderPage() {
               </div>
             </section>
 
+            <section
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 16,
+                padding: 16
+              }}
+            >
+              <div
+                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
+              >
+                <div>
+                  <h2 style={{ margin: 0 }}>Alternate Versions (Optional)</h2>
+                  <p style={{ margin: "6px 0 0", opacity: 0.7 }}>
+                    Skip this if you only want to use the main song.
+                  </p>
+                </div>
+
+                <div style={{ display: "flex", gap: 10 }}>
+                  <button type="button" onClick={() => setAssetsOpen((prev) => !prev)}>
+                    {assetsOpen ? "Hide" : "Show"}
+                  </button>
+                  {assetsOpen ? (
+                    <button
+                      type="button"
+                      onClick={() => setAssets((prev) => [...prev, EMPTY_ASSET()])}
+                    >
+                      Add Version
+                    </button>
+                  ) : null}
+                </div>
+              </div>
+
+              {assetsOpen ? (
+                <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+                  {!assets.length ? (
+                    <p style={{ opacity: 0.7, margin: 0 }}>No alternate versions added.</p>
+                  ) : null}
+
+                  {assets.map((asset) => (
+                    <div
+                      key={asset.clientId}
+                      style={{
+                        border: "1px solid rgba(255,255,255,0.08)",
+                        borderRadius: 12,
+                        padding: 12
+                      }}
+                    >
+                      <div
+                        style={{
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr auto",
+                          gap: 12
+                        }}
+                      >
+                        <label>
+                          <div>Version Title</div>
+                          <input
+                            value={asset.title}
+                            onChange={(e) => {
+                              const nextTitle = e.target.value;
+                              updateAsset(asset.clientId, {
+                                title: nextTitle,
+                                slug: asset.slug || slugify(nextTitle)
+                              });
+                            }}
+                            placeholder="e.g. iMax Open Verse"
+                            style={{ width: "100%", padding: 10 }}
+                          />
+                        </label>
+
+                        <label>
+                          <div>Version Slug</div>
+                          <input
+                            value={asset.slug}
+                            onChange={(e) =>
+                              updateAsset(asset.clientId, {
+                                slug: slugify(e.target.value)
+                              })
+                            }
+                            placeholder="auto-generated from title"
+                            style={{ width: "100%", padding: 10 }}
+                          />
+                        </label>
+
+                        <button type="button" onClick={() => removeAsset(asset.clientId)}>
+                          Remove
+                        </button>
+                      </div>
+
+                      <div style={{ marginTop: 12 }}>
+                        <input
+                          type="file"
+                          accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac"
+                          onChange={(e) =>
+                            updateAsset(asset.clientId, {
+                              file: e.target.files?.[0] || null
+                            })
+                          }
+                        />
+                        {asset.file ? (
+                          <div style={{ marginTop: 6, opacity: 0.7 }}>{asset.file.name}</div>
+                        ) : null}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : null}
+            </section>
+
             <button type="submit" disabled={saving} style={{ padding: 14, borderRadius: 12 }}>
-              {saving ? "Saving…" : "Save Conversation"}
+              {saving ? "Saving..." : "Save Conversation"}
             </button>
           </form>
 
