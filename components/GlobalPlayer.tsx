@@ -24,6 +24,9 @@ export type GlobalTrack = {
   conversationRoute?: string | null;
   isFriendsFinal?: boolean;
   resumeSeconds?: number | null;
+  coverUrl?: string | null;
+  coverPath?: string | null;
+  coverBucket?: string | null;
 };
 
 type Props = {
@@ -193,6 +196,7 @@ export default function GlobalPlayer({ email }: Props) {
   const [isVisible, setIsVisible] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
   const [friendsFinalQueue, setFriendsFinalQueue] = useState<GlobalTrack[]>([]);
+  const [resolvedCoverUrl, setResolvedCoverUrl] = useState<string | null>(null);
 
   const currentTrack = useMemo(() => {
     if (currentIndex < 0 || currentIndex >= queue.length) return null;
@@ -343,7 +347,10 @@ export default function GlobalPlayer({ email }: Props) {
     setCurrentIndex(nextIndex);
     setIsVisible(true);
   }
-
+function getCurrentTrackSongSlug(track: GlobalTrack | null) {
+  if (!track) return null;
+  return track.playlistSongSlug || track.analyticsSongSlug || track.slug || null;
+}
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       const data = event.data;
@@ -514,7 +521,40 @@ export default function GlobalPlayer({ email }: Props) {
       audio.removeEventListener("ended", onEnded);
     };
   }, [currentTrack, currentIndex, queue, friendsFinalQueue]);
+useEffect(() => {
+  const songSlug = getCurrentTrackSongSlug(currentTrack);
 
+  if (!songSlug) {
+    setResolvedCoverUrl(null);
+    return;
+  }
+
+  let isCancelled = false;
+
+  async function fetchCover() {
+    try {
+      const res = await fetch(`/api/songs/by-slug/${encodeURIComponent(songSlug)}`, {
+        cache: "no-store"
+      });
+
+      const data = await res.json();
+
+      if (!isCancelled) {
+        setResolvedCoverUrl(data?.ok ? data.song?.coverUrl || null : null);
+      }
+    } catch {
+      if (!isCancelled) {
+        setResolvedCoverUrl(null);
+      }
+    }
+  }
+
+  fetchCover();
+
+  return () => {
+    isCancelled = true;
+  };
+}, [currentTrack]);
   useEffect(() => {
     const shouldOffset = Boolean(isVisible && currentTrack);
 
@@ -562,10 +602,14 @@ export default function GlobalPlayer({ email }: Props) {
         <div className="music-inline-player">
           <div className="music-inline-player-left">
             <div className="music-inline-cover">
-              <div className="music-inline-cover-fallback">
-                {trackParts.song?.[0] || "♪"}
-              </div>
-            </div>
+  {resolvedCoverUrl ? (
+    <img src={resolvedCoverUrl} alt={trackParts.song} />
+  ) : (
+    <div className="music-inline-cover-fallback">
+      {trackParts.song?.[0] || "♪"}
+    </div>
+  )}
+</div>
 
             <div className="music-inline-copy">
               <div className="music-inline-title">
