@@ -141,6 +141,7 @@ export async function GET(request: NextRequest) {
       return {
         message_type: m.message_type,
         message_side: m.message_side,
+        sender_name: m.sender_name || "",
         body: m.body || "",
         audio_label: m.audio_label || "",
         audio_kind: m.audio_kind || "Song",
