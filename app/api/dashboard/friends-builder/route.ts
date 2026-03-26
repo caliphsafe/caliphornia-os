@@ -17,22 +17,6 @@ function safeFileName(name: string) {
 export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode");
 
-  if (mode === "apps") {
-    const { data, error } = await supabaseAdmin
-      .from("apps")
-      .select("id, slug, name")
-      .order("name", { ascending: true });
-
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      apps: data || []
-    });
-  }
-
   if (mode === "songs") {
     const { data, error } = await supabaseAdmin
       .from("songs")
@@ -124,23 +108,6 @@ export async function GET(request: NextRequest) {
       .eq("is_final_version", false)
       .order("created_at", { ascending: true });
 
-    const linkedSongIds = Array.from(
-      new Set((assets || []).map((a) => a.linked_song_id).filter(Boolean))
-    );
-
-    const linkedSongMap = new Map<string, string>();
-
-    if (linkedSongIds.length) {
-      const { data: linkedSongs } = await supabaseAdmin
-        .from("songs")
-        .select("id, slug")
-        .in("id", linkedSongIds);
-
-      for (const row of linkedSongs || []) {
-        linkedSongMap.set(row.id, row.slug);
-      }
-    }
-
     const { data: messages } = await supabaseAdmin
       .from("conversation_messages")
       .select(`
@@ -177,13 +144,10 @@ export async function GET(request: NextRequest) {
 
       return {
         message_type: m.message_type,
-        sender_name: m.sender_name,
-        sender_label: m.sender_label,
-        body: m.body,
         message_side: m.message_side,
-        display_time: m.display_time,
-        audio_label: m.audio_label,
-        audio_kind: m.audio_kind,
+        body: m.body || "",
+        audio_label: m.audio_label || "",
+        audio_kind: m.audio_kind || "Song",
         asset_slug: clipAsset?.slug || "",
         clip_title: clip?.clip_title || "",
         start_seconds: clip?.start_seconds ?? null,
@@ -199,60 +163,10 @@ export async function GET(request: NextRequest) {
         primarySongSlug,
         assets: (assets || []).map((a) => ({
           slug: a.slug,
-          title: a.title,
-          version_label: a.version_label,
-          is_playlistable: a.is_playlistable,
-          linked_song_slug: a.linked_song_id
-            ? linkedSongMap.get(a.linked_song_id) || ""
-            : ""
+          title: a.title
         })),
         messages: normalizedMessages
       }
-    });
-  }
-
-  if (mode === "app-order") {
-    const appSlug = request.nextUrl.searchParams.get("appSlug");
-
-    if (!appSlug) {
-      return NextResponse.json({ ok: false, error: "Missing appSlug." }, { status: 400 });
-    }
-
-    const { data: app } = await supabaseAdmin
-      .from("apps")
-      .select("id")
-      .eq("slug", appSlug)
-      .single();
-
-    if (!app) {
-      return NextResponse.json({ ok: false, error: "App not found." }, { status: 404 });
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from("app_songs")
-      .select(`
-        position,
-        song_slug,
-        songs (
-          title
-        )
-      `)
-      .eq("app_id", app.id)
-      .order("position", { ascending: true });
-
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      rows: (data || []).map((row: any) => ({
-        song_slug: row.song_slug,
-        title: Array.isArray(row.songs)
-          ? row.songs[0]?.title || row.song_slug
-          : row.songs?.title || row.song_slug,
-        position: row.position
-      }))
     });
   }
 
@@ -260,42 +174,6 @@ export async function GET(request: NextRequest) {
 }
 
 export async function POST(request: NextRequest) {
-  const contentType = request.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    const body = await request.json();
-
-    if (body.action === "save-order") {
-      const { appSlug, rows } = body;
-
-      const { data: app } = await supabaseAdmin
-        .from("apps")
-        .select("id")
-        .eq("slug", appSlug)
-        .single();
-
-      if (!app) {
-        return NextResponse.json({ ok: false, error: "App not found." }, { status: 404 });
-      }
-
-      for (const row of rows || []) {
-        const { error } = await supabaseAdmin
-          .from("app_songs")
-          .update({ position: row.position })
-          .eq("app_id", app.id)
-          .eq("song_slug", row.songSlug);
-
-        if (error) {
-          return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-        }
-      }
-
-      return NextResponse.json({ ok: true });
-    }
-
-    return NextResponse.json({ ok: false, error: "Invalid action." }, { status: 400 });
-  }
-
   try {
     const formData = await request.formData();
     const action = String(formData.get("action") || "");
@@ -307,19 +185,14 @@ export async function POST(request: NextRequest) {
     const selectedConversationSlug = String(
       formData.get("selectedConversationSlug") || ""
     ).trim();
+
     const primarySongSlug = String(formData.get("primarySongSlug") || "").trim();
-    const conversationSlug = slugify(
-      String(formData.get("conversationSlug") || "").trim()
-    );
+    const conversationSlug = slugify(String(formData.get("conversationSlug") || "").trim());
     const conversationTitle = String(formData.get("conversationTitle") || "").trim();
-    const conversationSubtitle = String(
-      formData.get("conversationSubtitle") || ""
-    ).trim();
+    const conversationSubtitle = String(formData.get("conversationSubtitle") || "").trim();
     const listPreview = String(formData.get("listPreview") || "").trim();
     const avatarLetter = String(formData.get("avatarLetter") || "").trim();
-    const lastActivityLabel = String(
-      formData.get("lastActivityLabel") || ""
-    ).trim();
+    const lastActivityLabel = String(formData.get("lastActivityLabel") || "").trim();
     const sortOrder = String(formData.get("sortOrder") || "").trim();
 
     const assets = JSON.parse(String(formData.get("assets") || "[]"));
@@ -332,24 +205,30 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: appRow } = await supabaseAdmin
+    const { data: appRow, error: appError } = await supabaseAdmin
       .from("apps")
       .select("id, slug")
       .eq("slug", "friends")
       .single();
 
-    if (!appRow) {
-      return NextResponse.json({ ok: false, error: "Friends app not found." }, { status: 404 });
+    if (appError || !appRow) {
+      return NextResponse.json(
+        { ok: false, error: appError?.message || "Friends app not found." },
+        { status: 404 }
+      );
     }
 
-    const { data: primarySong } = await supabaseAdmin
+    const { data: primarySong, error: primarySongError } = await supabaseAdmin
       .from("songs")
       .select("id, slug, title, artist_name, audio_path, cover_image_path")
       .eq("slug", primarySongSlug)
       .single();
 
-    if (!primarySong) {
-      return NextResponse.json({ ok: false, error: "Primary song not found." }, { status: 404 });
+    if (primarySongError || !primarySong) {
+      return NextResponse.json(
+        { ok: false, error: primarySongError?.message || "Primary song not found." },
+        { status: 404 }
+      );
     }
 
     const { data: savedConversation, error: conversationError } = await supabaseAdmin
@@ -445,24 +324,17 @@ export async function POST(request: NextRequest) {
     const assetSlugToId = new Map<string, string>();
 
     for (const asset of assets || []) {
-      let linkedSongId: string | null = null;
+      const cleanSlug = slugify(String(asset.slug || "").trim());
+      const cleanTitle = String(asset.title || "").trim();
 
-      if (asset.linkedSongSlug) {
-        const { data: linkedSong } = await supabaseAdmin
-          .from("songs")
-          .select("id")
-          .eq("slug", asset.linkedSongSlug)
-          .maybeSingle();
-
-        linkedSongId = linkedSong?.id || null;
-      }
+      if (!cleanSlug) continue;
 
       let storagePath: string | null = null;
       const incomingFile = formData.get(`assetFile__${asset.clientId}`);
 
       if (incomingFile instanceof File && incomingFile.size > 0) {
         const ext = (incomingFile.name.split(".").pop() || "mp3").toLowerCase();
-        storagePath = `friends/${primarySong.slug}/${asset.slug}.${safeFileName(ext)}`;
+        storagePath = `friends/${primarySong.slug}/${cleanSlug}.${safeFileName(ext)}`;
 
         const upload = await supabaseAdmin.storage
           .from("songs")
@@ -481,13 +353,13 @@ export async function POST(request: NextRequest) {
         .upsert(
           {
             conversation_id: savedConversation.id,
-            slug: asset.slug,
-            title: asset.title || asset.slug,
+            slug: cleanSlug,
+            title: cleanTitle || cleanSlug,
             storage_path: storagePath,
-            version_label: asset.versionLabel || null,
+            version_label: null,
             is_final_version: false,
-            is_playlistable: Boolean(asset.isPlaylistable),
-            linked_song_id: linkedSongId
+            is_playlistable: false,
+            linked_song_id: null
           },
           { onConflict: "conversation_id,slug" }
         )
@@ -516,20 +388,41 @@ export async function POST(request: NextRequest) {
     }
 
     for (const msg of messages || []) {
+      const messageType = String(msg.messageType || "").trim();
+      const messageSide =
+        messageType === "timestamp"
+          ? "center"
+          : String(msg.messageSide || "incoming").trim();
+
+      const body = String(msg.body || "").trim();
+      const audioLabel = String(msg.audioLabel || "").trim();
+      const audioKind = String(msg.audioKind || "Song").trim();
+      const assetSlug = slugify(String(msg.assetSlug || "").trim());
+
       const { data: savedMessage, error: messageError } = await supabaseAdmin
         .from("conversation_messages")
         .insert({
           conversation_id: savedConversation.id,
-          message_type: msg.messageType,
-          sender_name: msg.senderName || null,
-          sender_label: msg.senderLabel || null,
-          body: msg.body || null,
-          position: msg.position,
+          message_type: messageType,
+          sender_name:
+            messageType === "timestamp"
+              ? null
+              : messageSide === "outgoing"
+              ? "Caliph"
+              : null,
+          sender_label:
+            messageType === "timestamp"
+              ? null
+              : messageSide === "incoming"
+              ? primarySong.artist_name || null
+              : null,
+          body: body || null,
+          position: Number(msg.position),
           is_published: true,
-          message_side: msg.messageSide || null,
-          display_time: msg.displayTime || null,
-          audio_label: msg.audioLabel || null,
-          audio_kind: msg.audioKind || null
+          message_side: messageSide,
+          display_time: null,
+          audio_label: messageType === "audio" ? audioLabel || null : null,
+          audio_kind: messageType === "audio" ? audioKind || null : null
         })
         .select("id")
         .single();
@@ -541,14 +434,15 @@ export async function POST(request: NextRequest) {
         );
       }
 
-      if (msg.messageType === "audio" && msg.assetSlug) {
-        const audioAssetId = assetSlugToId.get(msg.assetSlug);
+      if (messageType === "audio") {
+        const resolvedAssetSlug = assetSlug || primarySong.slug;
+        const audioAssetId = assetSlugToId.get(resolvedAssetSlug);
 
         if (!audioAssetId) {
           return NextResponse.json(
             {
               ok: false,
-              error: `Audio asset "${msg.assetSlug}" not found for one of the messages.`
+              error: `Audio source "${resolvedAssetSlug}" not found for one of the messages.`
             },
             { status: 400 }
           );
@@ -559,10 +453,10 @@ export async function POST(request: NextRequest) {
           .insert({
             message_id: savedMessage.id,
             audio_asset_id: audioAssetId,
-            clip_title: msg.clipTitle || msg.audioLabel || null,
-            start_seconds: msg.startSeconds ? Number(msg.startSeconds) : 0,
-            end_seconds: msg.endSeconds ? Number(msg.endSeconds) : null,
-            display_duration: msg.displayDuration || null
+            clip_title: audioLabel || audioKind || "Audio",
+            start_seconds: 0,
+            end_seconds: null,
+            display_duration: null
           });
 
         if (clipError) {
