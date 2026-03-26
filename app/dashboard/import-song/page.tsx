@@ -1,7 +1,7 @@
 "use client";
 
 import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
-
+import { supabaseBrowser } from "@/lib/supabase-browser";
 type AppOption = {
   id: string;
   slug: string;
@@ -70,7 +70,53 @@ type FormState = {
   lyricsBody: string;
   useConversationBuilder: boolean;
 };
+function safeFileName(name: string) {
+  return name.replace(/[^a-zA-Z0-9._-]/g, "-");
+}
 
+async function createSignedUploadTarget(bucket: string, path: string, upsert = true) {
+  const res = await fetch("/api/dashboard/storage-upload", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      bucket,
+      path,
+      upsert
+    })
+  });
+
+  const data = await res.json();
+
+  if (!data?.ok) {
+    throw new Error(data?.error || "Could not create upload target.");
+  }
+
+  return data as {
+    ok: true;
+    bucket: string;
+    path: string;
+    token: string;
+  };
+}
+
+async function uploadFileToSignedUrl(
+  bucket: string,
+  path: string,
+  token: string,
+  file: File
+) {
+  const { error } = await supabaseBrowser.storage
+    .from(bucket)
+    .uploadToSignedUrl(path, token, file, {
+      contentType: file.type || undefined
+    });
+
+  if (error) {
+    throw new Error(error.message);
+  }
+}
 function slugify(value: string) {
   return value
     .toLowerCase()
@@ -294,74 +340,102 @@ export default function ImportSongPage() {
   }
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setResult("");
-    setContinueToFriendsBuilderSlug("");
+  e.preventDefault();
+  setSaving(true);
+  setResult("");
+  setContinueToFriendsBuilderSlug("");
 
-    try {
-      const payload = new FormData();
+  try {
+    const songSlug = form.slug.trim();
+    const appSlug = form.appSlug.trim();
 
-      payload.append("mode", mode);
-      payload.append("selectedSongSlug", selectedSongSlug);
-      payload.append("appSlug", form.appSlug);
-      payload.append("slug", form.slug.trim());
-      payload.append("title", form.title.trim());
-      payload.append("artistName", form.artistName.trim());
-      payload.append("producerNames", form.producerNames.trim());
-      payload.append("position", form.position.trim());
-      payload.append("trackNumber", form.trackNumber.trim());
-      payload.append("durationSeconds", form.durationSeconds.trim());
-      payload.append("durationLabel", form.durationLabel.trim());
-      payload.append("displayDate", form.displayDate.trim());
-      payload.append("description", form.description.trim());
-      payload.append("isFeatured", String(form.isFeatured));
-      payload.append("lyricsBody", form.lyricsBody);
-
-      const audioFile = audioInputRef.current?.files?.[0];
-      const coverFile = coverInputRef.current?.files?.[0];
-
-      if (audioFile) payload.append("audioFile", audioFile);
-      if (coverFile) payload.append("coverFile", coverFile);
-
-      const res = await fetch("/api/dashboard/import-song", {
-        method: "POST",
-        body: payload
-      });
-
-      const data = await res.json();
-
-      if (!data?.ok) {
-        setResult(data?.error || "Could not save.");
-        return;
-      }
-
-      setResult(`Saved "${data.song?.title}".`);
-
-      if (isFriends && form.useConversationBuilder) {
-        setContinueToFriendsBuilderSlug(form.slug.trim() || data.song?.slug || "");
-      }
-
-      await loadAppsAndSongs();
-      await loadAppOrder(orderAppSlug);
-
-      if (mode === "new") {
-        setForm((prev) => ({
-          ...EMPTY_FORM,
-          appSlug: prev.appSlug
-        }));
-        setAudioFileName("");
-        setCoverFileName("");
-        if (audioInputRef.current) audioInputRef.current.value = "";
-        if (coverInputRef.current) coverInputRef.current.value = "";
-      }
-    } catch {
-      setResult("Server error while saving.");
-    } finally {
+    if (!songSlug || !appSlug || !form.title.trim() || !form.artistName.trim()) {
+      setResult("Missing required fields.");
       setSaving(false);
+      return;
     }
-  }
 
+    const audioFile = audioInputRef.current?.files?.[0] || null;
+    const coverFile = coverInputRef.current?.files?.[0] || null;
+
+    let audioPath = audioFileName && audioFileName.includes("/") ? audioFileName : "";
+    let coverImagePath = coverFileName && coverFileName.includes("/") ? coverFileName : "";
+
+    if (audioFile) {
+      const audioExt = (audioFile.name.split(".").pop() || "mp3").toLowerCase();
+      audioPath = `${appSlug}/${songSlug}/${songSlug}-final.${safeFileName(audioExt)}`;
+
+      const audioTarget = await createSignedUploadTarget("songs", audioPath, true);
+      await uploadFileToSignedUrl("songs", audioTarget.path, audioTarget.token, audioFile);
+      setAudioFileName(audioPath);
+    }
+
+    if (coverFile) {
+      const coverExt = (coverFile.name.split(".").pop() || "png").toLowerCase();
+      coverImagePath = `${appSlug}/${songSlug}/${songSlug}.${safeFileName(coverExt)}`;
+
+      const coverTarget = await createSignedUploadTarget("cover-art", coverImagePath, true);
+      await uploadFileToSignedUrl("cover-art", coverTarget.path, coverTarget.token, coverFile);
+      setCoverFileName(coverImagePath);
+    }
+
+    const payload = new FormData();
+
+    payload.append("mode", mode);
+    payload.append("selectedSongSlug", selectedSongSlug);
+    payload.append("appSlug", form.appSlug);
+    payload.append("slug", form.slug.trim());
+    payload.append("title", form.title.trim());
+    payload.append("artistName", form.artistName.trim());
+    payload.append("producerNames", form.producerNames.trim());
+    payload.append("position", form.position.trim());
+    payload.append("trackNumber", form.trackNumber.trim());
+    payload.append("durationSeconds", form.durationSeconds.trim());
+    payload.append("durationLabel", form.durationLabel.trim());
+    payload.append("displayDate", form.displayDate.trim());
+    payload.append("description", form.description.trim());
+    payload.append("isFeatured", String(form.isFeatured));
+    payload.append("lyricsBody", form.lyricsBody);
+    payload.append("audioPath", audioPath);
+    payload.append("coverImagePath", coverImagePath);
+
+    const res = await fetch("/api/dashboard/import-song", {
+      method: "POST",
+      body: payload
+    });
+
+    const data = await res.json();
+
+    if (!data?.ok) {
+      setResult(data?.error || "Could not save.");
+      return;
+    }
+
+    setResult(`Saved "${data.song?.title}".`);
+
+    if (isFriends && form.useConversationBuilder) {
+      setContinueToFriendsBuilderSlug(form.slug.trim() || data.song?.slug || "");
+    }
+
+    await loadAppsAndSongs();
+    await loadAppOrder(orderAppSlug);
+
+    if (mode === "new") {
+      setForm((prev) => ({
+        ...EMPTY_FORM,
+        appSlug: prev.appSlug
+      }));
+      setAudioFileName("");
+      setCoverFileName("");
+      if (audioInputRef.current) audioInputRef.current.value = "";
+      if (coverInputRef.current) coverInputRef.current.value = "";
+    }
+  } catch (error: any) {
+    setResult(error?.message || "Server error while saving.");
+  } finally {
+    setSaving(false);
+  }
+}
   async function handleSaveOrder() {
     setSavingOrder(true);
     setResult("");
