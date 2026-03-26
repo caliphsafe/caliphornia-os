@@ -323,29 +323,22 @@ export async function POST(request: NextRequest) {
 
     const assetSlugToId = new Map<string, string>();
 
-    for (const asset of assets || []) {
+       for (const asset of assets || []) {
       const cleanSlug = slugify(String(asset.slug || "").trim());
       const cleanTitle = String(asset.title || "").trim();
 
       if (!cleanSlug) continue;
 
       let storagePath: string | null = null;
-      const incomingFile = formData.get(`assetFile__${asset.clientId}`);
 
-      if (incomingFile instanceof File && incomingFile.size > 0) {
-        const ext = (incomingFile.name.split(".").pop() || "mp3").toLowerCase();
-        storagePath = `friends/${primarySong.slug}/${cleanSlug}.${safeFileName(ext)}`;
-
-        const upload = await supabaseAdmin.storage
-          .from("songs")
-          .upload(storagePath, incomingFile, {
-            upsert: true,
-            contentType: incomingFile.type || undefined
-          });
-
-        if (upload.error) {
-          return NextResponse.json({ ok: false, error: upload.error.message }, { status: 500 });
-        }
+      const uploadedMetaRaw = formData.get(`assetUpload__${asset.clientId}`);
+      if (typeof uploadedMetaRaw === "string" && uploadedMetaRaw) {
+        try {
+          const uploadedMeta = JSON.parse(uploadedMetaRaw);
+          if (uploadedMeta?.slug === cleanSlug && uploadedMeta?.storagePath) {
+            storagePath = String(uploadedMeta.storagePath);
+          }
+        } catch {}
       }
 
       const { data: savedAsset, error: assetError } = await supabaseAdmin
