@@ -682,7 +682,7 @@ export default function FriendsBuilderPage() {
                           </select>
                         </label>
                       ) : null}
-                      )}
+                    
 
                                             {msg.messageType === "timestamp" ? (
                         <label style={{ gridColumn: "2 / 3" }}>
