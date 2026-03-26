@@ -801,9 +801,13 @@ img {
 .global-player-main {
   display: grid;
   gap: 10px;
+  min-width: 0;
 }
 
 .global-player-copy {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
   padding-right: 30px;
 }
 
@@ -812,6 +816,9 @@ img {
   font-weight: 700;
   line-height: 1.15;
   color: rgba(255,255,255,0.97);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .global-player-artist {
@@ -819,6 +826,9 @@ img {
   font-size: 13px;
   line-height: 1.2;
   color: rgba(255,255,255,0.68);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .global-player-controls {
@@ -826,6 +836,7 @@ img {
   align-items: center;
   justify-content: center;
   gap: 10px;
+  flex-shrink: 0;
 }
 
 .global-player-orb {
