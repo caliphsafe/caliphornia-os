@@ -10,10 +10,6 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function safeFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, "-");
-}
-
 export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode");
 
