@@ -784,19 +784,21 @@ export default function ImportSongPage() {
               <p style={{ marginTop: 0 }}>
                 Song saved. Continue to the Fri.ends builder for the full conversation setup.
               </p>
-              <a
-                href={`/dashboard/friends-builder`}
-                style={{
-                  display: "inline-block",
-                  padding: "10px 14px",
-                  borderRadius: 10,
-                  border: "1px solid rgba(255,255,255,0.12)",
-                  textDecoration: "none",
-                  color: "inherit"
-                }}
-              >
-                Continue to Fri.ends Builder
-              </a>
+             <a
+  href={`/dashboard/friends-builder?song=${encodeURIComponent(
+    continueToFriendsBuilderSlug
+  )}`}
+  style={{
+    display: "inline-block",
+    padding: "10px 14px",
+    borderRadius: 10,
+    border: "1px solid rgba(255,255,255,0.12)",
+    textDecoration: "none",
+    color: "inherit"
+  }}
+>
+  Continue to Fri.ends Builder
+</a>
             </div>
           ) : null}
 
