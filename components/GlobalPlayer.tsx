@@ -172,15 +172,10 @@ function MarqueeText({
 }) {
   const shouldMarquee = active && text.length > 22;
 
-  if (!shouldMarquee) {
-    return <span className="music-ellipsis">{text}</span>;
-  }
-
   return (
-    <span className="music-marquee-shell">
-      <span className="music-marquee-track">
+    <span className={shouldMarquee ? "music-marquee-shell" : "music-ellipsis"}>
+      <span className={shouldMarquee ? "music-marquee-track" : ""}>
         <span>{text}</span>
-        <span aria-hidden="true">{text}</span>
       </span>
     </span>
   );
