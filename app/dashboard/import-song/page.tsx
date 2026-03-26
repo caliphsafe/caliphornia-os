@@ -1,6 +1,6 @@
 "use client";
 
-import { ChangeEvent, FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { ChangeEvent, FormEvent, useEffect, useRef, useState } from "react";
 
 type AppOption = {
   id: string;
@@ -48,6 +48,12 @@ type SongDetail = {
   } | null;
 };
 
+type AppOrderRow = {
+  song_slug: string;
+  title: string;
+  position: number | null;
+};
+
 type FormState = {
   appSlug: string;
   slug: string;
@@ -62,14 +68,7 @@ type FormState = {
   description: string;
   isFeatured: boolean;
   lyricsBody: string;
-  createConversation: boolean;
-  conversationSlug: string;
-  conversationTitle: string;
-  conversationSubtitle: string;
-  listPreview: string;
-  avatarLetter: string;
-  lastActivityLabel: string;
-  sortOrder: string;
+  useConversationBuilder: boolean;
 };
 
 function slugify(value: string) {
@@ -131,14 +130,7 @@ const EMPTY_FORM: FormState = {
   description: "",
   isFeatured: false,
   lyricsBody: "",
-  createConversation: false,
-  conversationSlug: "",
-  conversationTitle: "",
-  conversationSubtitle: "",
-  listPreview: "",
-  avatarLetter: "",
-  lastActivityLabel: "",
-  sortOrder: ""
+  useConversationBuilder: false
 };
 
 export default function ImportSongPage() {
@@ -149,8 +141,13 @@ export default function ImportSongPage() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState("");
+  const [continueToFriendsBuilderSlug, setContinueToFriendsBuilderSlug] = useState("");
   const [audioFileName, setAudioFileName] = useState("");
   const [coverFileName, setCoverFileName] = useState("");
+
+  const [orderAppSlug, setOrderAppSlug] = useState("friends");
+  const [orderRows, setOrderRows] = useState<AppOrderRow[]>([]);
+  const [savingOrder, setSavingOrder] = useState(false);
 
   const audioInputRef = useRef<HTMLInputElement | null>(null);
   const coverInputRef = useRef<HTMLInputElement | null>(null);
@@ -159,28 +156,47 @@ export default function ImportSongPage() {
 
   const isFriends = form.appSlug === "friends";
 
+  async function loadAppsAndSongs() {
+    const [appsRes, songsRes] = await Promise.all([
+      fetch("/api/dashboard/import-song?mode=apps", { cache: "no-store" }),
+      fetch("/api/dashboard/import-song?mode=songs", { cache: "no-store" })
+    ]);
+
+    const appsData = await appsRes.json();
+    const songsData = await songsRes.json();
+
+    if (appsData?.ok) {
+      setApps(appsData.apps || []);
+      setForm((prev) => ({
+        ...prev,
+        appSlug: prev.appSlug || appsData.apps?.[0]?.slug || ""
+      }));
+    }
+
+    if (songsData?.ok) {
+      setSongs(songsData.songs || []);
+    }
+  }
+
+  async function loadAppOrder(appSlug: string) {
+    const res = await fetch(
+      `/api/dashboard/import-song?mode=app-order&appSlug=${encodeURIComponent(appSlug)}`,
+      { cache: "no-store" }
+    );
+    const data = await res.json();
+
+    if (data?.ok) {
+      setOrderRows(data.rows || []);
+    } else {
+      setResult(data?.error || "Could not load app order.");
+    }
+  }
+
   useEffect(() => {
     async function boot() {
       try {
-        const [appsRes, songsRes] = await Promise.all([
-          fetch("/api/dashboard/import-song?mode=apps", { cache: "no-store" }),
-          fetch("/api/dashboard/import-song?mode=songs", { cache: "no-store" })
-        ]);
-
-        const appsData = await appsRes.json();
-        const songsData = await songsRes.json();
-
-        if (appsData?.ok) {
-          setApps(appsData.apps || []);
-          setForm((prev) => ({
-            ...prev,
-            appSlug: prev.appSlug || appsData.apps?.[0]?.slug || ""
-          }));
-        }
-
-        if (songsData?.ok) {
-          setSongs(songsData.songs || []);
-        }
+        await loadAppsAndSongs();
+        await loadAppOrder("friends");
       } catch {
         setResult("Could not load admin data.");
       } finally {
@@ -195,6 +211,7 @@ export default function ImportSongPage() {
     if (!slug) return;
 
     setResult("");
+    setContinueToFriendsBuilderSlug("");
 
     try {
       const res = await fetch(
@@ -225,19 +242,12 @@ export default function ImportSongPage() {
         description: detail.song.description || "",
         isFeatured: Boolean(detail.song.is_featured),
         lyricsBody: detail.lyric?.body || "",
-        createConversation: Boolean(detail.conversation),
-        conversationSlug: detail.conversation?.slug || "",
-        conversationTitle: detail.conversation?.title || "",
-        conversationSubtitle: detail.conversation?.subtitle || "",
-        listPreview: detail.conversation?.list_preview || "",
-        avatarLetter: detail.conversation?.avatar_letter || "",
-        lastActivityLabel: detail.conversation?.last_activity_label || "",
-        sortOrder:
-          detail.conversation?.sort_order != null ? String(detail.conversation.sort_order) : ""
+        useConversationBuilder: Boolean(detail.conversation)
       });
 
       setAudioFileName(detail.song.audio_path || "");
       setCoverFileName(detail.song.cover_image_path || "");
+      setContinueToFriendsBuilderSlug(detail.conversation?.slug || "");
     } catch {
       setResult("Could not load song.");
     }
@@ -273,19 +283,7 @@ export default function ImportSongPage() {
           ? String(durationSeconds)
           : prev.durationSeconds,
       durationLabel:
-        mode === "new" && !prev.durationLabel && durationLabel ? durationLabel : prev.durationLabel,
-      conversationSlug:
-        mode === "new" && prev.appSlug === "friends" && !prev.conversationSlug
-          ? inferredSlug
-          : prev.conversationSlug,
-      conversationTitle:
-        mode === "new" && prev.appSlug === "friends" && !prev.conversationTitle
-          ? inferredTitle
-          : prev.conversationTitle,
-      avatarLetter:
-        mode === "new" && prev.appSlug === "friends" && !prev.avatarLetter && inferredTitle
-          ? inferredTitle[0].toUpperCase()
-          : prev.avatarLetter
+        mode === "new" && !prev.durationLabel && durationLabel ? durationLabel : prev.durationLabel
     }));
   }
 
@@ -299,6 +297,7 @@ export default function ImportSongPage() {
     e.preventDefault();
     setSaving(true);
     setResult("");
+    setContinueToFriendsBuilderSlug("");
 
     try {
       const payload = new FormData();
@@ -318,14 +317,6 @@ export default function ImportSongPage() {
       payload.append("description", form.description.trim());
       payload.append("isFeatured", String(form.isFeatured));
       payload.append("lyricsBody", form.lyricsBody);
-      payload.append("createConversation", String(form.createConversation));
-      payload.append("conversationSlug", form.conversationSlug.trim());
-      payload.append("conversationTitle", form.conversationTitle.trim());
-      payload.append("conversationSubtitle", form.conversationSubtitle.trim());
-      payload.append("listPreview", form.listPreview.trim());
-      payload.append("avatarLetter", form.avatarLetter.trim());
-      payload.append("lastActivityLabel", form.lastActivityLabel.trim());
-      payload.append("sortOrder", form.sortOrder.trim());
 
       const audioFile = audioInputRef.current?.files?.[0];
       const coverFile = coverInputRef.current?.files?.[0];
@@ -345,22 +336,20 @@ export default function ImportSongPage() {
         return;
       }
 
-      setResult(
-        data?.conversation
-          ? `Saved "${data.song?.title}" and updated conversation "${data.conversation?.title}".`
-          : `Saved "${data.song?.title}".`
-      );
+      setResult(`Saved "${data.song?.title}".`);
 
-      const songsRes = await fetch("/api/dashboard/import-song?mode=songs", {
-        cache: "no-store"
-      });
-      const songsData = await songsRes.json();
-      if (songsData?.ok) {
-        setSongs(songsData.songs || []);
+      if (isFriends && form.useConversationBuilder) {
+        setContinueToFriendsBuilderSlug(form.slug.trim() || data.song?.slug || "");
       }
 
+      await loadAppsAndSongs();
+      await loadAppOrder(orderAppSlug);
+
       if (mode === "new") {
-        setForm((prev) => ({ ...EMPTY_FORM, appSlug: prev.appSlug }));
+        setForm((prev) => ({
+          ...EMPTY_FORM,
+          appSlug: prev.appSlug
+        }));
         setAudioFileName("");
         setCoverFileName("");
         if (audioInputRef.current) audioInputRef.current.value = "";
@@ -373,12 +362,49 @@ export default function ImportSongPage() {
     }
   }
 
+  async function handleSaveOrder() {
+    setSavingOrder(true);
+    setResult("");
+
+    try {
+      const res = await fetch("/api/dashboard/import-song", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          action: "save-order",
+          appSlug: orderAppSlug,
+          rows: orderRows.map((row) => ({
+            songSlug: row.song_slug,
+            position: row.position
+          }))
+        })
+      });
+
+      const data = await res.json();
+
+      if (!data?.ok) {
+        setResult(data?.error || "Could not save order.");
+        setSavingOrder(false);
+        return;
+      }
+
+      setResult(`Saved ${orderAppSlug} order.`);
+      await loadAppOrder(orderAppSlug);
+    } catch {
+      setResult("Server error while saving order.");
+    } finally {
+      setSavingOrder(false);
+    }
+  }
+
   return (
-    <main style={{ padding: 24, maxWidth: 820, margin: "0 auto" }}>
-      <h1 style={{ marginBottom: 8 }}>Song Manager</h1>
-      <p style={{ marginTop: 0, marginBottom: 24, opacity: 0.75 }}>
-        Create new songs, edit existing songs, and optionally create or update a Fri.ends conversation.
-      </p>
+    <main style={{ padding: 24, maxWidth: 1100, margin: "0 auto" }}>
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ marginBottom: 8 }}>Song Manager</h1>
+        <p style={{ margin: 0, opacity: 0.75 }}>
+          Upload songs, edit metadata and lyrics, assign songs to apps, and manage app order.
+        </p>
+      </div>
 
       {loading ? (
         <p>Loading…</p>
@@ -390,9 +416,14 @@ export default function ImportSongPage() {
               onClick={() => {
                 setMode("new");
                 setSelectedSongSlug("");
-                setForm((prev) => ({ ...EMPTY_FORM, appSlug: prev.appSlug || apps[0]?.slug || "" }));
+                setForm((prev) => ({
+                  ...EMPTY_FORM,
+                  appSlug: prev.appSlug || apps[0]?.slug || ""
+                }));
                 setAudioFileName("");
                 setCoverFileName("");
+                setContinueToFriendsBuilderSlug("");
+                setResult("");
               }}
               style={{ padding: "10px 14px", borderRadius: 10 }}
             >
@@ -432,13 +463,290 @@ export default function ImportSongPage() {
           ) : null}
 
           <form onSubmit={handleSubmit} style={{ display: "grid", gap: 16 }}>
-            <label>
-              <div>App</div>
+            <section
+              style={{
+                border: "1px solid rgba(255,255,255,0.12)",
+                borderRadius: 16,
+                padding: 16
+              }}
+            >
+              <h2 style={{ marginTop: 0 }}>Song</h2>
+
+              <label>
+                <div>App</div>
+                <select
+                  value={form.appSlug}
+                  onChange={(e) => updateField("appSlug", e.target.value)}
+                  required
+                  style={{ width: "100%", padding: 12 }}
+                >
+                  {apps.map((app) => (
+                    <option key={app.id} value={app.slug}>
+                      {app.name} ({app.slug})
+                    </option>
+                  ))}
+                </select>
+              </label>
+
+              <div style={{ marginTop: 16 }}>
+                <label>
+                  <div>Audio File {mode === "new" ? "" : "(optional to replace)"}</div>
+                  <input
+                    ref={audioInputRef}
+                    type="file"
+                    accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac"
+                    onChange={handleAudioChange}
+                    required={mode === "new"}
+                  />
+                  {audioFileName ? (
+                    <div style={{ marginTop: 6, opacity: 0.7 }}>{audioFileName}</div>
+                  ) : null}
+                </label>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <label>
+                  <div>Cover File {mode === "edit" ? "(optional to replace)" : "(optional)"}</div>
+                  <input
+                    ref={coverInputRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp"
+                    onChange={handleCoverChange}
+                  />
+                  {coverFileName ? (
+                    <div style={{ marginTop: 6, opacity: 0.7 }}>{coverFileName}</div>
+                  ) : null}
+                </label>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 16,
+                  marginTop: 16
+                }}
+              >
+                <label>
+                  <div>Song Slug</div>
+                  <input
+                    value={form.slug}
+                    onChange={(e) => updateField("slug", slugify(e.target.value))}
+                    required
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+
+                <label>
+                  <div>Title</div>
+                  <input
+                    value={form.title}
+                    onChange={(e) => updateField("title", e.target.value)}
+                    required
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 16,
+                  marginTop: 16
+                }}
+              >
+                <label>
+                  <div>Artist Name</div>
+                  <input
+                    value={form.artistName}
+                    onChange={(e) => updateField("artistName", e.target.value)}
+                    required
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+
+                <label>
+                  <div>Producer Names</div>
+                  <input
+                    value={form.producerNames}
+                    onChange={(e) => updateField("producerNames", e.target.value)}
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr",
+                  gap: 16,
+                  marginTop: 16
+                }}
+              >
+                <label>
+                  <div>App Position</div>
+                  <input
+                    value={form.position}
+                    onChange={(e) => updateField("position", e.target.value)}
+                    type="number"
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+
+                <label>
+                  <div>Track Number</div>
+                  <input
+                    value={form.trackNumber}
+                    onChange={(e) => updateField("trackNumber", e.target.value)}
+                    type="number"
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+              </div>
+
+              <div
+                style={{
+                  display: "grid",
+                  gridTemplateColumns: "1fr 1fr 1fr",
+                  gap: 16,
+                  marginTop: 16
+                }}
+              >
+                <label>
+                  <div>Duration Seconds</div>
+                  <input
+                    value={form.durationSeconds}
+                    onChange={(e) => updateField("durationSeconds", e.target.value)}
+                    type="number"
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+
+                <label>
+                  <div>Duration Label</div>
+                  <input
+                    value={form.durationLabel}
+                    onChange={(e) => updateField("durationLabel", e.target.value)}
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+
+                <label>
+                  <div>Display Date</div>
+                  <input
+                    value={form.displayDate}
+                    onChange={(e) => updateField("displayDate", e.target.value)}
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <label>
+                  <div>Description</div>
+                  <textarea
+                    value={form.description}
+                    onChange={(e) => updateField("description", e.target.value)}
+                    rows={3}
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                  <input
+                    type="checkbox"
+                    checked={form.isFeatured}
+                    onChange={(e) => updateField("isFeatured", e.target.checked)}
+                  />
+                  Featured song
+                </label>
+              </div>
+
+              <div style={{ marginTop: 16 }}>
+                <label>
+                  <div>Lyrics (optional)</div>
+                  <textarea
+                    value={form.lyricsBody}
+                    onChange={(e) => updateField("lyricsBody", e.target.value)}
+                    rows={10}
+                    style={{ width: "100%", padding: 12 }}
+                  />
+                </label>
+              </div>
+
+              {isFriends ? (
+                <div style={{ marginTop: 20 }}>
+                  <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
+                    <input
+                      type="checkbox"
+                      checked={form.useConversationBuilder}
+                      onChange={(e) =>
+                        updateField("useConversationBuilder", e.target.checked)
+                      }
+                    />
+                    Use Conversation Builder after saving
+                  </label>
+                </div>
+              ) : null}
+            </section>
+
+            <button type="submit" disabled={saving} style={{ padding: 14, borderRadius: 12 }}>
+              {saving ? "Saving..." : mode === "new" ? "Create Song" : "Save Changes"}
+            </button>
+          </form>
+
+          {continueToFriendsBuilderSlug ? (
+            <div
+              style={{
+                marginTop: 16,
+                padding: 16,
+                borderRadius: 16,
+                border: "1px solid rgba(255,255,255,0.12)"
+              }}
+            >
+              <p style={{ marginTop: 0 }}>
+                Song saved. Continue to the Fri.ends builder for the full conversation setup.
+              </p>
+              <a
+                href={`/dashboard/friends-builder`}
+                style={{
+                  display: "inline-block",
+                  padding: "10px 14px",
+                  borderRadius: 10,
+                  border: "1px solid rgba(255,255,255,0.12)",
+                  textDecoration: "none",
+                  color: "inherit"
+                }}
+              >
+                Continue to Fri.ends Builder
+              </a>
+            </div>
+          ) : null}
+
+          <section
+            style={{
+              marginTop: 32,
+              border: "1px solid rgba(255,255,255,0.12)",
+              borderRadius: 16,
+              padding: 16
+            }}
+          >
+            <h2 style={{ marginTop: 0 }}>App Order Manager</h2>
+
+            <div
+              style={{ display: "flex", gap: 12, alignItems: "center", marginBottom: 16 }}
+            >
               <select
-                value={form.appSlug}
-                onChange={(e) => updateField("appSlug", e.target.value)}
-                required
-                style={{ width: "100%", padding: 12 }}
+                value={orderAppSlug}
+                onChange={async (e) => {
+                  const next = e.target.value;
+                  setOrderAppSlug(next);
+                  await loadAppOrder(next);
+                }}
+                style={{ padding: 10 }}
               >
                 {apps.map((app) => (
                   <option key={app.id} value={app.slug}>
@@ -446,241 +754,51 @@ export default function ImportSongPage() {
                   </option>
                 ))}
               </select>
-            </label>
 
-            <label>
-              <div>Audio File {mode === "new" ? "" : "(optional to replace)"}</div>
-              <input
-                ref={audioInputRef}
-                type="file"
-                accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac"
-                onChange={handleAudioChange}
-                required={mode === "new"}
-              />
-              {audioFileName ? <div style={{ marginTop: 6, opacity: 0.7 }}>{audioFileName}</div> : null}
-            </label>
-
-            <label>
-              <div>Cover File {mode === "edit" ? "(optional to replace)" : "(optional)"}</div>
-              <input
-                ref={coverInputRef}
-                type="file"
-                accept="image/png,image/jpeg,image/webp"
-                onChange={handleCoverChange}
-              />
-              {coverFileName ? <div style={{ marginTop: 6, opacity: 0.7 }}>{coverFileName}</div> : null}
-            </label>
-
-            <label>
-              <div>Song Slug</div>
-              <input
-                value={form.slug}
-                onChange={(e) => updateField("slug", slugify(e.target.value))}
-                required
-                style={{ width: "100%", padding: 12 }}
-              />
-            </label>
-
-            <label>
-              <div>Title</div>
-              <input
-                value={form.title}
-                onChange={(e) => updateField("title", e.target.value)}
-                required
-                style={{ width: "100%", padding: 12 }}
-              />
-            </label>
-
-            <label>
-              <div>Artist Name</div>
-              <input
-                value={form.artistName}
-                onChange={(e) => updateField("artistName", e.target.value)}
-                required
-                style={{ width: "100%", padding: 12 }}
-              />
-            </label>
-
-            <label>
-              <div>Producer Names</div>
-              <input
-                value={form.producerNames}
-                onChange={(e) => updateField("producerNames", e.target.value)}
-                style={{ width: "100%", padding: 12 }}
-              />
-            </label>
-
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <label>
-                <div>App Position</div>
-                <input
-                  value={form.position}
-                  onChange={(e) => updateField("position", e.target.value)}
-                  type="number"
-                  style={{ width: "100%", padding: 12 }}
-                />
-              </label>
-
-              <label>
-                <div>Track Number</div>
-                <input
-                  value={form.trackNumber}
-                  onChange={(e) => updateField("trackNumber", e.target.value)}
-                  type="number"
-                  style={{ width: "100%", padding: 12 }}
-                />
-              </label>
+              <button type="button" onClick={handleSaveOrder} disabled={savingOrder}>
+                {savingOrder ? "Saving..." : "Save Order"}
+              </button>
             </div>
 
-            <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-              <label>
-                <div>Duration Seconds</div>
-                <input
-                  value={form.durationSeconds}
-                  onChange={(e) => updateField("durationSeconds", e.target.value)}
-                  type="number"
-                  style={{ width: "100%", padding: 12 }}
-                />
-              </label>
-
-              <label>
-                <div>Duration Label</div>
-                <input
-                  value={form.durationLabel}
-                  onChange={(e) => updateField("durationLabel", e.target.value)}
-                  style={{ width: "100%", padding: 12 }}
-                />
-              </label>
-            </div>
-
-            <label>
-              <div>Display Date</div>
-              <input
-                value={form.displayDate}
-                onChange={(e) => updateField("displayDate", e.target.value)}
-                style={{ width: "100%", padding: 12 }}
-              />
-            </label>
-
-            <label>
-              <div>Description</div>
-              <textarea
-                value={form.description}
-                onChange={(e) => updateField("description", e.target.value)}
-                rows={3}
-                style={{ width: "100%", padding: 12 }}
-              />
-            </label>
-
-            <label style={{ display: "flex", alignItems: "center", gap: 10 }}>
-              <input
-                type="checkbox"
-                checked={form.isFeatured}
-                onChange={(e) => updateField("isFeatured", e.target.checked)}
-              />
-              Featured song
-            </label>
-
-            <label>
-              <div>Lyrics (optional)</div>
-              <textarea
-                value={form.lyricsBody}
-                onChange={(e) => updateField("lyricsBody", e.target.value)}
-                rows={10}
-                style={{ width: "100%", padding: 12 }}
-              />
-            </label>
-
-            {isFriends ? (
-              <section style={{ border: "1px solid rgba(255,255,255,0.12)", borderRadius: 16, padding: 16 }}>
-                <label style={{ display: "flex", alignItems: "center", gap: 10, marginBottom: 16 }}>
-                  <input
-                    type="checkbox"
-                    checked={form.createConversation}
-                    onChange={(e) => updateField("createConversation", e.target.checked)}
-                  />
-                  Create or update Fri.ends conversation
-                </label>
-
-                {form.createConversation ? (
-                  <div style={{ display: "grid", gap: 16 }}>
-                    <label>
-                      <div>Conversation Slug</div>
-                      <input
-                        value={form.conversationSlug}
-                        onChange={(e) => updateField("conversationSlug", slugify(e.target.value))}
-                        style={{ width: "100%", padding: 12 }}
-                      />
-                    </label>
-
-                    <label>
-                      <div>Conversation Title</div>
-                      <input
-                        value={form.conversationTitle}
-                        onChange={(e) => updateField("conversationTitle", e.target.value)}
-                        style={{ width: "100%", padding: 12 }}
-                      />
-                    </label>
-
-                    <label>
-                      <div>Conversation Subtitle</div>
-                      <input
-                        value={form.conversationSubtitle}
-                        onChange={(e) => updateField("conversationSubtitle", e.target.value)}
-                        style={{ width: "100%", padding: 12 }}
-                      />
-                    </label>
-
-                    <label>
-                      <div>List Preview</div>
-                      <input
-                        value={form.listPreview}
-                        onChange={(e) => updateField("listPreview", e.target.value)}
-                        style={{ width: "100%", padding: 12 }}
-                      />
-                    </label>
-
-                    <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr", gap: 16 }}>
-                      <label>
-                        <div>Avatar Letter</div>
-                        <input
-                          value={form.avatarLetter}
-                          onChange={(e) => updateField("avatarLetter", e.target.value.slice(0, 1))}
-                          maxLength={1}
-                          style={{ width: "100%", padding: 12 }}
-                        />
-                      </label>
-
-                      <label>
-                        <div>Last Activity Label</div>
-                        <input
-                          value={form.lastActivityLabel}
-                          onChange={(e) => updateField("lastActivityLabel", e.target.value)}
-                          style={{ width: "100%", padding: 12 }}
-                        />
-                      </label>
-
-                      <label>
-                        <div>Sort Order</div>
-                        <input
-                          value={form.sortOrder}
-                          onChange={(e) => updateField("sortOrder", e.target.value)}
-                          type="number"
-                          style={{ width: "100%", padding: 12 }}
-                        />
-                      </label>
-                    </div>
+            <div style={{ display: "grid", gap: 10 }}>
+              {orderRows.map((row) => (
+                <div
+                  key={row.song_slug}
+                  style={{
+                    display: "grid",
+                    gridTemplateColumns: "1fr 140px",
+                    gap: 12,
+                    alignItems: "center"
+                  }}
+                >
+                  <div>
+                    {row.title}{" "}
+                    <span style={{ opacity: 0.6 }}>({row.song_slug})</span>
                   </div>
-                ) : null}
-              </section>
-            ) : null}
 
-            <button type="submit" disabled={saving} style={{ padding: 14, borderRadius: 12 }}>
-              {saving ? "Saving..." : mode === "new" ? "Create Song" : "Save Changes"}
-            </button>
+                  <input
+                    type="number"
+                    value={row.position ?? ""}
+                    onChange={(e) =>
+                      setOrderRows((prev) =>
+                        prev.map((r) =>
+                          r.song_slug === row.song_slug
+                            ? {
+                                ...r,
+                                position: e.target.value ? Number(e.target.value) : null
+                              }
+                            : r
+                        )
+                      )
+                    }
+                    style={{ width: "100%", padding: 10 }}
+                  />
+                </div>
+              ))}
+            </div>
+          </section>
 
-            {result ? <p style={{ margin: 0 }}>{result}</p> : null}
-          </form>
+          {result ? <p style={{ marginTop: 20 }}>{result}</p> : null}
         </>
       )}
     </main>
