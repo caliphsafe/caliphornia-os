@@ -382,10 +382,25 @@ export default function FriendsBuilderPage() {
         )
       );
 
-      for (const asset of assets) {
-        if (asset.file) {
-          payload.append(`assetFile__${asset.clientId}`, asset.file);
-        }
+            for (const asset of assets) {
+        if (!asset.file || !selectedSong) continue;
+
+        const cleanSlug = slugify(asset.slug || asset.title);
+        if (!cleanSlug) continue;
+
+        const ext = (asset.file.name.split(".").pop() || "mp3").toLowerCase();
+        const storagePath = `friends/${selectedSong.slug}/${cleanSlug}.${ext}`;
+
+        const target = await createSignedUploadTarget("songs", storagePath, true);
+        await uploadFileToSignedUrl("songs", target.path, target.token, asset.file);
+
+        payload.append(
+          `assetUpload__${asset.clientId}`,
+          JSON.stringify({
+            slug: cleanSlug,
+            storagePath
+          })
+        );
       }
 
       const res = await fetch("/api/dashboard/friends-builder", {
