@@ -133,10 +133,91 @@ export async function GET(request: NextRequest) {
     });
   }
 
+  if (mode === "app-order") {
+    const appSlug = request.nextUrl.searchParams.get("appSlug");
+
+    if (!appSlug) {
+      return NextResponse.json({ ok: false, error: "Missing appSlug." }, { status: 400 });
+    }
+
+    const { data: app } = await supabaseAdmin
+      .from("apps")
+      .select("id")
+      .eq("slug", appSlug)
+      .single();
+
+    if (!app) {
+      return NextResponse.json({ ok: false, error: "App not found." }, { status: 404 });
+    }
+
+    const { data, error } = await supabaseAdmin
+      .from("app_songs")
+      .select(`
+        position,
+        song_slug,
+        songs (
+          title
+        )
+      `)
+      .eq("app_id", app.id)
+      .order("position", { ascending: true });
+
+    if (error) {
+      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({
+      ok: true,
+      rows: (data || []).map((row: any) => ({
+        song_slug: row.song_slug,
+        title: Array.isArray(row.songs)
+          ? row.songs[0]?.title || row.song_slug
+          : row.songs?.title || row.song_slug,
+        position: row.position
+      }))
+    });
+  }
+
   return NextResponse.json({ ok: false, error: "Invalid mode." }, { status: 400 });
 }
 
 export async function POST(request: NextRequest) {
+  const contentType = request.headers.get("content-type") || "";
+
+  if (contentType.includes("application/json")) {
+    const body = await request.json();
+
+    if (body.action === "save-order") {
+      const { appSlug, rows } = body;
+
+      const { data: app } = await supabaseAdmin
+        .from("apps")
+        .select("id")
+        .eq("slug", appSlug)
+        .single();
+
+      if (!app) {
+        return NextResponse.json({ ok: false, error: "App not found." }, { status: 404 });
+      }
+
+      for (const row of rows || []) {
+        const { error } = await supabaseAdmin
+          .from("app_songs")
+          .update({ position: row.position })
+          .eq("app_id", app.id)
+          .eq("song_slug", row.songSlug);
+
+        if (error) {
+          return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+        }
+      }
+
+      return NextResponse.json({ ok: true });
+    }
+
+    return NextResponse.json({ ok: false, error: "Invalid action." }, { status: 400 });
+  }
+
   try {
     const formData = await request.formData();
 
@@ -156,15 +237,6 @@ export async function POST(request: NextRequest) {
     const description = String(formData.get("description") || "").trim();
     const isFeatured = String(formData.get("isFeatured") || "") === "true";
     const lyricsBody = String(formData.get("lyricsBody") || "").trim();
-
-    const createConversation = String(formData.get("createConversation") || "") === "true";
-    const conversationSlugInput = String(formData.get("conversationSlug") || "").trim();
-    const conversationTitle = String(formData.get("conversationTitle") || "").trim();
-    const conversationSubtitle = String(formData.get("conversationSubtitle") || "").trim();
-    const listPreview = String(formData.get("listPreview") || "").trim();
-    const avatarLetter = String(formData.get("avatarLetter") || "").trim();
-    const lastActivityLabel = String(formData.get("lastActivityLabel") || "").trim();
-    const sortOrder = String(formData.get("sortOrder") || "").trim();
 
     const audioFile = formData.get("audioFile");
     const coverFile = formData.get("coverFile");
@@ -353,96 +425,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    let conversationRow: any = null;
-
-    if (appRow.slug === "friends" && createConversation) {
-      const conversationSlug = slugify(conversationSlugInput || title);
-
-      const conversationPayload = {
-        app_id: appRow.id,
-        slug: conversationSlug,
-        title: conversationTitle || title,
-        subtitle: conversationSubtitle || artistName,
-        is_published: true,
-        avatar_letter: (avatarLetter || title[0] || "F").slice(0, 1),
-        list_preview: listPreview || null,
-        last_activity_label: lastActivityLabel || null,
-        sort_order: sortOrder ? Number(sortOrder) : null,
-        cover_image_path: coverImagePath,
-        cover_image_bucket: "cover-art",
-        primary_song_id: songRow.id
-      };
-
-      const { data: savedConversation, error: conversationError } = await supabaseAdmin
-        .from("conversations")
-        .upsert(conversationPayload, { onConflict: "slug" })
-        .select("id, slug, title")
-        .single();
-
-      if (conversationError || !savedConversation) {
-        return NextResponse.json(
-          { ok: false, error: conversationError?.message || "Could not save conversation." },
-          { status: 500 }
-        );
-      }
-
-      conversationRow = savedConversation;
-
-      const { data: existingFinalAsset } = await supabaseAdmin
-        .from("audio_assets")
-        .select("id")
-        .eq("conversation_id", savedConversation.id)
-        .eq("is_final_version", true)
-        .maybeSingle();
-
-      if (existingFinalAsset?.id) {
-        const { error: updateAssetError } = await supabaseAdmin
-          .from("audio_assets")
-          .update({
-            slug: songRow.slug,
-            title: songRow.title,
-            storage_path: audioPath,
-            version_label: "Final",
-            is_final_version: true,
-            is_playlistable: true,
-            linked_song_id: songRow.id
-          })
-          .eq("id", existingFinalAsset.id);
-
-        if (updateAssetError) {
-          return NextResponse.json(
-            { ok: false, error: updateAssetError.message },
-            { status: 500 }
-          );
-        }
-      } else {
-        const { error: insertAssetError } = await supabaseAdmin
-          .from("audio_assets")
-          .insert({
-            conversation_id: savedConversation.id,
-            slug: songRow.slug,
-            title: songRow.title,
-            storage_path: audioPath,
-            version_label: "Final",
-            is_final_version: true,
-            is_playlistable: true,
-            linked_song_id: songRow.id
-          });
-
-        if (insertAssetError) {
-          return NextResponse.json(
-            { ok: false, error: insertAssetError.message },
-            { status: 500 }
-          );
-        }
-      }
-    }
-
     return NextResponse.json({
       ok: true,
       app: appRow,
-      song: songRow,
-      conversation: conversationRow
+      song: songRow
     });
   } catch (error: any) {
     return NextResponse.json(
