@@ -28,6 +28,7 @@ type MessageRow = {
   clientId: string;
   messageType: "timestamp" | "text" | "audio";
   messageSide: "incoming" | "outgoing" | "center";
+  senderName: string;
   body: string;
   audioSourceSlug: string;
   audioLabel: string;
@@ -51,6 +52,7 @@ const EMPTY_MESSAGE = (): MessageRow => ({
   clientId: uid(),
   messageType: "text",
   messageSide: "incoming",
+  senderName: "",
   body: "",
   audioSourceSlug: "",
   audioLabel: "",
@@ -131,6 +133,20 @@ export default function FriendsBuilderPage() {
       throw new Error(error.message);
     }
   }
+    const senderOptions = useMemo(() => {
+    const names = new Set<string>();
+
+    names.add("Caliph");
+
+    const rawArtists = selectedSong?.artist_name || "";
+    rawArtists
+      .split(",")
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .forEach((name) => names.add(name));
+
+    return Array.from(names);
+  }, [selectedSong]);
   const audioSourceOptions = useMemo(() => {
     const base: { slug: string; label: string }[] = [];
     if (selectedSong) {
@@ -243,6 +259,7 @@ export default function FriendsBuilderPage() {
           clientId: uid(),
           messageType: m.message_type,
           messageSide: m.message_side || (m.message_type === "timestamp" ? "center" : "incoming"),
+          senderName: m.sender_name || "",
           body: m.body || "",
           audioSourceSlug: m.asset_slug || detail.primarySongSlug || "",
           audioLabel: m.audio_label || "",
@@ -296,12 +313,24 @@ export default function FriendsBuilderPage() {
     if (!conversationTitle) setConversationTitle(song.title);
     if (!listPreview) setListPreview(song.description || "");
 
-    setMessages((prev) =>
-      prev.map((msg) =>
-        msg.messageType === "audio" && !msg.audioSourceSlug
-          ? { ...msg, audioSourceSlug: song.slug }
-          : msg
-      )
+        setMessages((prev) =>
+      prev.map((msg) => ({
+        ...msg,
+        senderName:
+          !msg.senderName && msg.messageType !== "timestamp"
+            ? "Caliph"
+            : msg.senderName,
+        messageSide:
+          msg.messageType === "timestamp"
+            ? "center"
+            : !msg.senderName
+            ? "outgoing"
+            : msg.messageSide,
+        audioSourceSlug:
+          msg.messageType === "audio" && !msg.audioSourceSlug
+            ? song.slug
+            : msg.audioSourceSlug
+      }))
     );
   }
 
@@ -349,17 +378,12 @@ export default function FriendsBuilderPage() {
           messages.map((m, index) => ({
             position: index + 1,
             messageType: m.messageType,
-            senderName:
-              m.messageType === "timestamp"
-                ? ""
-                : m.messageSide === "outgoing"
-                ? "Caliph"
-                : "",
+            senderName: m.messageType === "timestamp" ? "" : m.senderName || "",
             senderLabel:
               m.messageType === "timestamp"
                 ? ""
-                : m.messageSide === "incoming"
-                ? selectedSong?.artist_name || ""
+                : m.senderName && m.senderName !== "Caliph"
+                ? m.senderName
                 : "",
             body: m.body,
             messageSide:
@@ -565,7 +589,9 @@ export default function FriendsBuilderPage() {
                 <button
                   type="button"
                   onClick={() => {
-                    const next = EMPTY_MESSAGE();
+                 const next = EMPTY_MESSAGE();
+                    next.senderName = "Caliph";
+                    next.messageSide = "outgoing";
                     if (next.messageType === "audio" && primarySongSlug) {
                       next.audioSourceSlug = primarySongSlug;
                     }
@@ -603,7 +629,7 @@ export default function FriendsBuilderPage() {
                     <div
                       style={{
                         display: "grid",
-                        gridTemplateColumns: "180px 180px 1fr",
+                        gridTemplateColumns: msg.messageType === "timestamp" ? "180px 1fr" : "180px 180px 1fr",
                         gap: 12
                       }}
                     >
@@ -633,28 +659,33 @@ export default function FriendsBuilderPage() {
                         </select>
                       </label>
 
-                      {msg.messageType !== "timestamp" ? (
+                                            {msg.messageType !== "timestamp" ? (
                         <label>
-                          <div>Side</div>
+                          <div>Sender</div>
                           <select
-                            value={msg.messageSide}
-                            onChange={(e) =>
+                            value={msg.senderName}
+                            onChange={(e) => {
+                              const sender = e.target.value;
                               updateMessage(msg.clientId, {
-                                messageSide: e.target.value as MessageRow["messageSide"]
-                              })
-                            }
+                                senderName: sender,
+                                messageSide: sender === "Caliph" ? "outgoing" : "incoming"
+                              });
+                            }}
                             style={{ width: "100%", padding: 10 }}
                           >
-                            <option value="incoming">Incoming</option>
-                            <option value="outgoing">Outgoing</option>
+                            <option value="">Choose sender</option>
+                            {senderOptions.map((name) => (
+                              <option key={name} value={name}>
+                                {name}
+                              </option>
+                            ))}
                           </select>
                         </label>
-                      ) : (
-                        <div />
+                      ) : null}
                       )}
 
-                      {msg.messageType === "timestamp" ? (
-                        <label>
+                                            {msg.messageType === "timestamp" ? (
+                        <label style={{ gridColumn: "2 / 3" }}>
                           <div>Timestamp Text</div>
                           <input
                             value={msg.body}
@@ -674,7 +705,7 @@ export default function FriendsBuilderPage() {
                               updateMessage(msg.clientId, { body: e.target.value })
                             }
                             placeholder={
-                              msg.messageSide === "outgoing"
+                              msg.senderName === "Caliph"
                                 ? "Type your message"
                                 : "Type collaborator message"
                             }
