@@ -738,6 +738,5 @@ export default function FartherhoodClient() {
           <div className="collab-foot-muted">Tip: tap outside to close</div>
         </div>
       </div>
-    </>
   );
 }
