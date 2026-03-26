@@ -1234,18 +1234,18 @@ img {
 }
 
 .music-marquee-track {
-  display: inline-flex;
-  gap: 42px;
+  display: inline-block;
   min-width: max-content;
-  animation: music-marquee-scroll 10s linear infinite;
+  padding-right: 32px;
+  animation: music-marquee-scroll 8s linear infinite alternate;
 }
 
 @keyframes music-marquee-scroll {
   0% {
-    transform: translateX(0%);
+    transform: translateX(0);
   }
   100% {
-    transform: translateX(calc(-50% - 21px));
+    transform: translateX(-22%);
   }
 }
 
