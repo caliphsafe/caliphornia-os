@@ -238,8 +238,8 @@ export async function POST(request: NextRequest) {
     const isFeatured = String(formData.get("isFeatured") || "") === "true";
     const lyricsBody = String(formData.get("lyricsBody") || "").trim();
 
-    const audioFile = formData.get("audioFile");
-    const coverFile = formData.get("coverFile");
+   const audioPathInput = String(formData.get("audioPath") || "").trim();
+const coverImagePathInput = String(formData.get("coverImagePath") || "").trim();
 
     if (!appSlug || !title || !artistName) {
       return NextResponse.json(
@@ -271,65 +271,26 @@ export async function POST(request: NextRequest) {
 
     let existingSong: any = null;
 
-    if (mode === "edit") {
-      const lookupSlug = selectedSongSlug || songSlug;
-      const { data } = await supabaseAdmin
-        .from("songs")
-        .select("id, audio_path, cover_image_path")
-        .eq("slug", lookupSlug)
-        .maybeSingle();
+if (mode === "edit") {
+  const lookupSlug = selectedSongSlug || songSlug;
+  const { data } = await supabaseAdmin
+    .from("songs")
+    .select("id, audio_path, cover_image_path")
+    .eq("slug", lookupSlug)
+    .maybeSingle();
 
-      existingSong = data || null;
-    }
+  existingSong = data || null;
+}
 
-    let audioPath = existingSong?.audio_path || null;
+const audioPath = audioPathInput || existingSong?.audio_path || null;
+const coverImagePath = coverImagePathInput || existingSong?.cover_image_path || null;
 
-    if (audioFile instanceof File && audioFile.size > 0) {
-      const audioExt = (audioFile.name.split(".").pop() || "mp3").toLowerCase();
-      audioPath = `${appRow.slug}/${songSlug}/${songSlug}-final.${safeFileName(audioExt)}`;
-
-      const audioUpload = await supabaseAdmin.storage
-        .from("songs")
-        .upload(audioPath, audioFile, {
-          upsert: true,
-          contentType: audioFile.type || undefined
-        });
-
-      if (audioUpload.error) {
-        return NextResponse.json(
-          { ok: false, error: audioUpload.error.message },
-          { status: 500 }
-        );
-      }
-    }
-
-    if (!audioPath) {
-      return NextResponse.json(
-        { ok: false, error: "Audio file is required for new songs." },
-        { status: 400 }
-      );
-    }
-
-    let coverImagePath = existingSong?.cover_image_path || null;
-
-    if (coverFile instanceof File && coverFile.size > 0) {
-      const coverExt = (coverFile.name.split(".").pop() || "png").toLowerCase();
-      coverImagePath = `${appRow.slug}/${songSlug}/${songSlug}.${safeFileName(coverExt)}`;
-
-      const coverUpload = await supabaseAdmin.storage
-        .from("cover-art")
-        .upload(coverImagePath, coverFile, {
-          upsert: true,
-          contentType: coverFile.type || undefined
-        });
-
-      if (coverUpload.error) {
-        return NextResponse.json(
-          { ok: false, error: coverUpload.error.message },
-          { status: 500 }
-        );
-      }
-    }
+if (!audioPath) {
+  return NextResponse.json(
+    { ok: false, error: "Audio upload is required for new songs." },
+    { status: 400 }
+  );
+}
 
     const songPayload = {
       app_id: appRow.id,
