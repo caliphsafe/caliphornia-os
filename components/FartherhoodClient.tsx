@@ -704,39 +704,41 @@ export default function FartherhoodClient() {
           </div>
         </div>
 
-        <div className="collab-section">
+                <div className="collab-section">
           <div className="collab-section-title">Credits</div>
 
-         <div className="collab-list">
-  {tracks.map((track) => (
-    <div className="collab-row" key={track.slug}>
-      <div className="collab-dot"></div>
-      <div className="collab-row-main">
-        <div className="collab-row-title">{track.title}</div>
-        <div className="collab-row-sub">
-          {track.artistName ? (
-            <>
-              By <strong>{track.artistName}</strong>
-              <br />
-            </>
-          ) : null}
-          {track.producerNames ? (
-            <>
-              Prod. by <strong>{track.producerNames}</strong>
-            </>
-          ) : (
-            <>Producer info coming soon</>
-          )}
+          <div className="collab-list">
+            {tracks.map((track) => (
+              <div className="collab-row" key={track.slug}>
+                <div className="collab-dot"></div>
+                <div className="collab-row-main">
+                  <div className="collab-row-title">{track.title}</div>
+                  <div className="collab-row-sub">
+                    {track.artistName ? (
+                      <>
+                        By <strong>{track.artistName}</strong>
+                        <br />
+                      </>
+                    ) : null}
+                    {track.producerNames ? (
+                      <>
+                        Prod. by <strong>{track.producerNames}</strong>
+                      </>
+                    ) : (
+                      <>Producer info coming soon</>
+                    )}
+                  </div>
+                </div>
+                <div className="collab-tag">active</div>
+              </div>
+            ))}
+          </div>
         </div>
-      </div>
-      <div className="collab-tag">active</div>
-    </div>
-  ))}
-</div>
 
         <div className="collab-foot">
           <div className="collab-foot-muted">Tip: tap outside to close</div>
         </div>
       </div>
+    </>
   );
 }
