@@ -5,7 +5,8 @@ function getLyricsBody(lyrics: any): string {
   if (!lyrics) return "";
 
   if (Array.isArray(lyrics)) {
-    return lyrics[0]?.body || "";
+    const primary = lyrics.find((row: any) => row?.is_primary === true);
+    return primary?.body || lyrics[0]?.body || "";
   }
 
   if (typeof lyrics === "object" && lyrics.body) {
@@ -38,12 +39,15 @@ export async function GET() {
           id,
           slug,
           title,
+          artist_name,
+          producer_names,
           display_date,
           duration_label,
           description,
           audio_path,
           lyrics (
-            body
+            body,
+            is_primary
           )
         )
       `)
@@ -60,7 +64,7 @@ export async function GET() {
     const normalized = await Promise.all(
       (appSongs || []).map(async (row: any) => {
         const song = Array.isArray(row.songs) ? row.songs[0] : row.songs;
-        if (!song) return null;
+        if (!song?.audio_path) return null;
 
         const { data: signed, error: signedError } = await supabaseAdmin.storage
           .from("songs")
@@ -72,6 +76,8 @@ export async function GET() {
           id: song.id,
           slug: song.slug,
           title: song.title,
+          artistName: song.artist_name || "",
+          producerNames: song.producer_names || "",
           date: song.display_date || "",
           duration: song.duration_label || "02:00",
           file: signed.signedUrl,
