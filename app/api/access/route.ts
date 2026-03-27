@@ -1,4 +1,3 @@
-import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import { signSession } from "@/lib/session";
@@ -37,7 +36,8 @@ export async function POST(request: Request) {
       return NextResponse.json(
         {
           ok: false,
-          error: "Username must be 3 to 30 characters and use only letters, numbers, or underscores."
+          error:
+            "Username must be 3 to 30 characters and use only letters, numbers, or underscores."
         },
         { status: 400 }
       );
@@ -63,61 +63,60 @@ export async function POST(request: Request) {
       );
     }
 
-   const { error } = await supabaseAdmin.from("app_users").upsert(
-  {
-    email,
-    username,
-    last_login_at: new Date().toISOString()
-  },
-  {
-    onConflict: "email"
-  }
-);
+    const { error: upsertError } = await supabaseAdmin.from("app_users").upsert(
+      {
+        email,
+        username,
+        last_login_at: new Date().toISOString()
+      },
+      {
+        onConflict: "email"
+      }
+    );
 
-if (error) {
-  return NextResponse.json(
-    { ok: false, error: error.message },
-    { status: 500 }
-  );
-}
+    if (upsertError) {
+      return NextResponse.json(
+        { ok: false, error: upsertError.message },
+        { status: 500 }
+      );
+    }
 
-const { data: userRow, error: userRowError } = await supabaseAdmin
-  .from("app_users")
-  .select("email, username, role")
-  .eq("email", email)
-  .single();
+    const { data: userRow, error: userRowError } = await supabaseAdmin
+      .from("app_users")
+      .select("email, username, role")
+      .eq("email", email)
+      .single();
 
-if (userRowError || !userRow) {
-  return NextResponse.json(
-    { ok: false, error: userRowError?.message || "Could not load user." },
-    { status: 500 }
-  );
-}
+    if (userRowError || !userRow) {
+      return NextResponse.json(
+        { ok: false, error: userRowError?.message || "Could not load user." },
+        { status: 500 }
+      );
+    }
 
-const token = signSession({
-  email: userRow.email,
-  username: userRow.username || username,
-  role: userRow.role || "user",
-  iat: Date.now()
-});
+    const token = signSession({
+      email: userRow.email,
+      username: userRow.username || username,
+      role: userRow.role || "user",
+      iat: Date.now()
+    });
 
-    const cookieStore = await cookies();
-    cookieStore.set("caliph_os_session", token, {
-  httpOnly: true,
-  secure: process.env.NODE_ENV === "production",
-  sameSite: "lax",
-  path: "/",
-  maxAge: 60 * 60 * 24 * 30
-});
+    const response = NextResponse.json({
+      ok: true,
+      username: userRow.username || username,
+      email: userRow.email,
+      role: userRow.role || "user"
+    });
 
-    return NextResponse.json({
-  ok: true,
-  username,
-  email,
-  debug: {
-    tokenCreated: Boolean(token)
-  }
-});
+    response.cookies.set("caliph_os_session", token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path: "/",
+      maxAge: 60 * 60 * 24 * 30
+    });
+
+    return response;
   } catch {
     return NextResponse.json(
       { ok: false, error: "Something went wrong." },
