@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import MiliaSongCard from "@/components/MiliaSongCard";
+import type { MiliaQueueItem } from "@/lib/milia-player";
 import styles from "./milia.module.css";
 
 export const dynamic = "force-dynamic";
@@ -36,11 +37,6 @@ type WeatherData = {
     tempMin: number | null;
     label: string;
   };
-  hourly: Array<{
-    time: string;
-    temperature: number | null;
-    label: string;
-  }>;
 };
 
 function weatherCodeLabel(code: number | null | undefined) {
@@ -90,6 +86,17 @@ async function createSignedAudioUrl(storagePath: string | null | undefined) {
   return data.signedUrl;
 }
 
+async function createSignedCoverUrl(storagePath: string | null | undefined) {
+  if (!storagePath) return null;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from("cover-art")
+    .createSignedUrl(storagePath, 60 * 60);
+
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
 async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
   if (song.weather_lat == null || song.weather_lng == null) {
     return null;
@@ -100,9 +107,8 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
   url.searchParams.set("longitude", String(song.weather_lng));
   url.searchParams.set("timezone", song.weather_timezone || "auto");
   url.searchParams.set("current", "temperature_2m,weather_code");
-  url.searchParams.set("hourly", "temperature_2m,weather_code");
   url.searchParams.set("daily", "weather_code,temperature_2m_max,temperature_2m_min");
-  url.searchParams.set("forecast_days", "3");
+  url.searchParams.set("forecast_days", "1");
 
   const res = await fetch(url.toString(), {
     cache: "no-store",
@@ -111,9 +117,7 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
   if (!res.ok) return null;
 
   const data = await res.json();
-
   const current = data?.current || {};
-  const hourly = data?.hourly || {};
   const daily = data?.daily || {};
 
   return {
@@ -126,13 +130,6 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
       tempMin: daily?.temperature_2m_min?.[0] ?? null,
       label: weatherCodeLabel(daily?.weather_code?.[0] ?? current?.weather_code),
     },
-    hourly: Array.isArray(hourly?.time)
-      ? hourly.time.slice(0, 4).map((time: string, index: number) => ({
-          time,
-          temperature: hourly?.temperature_2m?.[index] ?? null,
-          label: weatherCodeLabel(hourly?.weather_code?.[index]),
-        }))
-      : [],
   };
 }
 
@@ -173,28 +170,50 @@ export default async function MiliaPage() {
 
   const songs = (data || []) as SongRow[];
 
-  const songsWithWeather = await Promise.all(
+  const songsWithMeta = await Promise.all(
     songs.map(async (song) => {
+      const placeLabel =
+        song.weather_location_name ||
+        [song.weather_city, song.weather_region, song.weather_country]
+          .filter(Boolean)
+          .join(", ") ||
+        song.weather_search_label ||
+        "Unknown location";
+
       try {
-        const [weather, audioUrl] = await Promise.all([
+        const [weather, audioUrl, coverUrl] = await Promise.all([
           getWeatherForSong(song),
           createSignedAudioUrl(song.audio_path),
+          createSignedCoverUrl(song.cover_image_path),
         ]);
 
         return {
           song,
-          audioUrl,
           weather,
+          audioUrl,
+          coverUrl,
+          placeLabel,
         };
       } catch {
         return {
           song,
-          audioUrl: null,
           weather: null,
+          audioUrl: null,
+          coverUrl: null,
+          placeLabel,
         };
       }
     })
   );
+
+  const projectQueue: MiliaQueueItem[] = songsWithMeta.map(({ song, audioUrl, coverUrl, placeLabel }) => ({
+    slug: song.slug,
+    title: song.title,
+    artistName: song.artist_name || "Unknown artist",
+    placeLabel,
+    audioUrl,
+    coverUrl,
+  }));
 
   return (
     <main className={styles.page}>
@@ -212,38 +231,26 @@ export default async function MiliaPage() {
         <section className={styles.hero}>
           <p className={styles.heroKicker}>Weather music</p>
           <h1 className={styles.heroTitle}>Milia</h1>
-          <p className={styles.heroSub}>
-            Songs connected to real places, with live weather unfolding around them.
-          </p>
         </section>
 
         <section className={styles.stack}>
-          {songsWithWeather.length === 0 ? (
+          {songsWithMeta.length === 0 ? (
             <div className={styles.empty}>No Milia songs yet.</div>
           ) : (
-            songsWithWeather.map(({ song, weather, audioUrl }) => {
-              const placeLabel =
-                song.weather_location_name ||
-                [song.weather_city, song.weather_region, song.weather_country]
-                  .filter(Boolean)
-                  .join(", ") ||
-                song.weather_search_label ||
-                "Unknown location";
-
-              return (
-                <MiliaSongCard
-                  key={song.slug}
-                  href={`/apps/milia/${song.slug}`}
-                  slug={song.slug}
-                  title={song.title}
-                  artistName={song.artist_name || "Unknown artist"}
-                  placeLabel={placeLabel}
-                  audioUrl={audioUrl}
-                  weather={weather}
-                  themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
-                />
-              );
-            })
+            songsWithMeta.map(({ song, weather, audioUrl, placeLabel }) => (
+              <MiliaSongCard
+                key={song.slug}
+                href={`/apps/milia/${song.slug}`}
+                slug={song.slug}
+                title={song.title}
+                artistName={song.artist_name || "Unknown artist"}
+                placeLabel={placeLabel}
+                audioUrl={audioUrl}
+                weather={weather}
+                themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
+                projectQueue={projectQueue}
+              />
+            ))
           )}
         </section>
       </div>
