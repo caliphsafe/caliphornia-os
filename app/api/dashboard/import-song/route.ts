@@ -10,10 +10,6 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
-function safeFileName(name: string) {
-  return name.replace(/[^a-zA-Z0-9._-]/g, "-");
-}
-
 export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode");
 
@@ -238,8 +234,8 @@ export async function POST(request: NextRequest) {
     const isFeatured = String(formData.get("isFeatured") || "") === "true";
     const lyricsBody = String(formData.get("lyricsBody") || "").trim();
 
-   const audioPathInput = String(formData.get("audioPath") || "").trim();
-const coverImagePathInput = String(formData.get("coverImagePath") || "").trim();
+    const audioPathInput = String(formData.get("audioPath") || "").trim();
+    const coverImagePathInput = String(formData.get("coverImagePath") || "").trim();
 
     if (!appSlug || !title || !artistName) {
       return NextResponse.json(
@@ -271,26 +267,26 @@ const coverImagePathInput = String(formData.get("coverImagePath") || "").trim();
 
     let existingSong: any = null;
 
-if (mode === "edit") {
-  const lookupSlug = selectedSongSlug || songSlug;
-  const { data } = await supabaseAdmin
-    .from("songs")
-    .select("id, audio_path, cover_image_path")
-    .eq("slug", lookupSlug)
-    .maybeSingle();
+    if (mode === "edit") {
+      const lookupSlug = selectedSongSlug || songSlug;
+      const { data } = await supabaseAdmin
+        .from("songs")
+        .select("id, audio_path, cover_image_path")
+        .eq("slug", lookupSlug)
+        .maybeSingle();
 
-  existingSong = data || null;
-}
+      existingSong = data || null;
+    }
 
-const audioPath = audioPathInput || existingSong?.audio_path || null;
-const coverImagePath = coverImagePathInput || existingSong?.cover_image_path || null;
+    const audioPath = audioPathInput || existingSong?.audio_path || null;
+    const coverImagePath = coverImagePathInput || existingSong?.cover_image_path || null;
 
-if (!audioPath) {
-  return NextResponse.json(
-    { ok: false, error: "Audio upload is required for new songs." },
-    { status: 400 }
-  );
-}
+    if (!audioPath) {
+      return NextResponse.json(
+        { ok: false, error: "Audio upload is required for new songs." },
+        { status: 400 }
+      );
+    }
 
     const songPayload = {
       app_id: appRow.id,
