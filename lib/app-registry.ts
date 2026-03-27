@@ -29,11 +29,11 @@ export const appRegistry: AppItem[] = [
     name: "Music",
     icon: "/icons/music.png",
     href: "/apps/music"
-  },
-  {
+  }
+  /* {
   id: "stats",
   name: "Stats",
   href: "/apps/stats",
   icon: "/icons/stats.png",
-}
+}*/
 ];
