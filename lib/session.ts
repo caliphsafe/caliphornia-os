@@ -53,11 +53,11 @@ export function verifySession(token?: string | null): SessionPayload | null {
     if (typeof parsed.iat !== "number") return null;
 
     return {
-  email: parsed.email,
-  username: typeof parsed.username === "string" ? parsed.username : undefined,
-  role: typeof parsed.role === "string" ? parsed.role : undefined,
-  iat: parsed.iat
-};
+      email: parsed.email,
+      username: typeof parsed.username === "string" ? parsed.username : undefined,
+      role: typeof parsed.role === "string" ? parsed.role : undefined,
+      iat: parsed.iat
+    };
   } catch {
     return null;
   }
