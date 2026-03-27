@@ -282,12 +282,19 @@ export default function EmailWall() {
   height: 100dvh;
   min-height: 100dvh;
   overflow: hidden;
+
   display: flex;
-  flex-direction: column;
   justify-content: center;
   align-items: center;
+
   box-sizing: border-box;
-  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+
+  /* ✅ THIS is the spacing you asked for */
+  padding:
+    max(24px, env(safe-area-inset-top))
+    18px
+    max(24px, env(safe-area-inset-bottom));
+
   color: #fff;
 }
 
@@ -446,19 +453,38 @@ export default function EmailWall() {
         .email-card {
   position: relative;
   z-index: 2;
-  width: min(460px, calc(100vw - 24px));
+
+  width: min(460px, 100%);
   box-sizing: border-box;
-  border-radius: 28px;
-  border: 1px solid rgba(255,255,255,0.14);
+
+  border-radius: 32px;
+
+  /* ✨ stronger glass effect */
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05)),
-    rgba(8, 17, 29, 0.76);
-  backdrop-filter: blur(26px) saturate(160%);
-  -webkit-backdrop-filter: blur(26px) saturate(160%);
+    linear-gradient(180deg, rgba(255,255,255,0.18), rgba(255,255,255,0.05)),
+    rgba(8, 17, 29, 0.82);
+
+  backdrop-filter: blur(32px) saturate(180%);
+  -webkit-backdrop-filter: blur(32px) saturate(180%);
+
+  border: 1px solid rgba(255,255,255,0.16);
+
   box-shadow:
-    0 24px 50px rgba(0,0,0,0.28),
-    inset 0 1px 0 rgba(255,255,255,0.1);
-  padding: 20px;
+    0 30px 60px rgba(0,0,0,0.35),
+    inset 0 1px 0 rgba(255,255,255,0.12);
+
+  padding: 26px 20px 22px;
+
+  display: grid;
+  gap: 16px;
+
+  /* ✨ subtle floating animation */
+  animation: cardFloat 6s ease-in-out infinite;
+}
+
+@keyframes cardFloat {
+  0%, 100% { transform: translateY(0px); }
+  50% { transform: translateY(-6px); }
 }
 
         .email-card-top {
@@ -475,16 +501,17 @@ export default function EmailWall() {
         }
 
         .email-card-top h2 {
-          margin: 0 0 8px;
-          font-size: 26px;
-        }
+  margin: 6px 0 6px;
+  font-size: 22px;
+  letter-spacing: -0.02em;
+}
 
-        .email-card-top p {
-          margin: 0;
-          font-size: 14px;
-          line-height: 1.55;
-          opacity: 0.78;
-        }
+.email-card-top p {
+  margin: 0;
+  font-size: 14px;
+  opacity: 0.75;
+  line-height: 1.5;
+}
 
         .form-stack {
           display: grid;
@@ -503,20 +530,34 @@ export default function EmailWall() {
         }
 
         .email-input {
-          width: 100%;
-          min-height: 52px;
-          border-radius: 16px;
-          border: 1px solid rgba(255,255,255,0.12);
-          background: rgba(255,255,255,0.07);
-          color: #fff;
-          padding: 0 14px;
-          font-size: 16px;
-          outline: none;
-        }
+  width: 100%;
+  height: 52px;
 
-        .email-input::placeholder {
-          color: rgba(255,255,255,0.45);
-        }
+  border-radius: 16px;
+
+  border: 1px solid rgba(255,255,255,0.18);
+
+  background: rgba(255,255,255,0.08);
+
+  padding: 0 14px;
+
+  color: #fff;
+  font-size: 15px;
+
+  outline: none;
+
+  transition: all 0.2s ease;
+}
+
+.email-input::placeholder {
+  color: rgba(255,255,255,0.45);
+}
+
+.email-input:focus {
+  border-color: rgba(255,255,255,0.4);
+  background: rgba(255,255,255,0.12);
+  box-shadow: 0 0 0 2px rgba(255,255,255,0.12);
+}
 
         .wall-help {
           font-size: 12px;
@@ -531,28 +572,46 @@ export default function EmailWall() {
           color: #ffb6c1;
         }
 
-        .primary-btn,
-        .ghost-btn {
-          width: 100%;
-          min-height: 48px;
-          border-radius: 16px;
-          border: 1px solid rgba(255,255,255,0.12);
-          padding: 0 14px;
-          font-size: 15px;
-          cursor: pointer;
-        }
-
         .primary-btn {
-          background: rgba(255,255,255,0.96);
-          color: #08111d;
-          font-weight: 700;
-          margin-bottom: 10px;
-        }
+  height: 52px;
+  border-radius: 18px;
+
+  border: none;
+
+  background: linear-gradient(135deg, #ffffff, #dfe6ff);
+
+  color: #0a1323;
+  font-weight: 700;
+  font-size: 15px;
+
+  cursor: pointer;
+
+  transition: all 0.18s ease;
+}
+
+.primary-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.25);
+}
+
+.primary-btn:active {
+  transform: scale(0.98);
+}
 
         .ghost-btn {
-          background: rgba(255,255,255,0.08);
-          color: #fff;
-        }
+  height: 44px;
+  border-radius: 14px;
+
+  border: 1px solid rgba(255,255,255,0.12);
+
+  background: rgba(255,255,255,0.06);
+
+  color: rgba(255,255,255,0.85);
+
+  font-size: 13px;
+
+  cursor: pointer;
+}
 
         @media (max-width: 640px) {
   .lock-screen-panel {
@@ -587,7 +646,17 @@ export default function EmailWall() {
             padding: 18px 16px;
             border-radius: 24px;
           }
+.email-card::before {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  border-radius: inherit;
 
+  background: radial-gradient(circle at top, rgba(255,255,255,0.25), transparent 60%);
+  opacity: 0.4;
+
+  pointer-events: none;
+}
           .email-card-top h2 {
             font-size: 23px;
           }
