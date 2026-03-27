@@ -207,21 +207,21 @@ export default async function MiliaPage() {
   );
 
   const projectQueue: GlobalTrack[] = songsWithMeta
-  .filter(({ audioUrl }) => Boolean(audioUrl))
-  .map(({ song, audioUrl, coverUrl }) => ({
-    id: song.slug,
-    slug: song.slug,
-    title: song.title,
-    artist: song.artist_name || "Unknown artist",
-    displayTitle: song.title,
-    duration: song.duration_label || undefined,
-    description: song.description || undefined,
-    file: audioUrl as string,
-    playlistSongSlug: song.slug,
-    analyticsSongSlug: song.slug,
-    sourceApp: "milia",
-    coverUrl: coverUrl || undefined,
-  }));
+    .filter(({ audioUrl }) => Boolean(audioUrl))
+    .map(({ song, audioUrl, coverUrl }) => ({
+      id: song.slug,
+      slug: song.slug,
+      title: song.title,
+      artist: song.artist_name || "Unknown artist",
+      displayTitle: song.title,
+      duration: song.duration_label || undefined,
+      description: song.description || undefined,
+      file: audioUrl as string,
+      playlistSongSlug: song.slug,
+      analyticsSongSlug: song.slug,
+      sourceApp: "milia",
+      coverUrl: coverUrl || undefined,
+    }));
 
   return (
     <main className={styles.page}>
@@ -237,7 +237,6 @@ export default async function MiliaPage() {
 
       <div className={styles.container}>
         <section className={styles.hero}>
-          <p className={styles.heroKicker}>Weather music</p>
           <h1 className={styles.heroTitle}>Milia</h1>
         </section>
 
@@ -253,6 +252,7 @@ export default async function MiliaPage() {
                 title={song.title}
                 artistName={song.artist_name || "Unknown artist"}
                 placeLabel={placeLabel}
+                audioUrl={audioUrl}
                 weather={weather}
                 themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
                 queue={projectQueue}
