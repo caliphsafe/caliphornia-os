@@ -3,11 +3,13 @@
 import AppIcon from "@/components/AppIcon";
 import { appRegistry } from "@/lib/app-registry";
 
-export default function HomeScreen({ email }: { email: string }) {
-  async function handleLogout() {
-    await fetch("/api/logout", { method: "POST" });
-    window.location.href = "/";
-  }
+export default function HomeScreen({
+  email,
+  username
+}: {
+  email: string;
+  username?: string;
+}) {
 
   return (
     <main className="iphone-shell home-screen ios-home-screen">
@@ -15,14 +17,14 @@ export default function HomeScreen({ email }: { email: string }) {
         <div className="home-topbar">
           <div className="home-brand-chip">Caliphornia OS</div>
 
-          <button
-            className="account-chip"
-            onClick={handleLogout}
-            title={`Log out ${email}`}
-            aria-label="Log out"
-          >
-            {email.slice(0, 1).toUpperCase()}
-          </button>
+          <div
+  className="account-chip"
+  title={username ? `@${username}` : email}
+>
+  {username
+    ? `@${username}`
+    : email.slice(0, 1).toUpperCase()}
+</div>
         </div>
 
         <section className="home-feature-card">
