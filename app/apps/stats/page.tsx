@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import StatsClient from "@/components/StatsClient";
+import styles from "./stats.module.css";
 
 async function createSignedCoverUrl(storagePath: string | null | undefined) {
   if (!storagePath) return null;
@@ -31,6 +31,39 @@ type SongRow = {
   globalPlayCount?: number;
 };
 
+type CountRow = {
+  label: string;
+  count: number;
+};
+
+function compactNumber(value: number) {
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value || 0);
+}
+
+function formatHeaderDate(date = new Date()) {
+  return new Intl.DateTimeFormat("en-US", {
+    weekday: "long",
+    month: "short",
+    day: "numeric",
+  }).format(date);
+}
+
+function formatShortDate(value?: string | null) {
+  if (!value) return "—";
+  try {
+    return new Date(value).toLocaleDateString("en-US", {
+      month: "numeric",
+      day: "numeric",
+      year: "2-digit",
+    });
+  } catch {
+    return "—";
+  }
+}
+
 function countByLabel(rows: { label: string }[]) {
   const map = new Map<string, number>();
 
@@ -43,6 +76,30 @@ function countByLabel(rows: { label: string }[]) {
   return Array.from(map.entries())
     .map(([label, count]) => ({ label, count }))
     .sort((a, b) => b.count - a.count);
+}
+
+function clampPercent(value: number) {
+  return Math.max(0, Math.min(100, value));
+}
+
+function getRingPercents({
+  totalUserPlays,
+  totalFavoriteSongs,
+  totalGlobalReach,
+}: {
+  totalUserPlays: number;
+  totalFavoriteSongs: number;
+  totalGlobalReach: number;
+}) {
+  const move = clampPercent((totalUserPlays / 200) * 100);
+  const exercise = clampPercent((totalFavoriteSongs / 10) * 100);
+  const stand = clampPercent((totalGlobalReach / 25) * 100);
+
+  return {
+    move,
+    exercise,
+    stand,
+  };
 }
 
 export default async function StatsPage() {
@@ -193,22 +250,263 @@ export default async function StatsPage() {
     eventLogs.map((row) => ({ label: row.platform || "" }))
   );
 
+  const totals = {
+    totalUserPlays: userSongs.reduce((sum, row) => sum + (row.playCount || 0), 0),
+    totalFavoriteSongs: favoriteSongs.length,
+    totalGlobalPlays: globalSongs.reduce((sum, row) => sum + (row.playCount || 0), 0),
+    totalGlobalReach: globalSongs.reduce((sum, row) => sum + (row.uniqueListenerCount || 0), 0),
+  };
+
+  const ringPercents = getRingPercents(totals);
+
+  const topSong = globalSongs[0] || null;
+  const latestSession = userSongs[0] || null;
+  const latestFavorite = favoriteSongs[0] || null;
+  const topCity = topCities[0] || null;
+  const topPlatform = topPlatforms[0] || null;
+
   return (
-    <StatsClient
-      username={session.username}
-      totals={{
-        totalUserPlays: userSongs.reduce((sum, row) => sum + (row.playCount || 0), 0),
-        totalFavoriteSongs: favoriteSongs.length,
-        totalGlobalPlays: globalSongs.reduce((sum, row) => sum + (row.playCount || 0), 0),
-        totalGlobalReach: globalSongs.reduce((sum, row) => sum + (row.uniqueListenerCount || 0), 0),
-      }}
-      globalSongs={globalSongs}
-      userSongs={userSongs}
-      favoriteSongs={favoriteSongs}
-      topCities={topCities}
-      topRegions={topRegions}
-      topCountries={topCountries}
-      topPlatforms={topPlatforms}
-    />
+    <main className={styles.page}>
+      <div className={styles.header}>
+        <div>
+          <h1 className={styles.title}>Summary</h1>
+          <p className={styles.date}>{formatHeaderDate()}</p>
+        </div>
+
+        <a href="/home" className={styles.profileBtn} aria-label="Back to Home">
+          {topSong?.coverImageUrl ? (
+            <img src={topSong.coverImageUrl} alt="Profile" className={styles.profileImg} />
+          ) : (
+            <span>{(session.username || "U").slice(0, 1).toUpperCase()}</span>
+          )}
+        </a>
+      </div>
+
+      <section className={`${styles.card} ${styles.ringsCard}`}>
+        <div>
+          <h2 className={styles.cardTitle}>Activity Rings</h2>
+
+          <div
+            className={styles.rings}
+            style={
+              {
+                "--move": `${ringPercents.move}%`,
+                "--exercise": `${ringPercents.exercise}%`,
+                "--stand": `${ringPercents.stand}%`,
+              } as React.CSSProperties
+            }
+          >
+            <div className={`${styles.ring} ${styles.ringMove}`} />
+            <div className={`${styles.ring} ${styles.ringExercise}`} />
+            <div className={`${styles.ring} ${styles.ringStand}`} />
+            <div className={styles.ringsCenter} />
+          </div>
+        </div>
+
+        <div className={styles.ringLegend}>
+          <div className={styles.legendRow}>
+            <span className={`${styles.legendDot} ${styles.moveDot}`} />
+            <div>
+              <strong>Move</strong>
+              <span>{compactNumber(totals.totalUserPlays)} plays</span>
+            </div>
+          </div>
+
+          <div className={styles.legendRow}>
+            <span className={`${styles.legendDot} ${styles.exerciseDot}`} />
+            <div>
+              <strong>Favorites</strong>
+              <span>{compactNumber(totals.totalFavoriteSongs)} saved songs</span>
+            </div>
+          </div>
+
+          <div className={styles.legendRow}>
+            <span className={`${styles.legendDot} ${styles.standDot}`} />
+            <div>
+              <strong>Reach</strong>
+              <span>{compactNumber(totals.totalGlobalReach)} listeners reached</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.twoColGrid}>
+        <article className={styles.card}>
+          <div className={styles.cardHeaderMini}>
+            <h3 className={styles.cardTitle}>Play Count</h3>
+            <span className={styles.chev}>›</span>
+          </div>
+          <p className={styles.miniLabel}>Today</p>
+          <div className={styles.bigNumberPurple}>{compactNumber(totals.totalUserPlays)}</div>
+          <div className={styles.sparkWrap}>
+            {Array.from({ length: 24 }).map((_, i) => (
+              <span
+                key={`plays-${i}`}
+                className={styles.sparkBar}
+                style={{
+                  height: `${16 + ((i * 9 + totals.totalUserPlays) % 70)}px`,
+                }}
+              />
+            ))}
+          </div>
+          <div className={styles.sparkTimeline}>
+            <span>12 AM</span>
+            <span>6 AM</span>
+            <span>12 PM</span>
+            <span>6 PM</span>
+          </div>
+        </article>
+
+        <article className={styles.card}>
+          <div className={styles.cardHeaderMini}>
+            <h3 className={styles.cardTitle}>Global Reach</h3>
+            <span className={styles.chev}>›</span>
+          </div>
+          <p className={styles.miniLabel}>Today</p>
+          <div className={styles.bigNumberBlue}>{compactNumber(totals.totalGlobalReach)}</div>
+          <div className={styles.sparkWrap}>
+            {Array.from({ length: 24 }).map((_, i) => (
+              <span
+                key={`reach-${i}`}
+                className={`${styles.sparkBar} ${styles.sparkBarBlue}`}
+                style={{
+                  height: `${18 + ((i * 7 + totals.totalGlobalReach) % 68)}px`,
+                }}
+              />
+            ))}
+          </div>
+          <div className={styles.sparkTimeline}>
+            <span>12 AM</span>
+            <span>6 AM</span>
+            <span>12 PM</span>
+            <span>6 PM</span>
+          </div>
+        </article>
+
+        <article className={styles.card}>
+          <div className={styles.cardHeaderMini}>
+            <h3 className={styles.cardTitle}>Sessions</h3>
+            <span className={styles.chev}>›</span>
+          </div>
+
+          {latestSession?.coverImageUrl ? (
+            <img
+              src={latestSession.coverImageUrl}
+              alt={latestSession.title}
+              className={styles.sessionCover}
+            />
+          ) : (
+            <div className={styles.sessionCoverFallback}>♪</div>
+          )}
+
+          <div className={styles.sessionTitle}>{latestSession?.title || "No recent session"}</div>
+          <div className={styles.bigNumberGreen}>
+            {compactNumber(latestSession?.playCount || 0)} plays
+          </div>
+          <div className={styles.sessionDate}>
+            {latestSession?.lastPlayedAt ? formatShortDate(latestSession.lastPlayedAt) : "—"}
+          </div>
+        </article>
+
+        <article className={styles.card}>
+          <div className={styles.cardHeaderMini}>
+            <h3 className={styles.cardTitle}>Awards</h3>
+            <span className={styles.chev}>›</span>
+          </div>
+
+          <div className={styles.awardBadge}>★</div>
+          <div className={styles.awardTitle}>
+            {latestFavorite ? "Latest Favorite Added" : "No awards yet"}
+          </div>
+          <div className={styles.awardSub}>
+            {latestFavorite
+              ? `${latestFavorite.title}`
+              : "Start saving songs to unlock moments"}
+          </div>
+          <div className={styles.awardDate}>
+            {latestFavorite?.favoritedAt ? formatShortDate(latestFavorite.favoritedAt) : "—"}
+          </div>
+        </article>
+      </section>
+
+      <section className={`${styles.card} ${styles.fullCard}`}>
+        <div className={styles.cardHeaderMini}>
+          <h3 className={styles.cardTitle}>Top Song</h3>
+          <span className={styles.chev}>›</span>
+        </div>
+
+        {topSong ? (
+          <div className={styles.highlightRow}>
+            <div className={styles.highlightMedia}>
+              {topSong.coverImageUrl ? (
+                <img src={topSong.coverImageUrl} alt={topSong.title} className={styles.highlightImg} />
+              ) : (
+                <div className={styles.highlightFallback}>♪</div>
+              )}
+            </div>
+            <div className={styles.highlightBody}>
+              <div className={styles.highlightTitle}>{topSong.title}</div>
+              <div className={styles.highlightSub}>{topSong.artistName || "Unknown artist"}</div>
+              <div className={styles.highlightMeta}>
+                {compactNumber(topSong.playCount || 0)} plays ·{" "}
+                {compactNumber(topSong.uniqueListenerCount || 0)} listeners
+              </div>
+            </div>
+          </div>
+        ) : (
+          <p className={styles.emptyText}>No top song yet.</p>
+        )}
+      </section>
+
+      <section className={`${styles.card} ${styles.fullCard}`}>
+        <div className={styles.cardHeaderMini}>
+          <h3 className={styles.cardTitle}>Location + Platform</h3>
+          <span className={styles.chev}>›</span>
+        </div>
+
+        <div className={styles.locationGrid}>
+          <div className={styles.locationCell}>
+            <span className={styles.locationLabel}>Top City</span>
+            <strong>{topCity?.label || "—"}</strong>
+            <span>{compactNumber(topCity?.count || 0)} events</span>
+          </div>
+
+          <div className={styles.locationCell}>
+            <span className={styles.locationLabel}>Top Platform</span>
+            <strong>{topPlatform?.label || "—"}</strong>
+            <span>{compactNumber(topPlatform?.count || 0)} events</span>
+          </div>
+
+          <div className={styles.locationCell}>
+            <span className={styles.locationLabel}>Top Region</span>
+            <strong>{topRegions[0]?.label || "—"}</strong>
+            <span>{compactNumber(topRegions[0]?.count || 0)} events</span>
+          </div>
+
+          <div className={styles.locationCell}>
+            <span className={styles.locationLabel}>Top Country</span>
+            <strong>{topCountries[0]?.label || "—"}</strong>
+            <span>{compactNumber(topCountries[0]?.count || 0)} events</span>
+          </div>
+        </div>
+      </section>
+
+      <section className={styles.bottomPanel}>
+        <div className={styles.bottomHero}>
+          <div className={styles.bottomKicker}>Caliphornia Stats+</div>
+          <div className={styles.bottomTitle}>Your music world in motion</div>
+          <div className={styles.bottomSub}>
+            Plays, favorites, reach, sessions, platform activity, and location signals all in one place.
+          </div>
+        </div>
+
+        <div className={styles.bottomTabs}>
+          <div className={`${styles.bottomTab} ${styles.bottomTabActive}`}>Summary</div>
+          <div className={styles.bottomTab}>Top Songs</div>
+          <div className={styles.bottomTab}>Sessions</div>
+          <div className={styles.bottomTab}>Places</div>
+        </div>
+      </section>
+    </main>
   );
 }
