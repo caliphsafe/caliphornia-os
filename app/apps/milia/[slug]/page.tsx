@@ -3,6 +3,9 @@ import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import styles from "../milia.module.css";
 
+export const dynamic = "force-dynamic";
+export const revalidate = 0;
+
 function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL;
