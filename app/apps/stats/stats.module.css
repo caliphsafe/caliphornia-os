@@ -465,9 +465,8 @@
 }
 
 .bottomPanel{
-  position:sticky;
-  bottom:18px;
-  z-index:40;
+  position:relative;
+  z-index:1;
   overflow:hidden;
   min-height:240px;
   border-radius:34px;
@@ -483,11 +482,11 @@
   box-shadow:
     0 28px 70px rgba(0,0,0,.42),
     inset 0 1px 0 rgba(255,255,255,.08);
-  transition: bottom .28s ease, transform .28s ease, box-shadow .28s ease;
+  transition: margin-bottom .28s ease;
 }
 
 .bottomContent{
-  padding:26px 22px 24px;
+  padding:26px 22px 22px;
 }
 
 .bottomKicker{
@@ -513,10 +512,6 @@
 }
 
 .bottomTabs{
-  position:sticky;
-  left:0;
-  right:0;
-  bottom:16px;
   display:grid;
   grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:8px;
@@ -529,9 +524,7 @@
   box-shadow:
     inset 0 1px 0 rgba(255,255,255,.05),
     0 10px 26px rgba(0,0,0,.24);
-  transition: bottom .28s ease, transform .28s ease;
-  z-index: 50;
-  margin-top: 18px;
+  margin: 14px 22px 16px;
 }
 
 .bottomTab{
@@ -830,22 +823,7 @@
     grid-template-columns:1fr;
   }
 }
-body.has-global-player .bottomPanel{
-  bottom:104px;
-}
-
-body.has-global-player .bottomTabs{
-  bottom:14px;
-}
-
-body.has-global-player .page{
-  padding-bottom: 230px;
-}
 
 body.has-global-player .bottomPanel{
-  bottom:18px;
-}
-
-body.has-global-player .bottomTabs{
-  bottom:104px;
+  margin-bottom: 96px;
 }
