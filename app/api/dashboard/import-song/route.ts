@@ -1,333 +1,369 @@
 import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { verifySession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
-function slugify(value: string) {
-  return value
-    .toLowerCase()
-    .trim()
-    .replace(/['"]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/^-+|-+$/g, "");
+async function requireAdmin() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("caliph_os_session")?.value ?? null;
+  const session = verifySession(token);
+
+  if (!session?.email) {
+    return { ok: false as const, error: "Unauthorized.", status: 401 };
+  }
+
+  const { data: userRow, error } = await supabaseAdmin
+    .from("app_users")
+    .select("role")
+    .eq("email", session.email)
+    .maybeSingle();
+
+  if (error || !userRow || userRow.role !== "admin") {
+    return { ok: false as const, error: "Forbidden.", status: 403 };
+  }
+
+  return { ok: true as const, email: session.email };
 }
 
-async function createSignedCoverUrl(storagePath: string | null | undefined) {
-  if (!storagePath) return null;
+function toNumberOrNull(value: FormDataEntryValue | string | null | undefined) {
+  const raw = typeof value === "string" ? value.trim() : String(value || "").trim();
+  if (!raw) return null;
+  const num = Number(raw);
+  return Number.isFinite(num) ? num : null;
+}
 
-  const { data, error } = await supabaseAdmin.storage
-    .from("cover-art")
-    .createSignedUrl(storagePath, 60 * 60);
-
-  if (error || !data?.signedUrl) return null;
-  return data.signedUrl;
+function toBool(value: FormDataEntryValue | string | null | undefined) {
+  return String(value || "") === "true";
 }
 
 export async function GET(request: NextRequest) {
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
+  }
+
   const mode = request.nextUrl.searchParams.get("mode");
 
-  if (mode === "apps") {
-    const { data, error } = await supabaseAdmin
-      .from("apps")
-      .select("id, slug, name")
-      .order("name", { ascending: true });
+  try {
+    if (mode === "apps") {
+      const { data, error } = await supabaseAdmin
+        .from("apps")
+        .select("id, slug, name")
+        .order("name", { ascending: true });
 
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({ ok: true, apps: data || [] });
-  }
-
-  if (mode === "songs") {
-    const { data, error } = await supabaseAdmin
-      .from("songs")
-      .select("slug, title, source_app_slug")
-      .order("created_at", { ascending: false });
-
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      songs: (data || []).map((row) => ({
-        slug: row.slug,
-        title: row.title,
-        app_slug: row.source_app_slug
-      }))
-    });
-  }
-
-  if (mode === "song-detail") {
-    const slug = request.nextUrl.searchParams.get("slug");
-
-    if (!slug) {
-      return NextResponse.json({ ok: false, error: "Missing slug." }, { status: 400 });
-    }
-
-    const { data: song, error: songError } = await supabaseAdmin
-      .from("songs")
-      .select(`
-        id,
-        slug,
-        title,
-        artist_name,
-        producer_names,
-        audio_path,
-        cover_image_path,
-        track_number,
-        duration_seconds,
-        duration_label,
-        display_date,
-        description,
-        is_featured,
-        source_app_slug
-      `)
-      .eq("slug", slug)
-      .single();
-
-    if (songError || !song) {
-      return NextResponse.json(
-        { ok: false, error: songError?.message || "Song not found." },
-        { status: 404 }
-      );
-    }
-
-    const { data: appSong } = await supabaseAdmin
-      .from("app_songs")
-      .select(`
-        position,
-        apps ( slug )
-      `)
-      .eq("song_id", song.id)
-      .maybeSingle();
-
-    const { data: lyric } = await supabaseAdmin
-      .from("lyrics")
-      .select("body")
-      .eq("song_id", song.id)
-      .eq("is_primary", true)
-      .maybeSingle();
-
-    const { data: conversation } = await supabaseAdmin
-      .from("conversations")
-      .select(`
-        slug,
-        title,
-        subtitle,
-        list_preview,
-        avatar_letter,
-        last_activity_label,
-        sort_order
-      `)
-      .eq("primary_song_id", song.id)
-      .maybeSingle();
-
-        return NextResponse.json({
-      ok: true,
-      detail: {
-        song: {
-          ...song,
-          cover_image_url: await createSignedCoverUrl(song.cover_image_path)
-        },
-        appSong: appSong
-          ? {
-              position: appSong.position,
-              app_slug: Array.isArray(appSong.apps)
-                ? appSong.apps[0]?.slug || null
-                : (appSong.apps as any)?.slug || null
-            }
-          : null,
-        lyric: lyric || null,
-        conversation: conversation || null
+      if (error) {
+        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
       }
-    });
+
+      return NextResponse.json({ ok: true, apps: data || [] });
+    }
+
+    if (mode === "songs") {
+      const { data, error } = await supabaseAdmin
+        .from("songs")
+        .select("slug, title, source_app_slug")
+        .order("title", { ascending: true });
+
+      if (error) {
+        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        songs: (data || []).map((row) => ({
+          slug: row.slug,
+          title: row.title,
+          app_slug: row.source_app_slug || null
+        }))
+      });
+    }
+
+    if (mode === "song-detail") {
+      const slug = request.nextUrl.searchParams.get("slug");
+      if (!slug) {
+        return NextResponse.json({ ok: false, error: "Missing slug." }, { status: 400 });
+      }
+
+      const [songRes, appSongRes, lyricRes, convoRes] = await Promise.all([
+        supabaseAdmin
+          .from("songs")
+          .select(`
+            slug,
+            title,
+            artist_name,
+            producer_names,
+            audio_path,
+            cover_image_path,
+            track_number,
+            duration_seconds,
+            duration_label,
+            display_date,
+            description,
+            is_featured,
+            source_app_slug,
+            weather_location_name,
+            weather_city,
+            weather_region,
+            weather_country,
+            weather_lat,
+            weather_lng,
+            weather_timezone,
+            weather_search_label,
+            weather_sort_order,
+            location_note
+          `)
+          .eq("slug", slug)
+          .maybeSingle(),
+
+        supabaseAdmin
+          .from("app_songs")
+          .select("position, app_slug")
+          .eq("song_slug", slug)
+          .maybeSingle(),
+
+        supabaseAdmin
+          .from("lyrics")
+          .select("body")
+          .eq("song_slug", slug)
+          .maybeSingle(),
+
+        supabaseAdmin
+          .from("friends_conversations")
+          .select(`
+            slug,
+            title,
+            subtitle,
+            list_preview,
+            avatar_letter,
+            last_activity_label,
+            sort_order
+          `)
+          .eq("song_slug", slug)
+          .maybeSingle()
+      ]);
+
+      if (songRes.error || !songRes.data) {
+        return NextResponse.json(
+          { ok: false, error: songRes.error?.message || "Song not found." },
+          { status: 404 }
+        );
+      }
+
+      let coverImageUrl: string | null = null;
+
+      if (songRes.data.cover_image_path) {
+        const { data: coverSigned } = await supabaseAdmin.storage
+          .from("cover-art")
+          .createSignedUrl(songRes.data.cover_image_path, 60 * 60);
+
+        coverImageUrl = coverSigned?.signedUrl || null;
+      }
+
+      return NextResponse.json({
+        ok: true,
+        detail: {
+          song: {
+            ...songRes.data,
+            cover_image_url: coverImageUrl
+          },
+          appSong: appSongRes.data || null,
+          lyric: lyricRes.data || null,
+          conversation: convoRes.data || null
+        }
+      });
+    }
+
+    if (mode === "app-order") {
+      const appSlug = request.nextUrl.searchParams.get("appSlug");
+      if (!appSlug) {
+        return NextResponse.json({ ok: false, error: "Missing app slug." }, { status: 400 });
+      }
+
+      const { data, error } = await supabaseAdmin
+        .from("app_songs")
+        .select("song_slug, position, songs(title)")
+        .eq("app_slug", appSlug)
+        .order("position", { ascending: true, nullsFirst: false });
+
+      if (error) {
+        return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
+      }
+
+      return NextResponse.json({
+        ok: true,
+        rows: (data || []).map((row: any) => ({
+          song_slug: row.song_slug,
+          title: row.songs?.title || row.song_slug,
+          position: row.position
+        }))
+      });
+    }
+
+    return NextResponse.json({ ok: false, error: "Invalid mode." }, { status: 400 });
+  } catch (error: any) {
+    return NextResponse.json(
+      { ok: false, error: error?.message || "Server error." },
+      { status: 500 }
+    );
   }
-
-  if (mode === "app-order") {
-    const appSlug = request.nextUrl.searchParams.get("appSlug");
-
-    if (!appSlug) {
-      return NextResponse.json({ ok: false, error: "Missing appSlug." }, { status: 400 });
-    }
-
-    const { data: app } = await supabaseAdmin
-      .from("apps")
-      .select("id")
-      .eq("slug", appSlug)
-      .single();
-
-    if (!app) {
-      return NextResponse.json({ ok: false, error: "App not found." }, { status: 404 });
-    }
-
-    const { data, error } = await supabaseAdmin
-      .from("app_songs")
-      .select(`
-        position,
-        song_slug,
-        songs (
-          title
-        )
-      `)
-      .eq("app_id", app.id)
-      .order("position", { ascending: true });
-
-    if (error) {
-      return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-    }
-
-    return NextResponse.json({
-      ok: true,
-      rows: (data || []).map((row: any) => ({
-        song_slug: row.song_slug,
-        title: Array.isArray(row.songs)
-          ? row.songs[0]?.title || row.song_slug
-          : row.songs?.title || row.song_slug,
-        position: row.position
-      }))
-    });
-  }
-
-  return NextResponse.json({ ok: false, error: "Invalid mode." }, { status: 400 });
 }
 
 export async function POST(request: NextRequest) {
-  const contentType = request.headers.get("content-type") || "";
-
-  if (contentType.includes("application/json")) {
-    const body = await request.json();
-
-    if (body.action === "save-order") {
-      const { appSlug, rows } = body;
-
-      const { data: app } = await supabaseAdmin
-        .from("apps")
-        .select("id")
-        .eq("slug", appSlug)
-        .single();
-
-      if (!app) {
-        return NextResponse.json({ ok: false, error: "App not found." }, { status: 404 });
-      }
-
-      for (const row of rows || []) {
-        const { error } = await supabaseAdmin
-          .from("app_songs")
-          .update({ position: row.position })
-          .eq("app_id", app.id)
-          .eq("song_slug", row.songSlug);
-
-        if (error) {
-          return NextResponse.json({ ok: false, error: error.message }, { status: 500 });
-        }
-      }
-
-      return NextResponse.json({ ok: true });
-    }
-
-    return NextResponse.json({ ok: false, error: "Invalid action." }, { status: 400 });
+  const auth = await requireAdmin();
+  if (!auth.ok) {
+    return NextResponse.json(
+      { ok: false, error: auth.error },
+      { status: auth.status }
+    );
   }
 
+  const contentType = request.headers.get("content-type") || "";
+
   try {
+    if (contentType.includes("application/json")) {
+      const body = await request.json();
+
+      if (body?.action === "save-order") {
+        const appSlug = String(body.appSlug || "").trim();
+        const rows = Array.isArray(body.rows) ? body.rows : [];
+
+        if (!appSlug) {
+          return NextResponse.json(
+            { ok: false, error: "Missing app slug." },
+            { status: 400 }
+          );
+        }
+
+        for (const row of rows) {
+          const songSlug = String(row.songSlug || "").trim();
+          if (!songSlug) continue;
+
+          const position =
+            row.position === null || row.position === undefined || row.position === ""
+              ? null
+              : Number(row.position);
+
+          const { error } = await supabaseAdmin
+            .from("app_songs")
+            .upsert(
+              {
+                app_slug: appSlug,
+                song_slug: songSlug,
+                position
+              },
+              { onConflict: "app_slug,song_slug" }
+            );
+
+          if (error) {
+            return NextResponse.json(
+              { ok: false, error: error.message },
+              { status: 500 }
+            );
+          }
+        }
+
+        return NextResponse.json({ ok: true });
+      }
+
+      return NextResponse.json({ ok: false, error: "Invalid action." }, { status: 400 });
+    }
+
     const formData = await request.formData();
 
     const mode = String(formData.get("mode") || "new");
     const selectedSongSlug = String(formData.get("selectedSongSlug") || "").trim();
-
     const appSlug = String(formData.get("appSlug") || "").trim();
-    const inputSlug = String(formData.get("slug") || "").trim();
+    const slug = String(formData.get("slug") || "").trim();
     const title = String(formData.get("title") || "").trim();
     const artistName = String(formData.get("artistName") || "").trim();
     const producerNames = String(formData.get("producerNames") || "").trim();
-    const position = String(formData.get("position") || "").trim();
-    const trackNumber = String(formData.get("trackNumber") || "").trim();
-    const durationSeconds = String(formData.get("durationSeconds") || "").trim();
+    const position = toNumberOrNull(formData.get("position"));
+    const trackNumber = toNumberOrNull(formData.get("trackNumber"));
+    const durationSeconds = toNumberOrNull(formData.get("durationSeconds"));
     const durationLabel = String(formData.get("durationLabel") || "").trim();
     const displayDate = String(formData.get("displayDate") || "").trim();
     const description = String(formData.get("description") || "").trim();
-    const isFeatured = String(formData.get("isFeatured") || "") === "true";
-    const lyricsBody = String(formData.get("lyricsBody") || "").trim();
+    const isFeatured = toBool(formData.get("isFeatured"));
+    const lyricsBody = String(formData.get("lyricsBody") || "");
+    const audioPath = String(formData.get("audioPath") || "").trim();
+    const coverImagePath = String(formData.get("coverImagePath") || "").trim();
 
-    const audioPathInput = String(formData.get("audioPath") || "").trim();
-    const coverImagePathInput = String(formData.get("coverImagePath") || "").trim();
-
-    if (!appSlug || !title || !artistName) {
+    if (!appSlug || !slug || !title || !artistName) {
       return NextResponse.json(
         { ok: false, error: "Missing required fields." },
         { status: 400 }
       );
     }
 
+    if (mode === "new" && !audioPath) {
+      return NextResponse.json(
+        { ok: false, error: "Audio path is required." },
+        { status: 400 }
+      );
+    }
+
     const { data: appRow, error: appError } = await supabaseAdmin
       .from("apps")
-      .select("id, slug, name")
+      .select("id, slug")
       .eq("slug", appSlug)
-      .single();
+      .maybeSingle();
 
-    if (appError || !appRow) {
+    if (appError || !appRow?.id) {
       return NextResponse.json(
-        { ok: false, error: "App not found." },
-        { status: 404 }
-      );
-    }
-
-    const songSlug = slugify(inputSlug || title);
-    if (!songSlug) {
-      return NextResponse.json(
-        { ok: false, error: "Could not generate song slug." },
+        { ok: false, error: appError?.message || "App not found." },
         { status: 400 }
       );
     }
 
-    let existingSong: any = null;
-
-    if (mode === "edit") {
-      const lookupSlug = selectedSongSlug || songSlug;
-      const { data } = await supabaseAdmin
-        .from("songs")
-        .select("id, audio_path, cover_image_path")
-        .eq("slug", lookupSlug)
-        .maybeSingle();
-
-      existingSong = data || null;
-    }
-
-    const audioPath = audioPathInput || existingSong?.audio_path || null;
-    const coverImagePath = coverImagePathInput || existingSong?.cover_image_path || null;
-
-    if (!audioPath) {
-      return NextResponse.json(
-        { ok: false, error: "Audio upload is required for new songs." },
-        { status: 400 }
-      );
-    }
-
-    const songPayload = {
+    const songPayload: Record<string, any> = {
       app_id: appRow.id,
-      slug: songSlug,
+      slug,
       title,
-      artist_name: artistName,
-      audio_path: audioPath,
-      cover_image_path: coverImagePath,
-      cover_image_bucket: "cover-art",
-      track_number: trackNumber ? Number(trackNumber) : null,
-      duration_seconds: durationSeconds ? Number(durationSeconds) : null,
-      display_date: displayDate || null,
-      duration_label: durationLabel || null,
-      description: description || null,
+      artist_name: artistName || null,
       producer_names: producerNames || null,
-      is_featured: Boolean(isFeatured),
+      audio_path: audioPath || null,
+      cover_image_path: coverImagePath || null,
+      track_number: trackNumber,
+      duration_seconds: durationSeconds,
+      duration_label: durationLabel || null,
+      display_date: displayDate || null,
+      description: description || null,
+      is_featured: isFeatured,
+      source_app_slug: appSlug,
       storage_bucket: "songs",
-      source_app_slug: appRow.slug
+      cover_image_bucket: "cover-art"
     };
 
-    const { data: songRow, error: songError } = await supabaseAdmin
+    if (appSlug === "milia") {
+      songPayload.weather_location_name =
+        String(formData.get("weatherLocationName") || "").trim() || null;
+      songPayload.weather_city =
+        String(formData.get("weatherCity") || "").trim() || null;
+      songPayload.weather_region =
+        String(formData.get("weatherRegion") || "").trim() || null;
+      songPayload.weather_country =
+        String(formData.get("weatherCountry") || "").trim() || null;
+      songPayload.weather_lat = toNumberOrNull(formData.get("weatherLat"));
+      songPayload.weather_lng = toNumberOrNull(formData.get("weatherLng"));
+      songPayload.weather_timezone =
+        String(formData.get("weatherTimezone") || "").trim() || null;
+      songPayload.weather_search_label =
+        String(formData.get("weatherSearchLabel") || "").trim() || null;
+      songPayload.weather_sort_order = toNumberOrNull(formData.get("weatherSortOrder"));
+      songPayload.location_note =
+        String(formData.get("locationNote") || "").trim() || null;
+    }
+
+    const { data: savedSong, error: songError } = await supabaseAdmin
       .from("songs")
       .upsert(songPayload, { onConflict: "slug" })
-      .select("id, slug, title")
-      .single();
+      .select("slug, title, source_app_slug")
+      .maybeSingle();
 
-    if (songError || !songRow) {
+    if (songError || !savedSong) {
       return NextResponse.json(
         { ok: false, error: songError?.message || "Could not save song." },
         { status: 500 }
@@ -338,12 +374,11 @@ export async function POST(request: NextRequest) {
       .from("app_songs")
       .upsert(
         {
-          app_id: appRow.id,
-          song_id: songRow.id,
-          song_slug: songRow.slug,
-          position: position ? Number(position) : trackNumber ? Number(trackNumber) : null
+          app_slug: appSlug,
+          song_slug: slug,
+          position
         },
-        { onConflict: "app_id,song_id" }
+        { onConflict: "app_slug,song_slug" }
       );
 
     if (appSongError) {
@@ -353,53 +388,52 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const { data: existingLyric } = await supabaseAdmin
-      .from("lyrics")
-      .select("id")
-      .eq("song_id", songRow.id)
-      .eq("is_primary", true)
-      .maybeSingle();
+    const lyricsTrimmed = lyricsBody.trim();
 
-    if (lyricsBody) {
-      if (existingLyric?.id) {
-        const { error: lyricUpdateError } = await supabaseAdmin
-          .from("lyrics")
-          .update({
-            body: lyricsBody,
-            version_label: "final",
-            is_primary: true
-          })
-          .eq("id", existingLyric.id);
+    if (lyricsTrimmed) {
+      const { error: lyricError } = await supabaseAdmin
+        .from("lyrics")
+        .upsert(
+          {
+            song_slug: slug,
+            body: lyricsTrimmed
+          },
+          { onConflict: "song_slug" }
+        );
 
-        if (lyricUpdateError) {
-          return NextResponse.json(
-            { ok: false, error: lyricUpdateError.message },
-            { status: 500 }
-          );
-        }
-      } else {
-        const { error: lyricInsertError } = await supabaseAdmin
-          .from("lyrics")
-          .insert({
-            song_id: songRow.id,
-            body: lyricsBody,
-            version_label: "final",
-            is_primary: true
-          });
-
-        if (lyricInsertError) {
-          return NextResponse.json(
-            { ok: false, error: lyricInsertError.message },
-            { status: 500 }
-          );
-        }
+      if (lyricError) {
+        return NextResponse.json(
+          { ok: false, error: lyricError.message },
+          { status: 500 }
+        );
       }
+    } else if (mode === "edit") {
+      await supabaseAdmin
+        .from("lyrics")
+        .delete()
+        .eq("song_slug", slug);
+    }
+
+    const useConversationBuilder = toBool(formData.get("useConversationBuilder"));
+
+    if (appSlug === "friends" && useConversationBuilder) {
+      await supabaseAdmin
+        .from("friends_conversations")
+        .upsert(
+          {
+            song_slug: slug,
+            slug,
+            title,
+            subtitle: artistName || null,
+            list_preview: description || null
+          },
+          { onConflict: "song_slug" }
+        );
     }
 
     return NextResponse.json({
       ok: true,
-      app: appRow,
-      song: songRow
+      song: savedSong
     });
   } catch (error: any) {
     return NextResponse.json(
