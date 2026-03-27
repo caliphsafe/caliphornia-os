@@ -96,7 +96,14 @@ export async function POST(request: Request) {
   maxAge: 60 * 60 * 24 * 30
 });
 
-    return NextResponse.json({ ok: true, username, email });
+    return NextResponse.json({
+  ok: true,
+  username,
+  email,
+  debug: {
+    tokenCreated: Boolean(token)
+  }
+});
   } catch {
     return NextResponse.json(
       { ok: false, error: "Something went wrong." },
