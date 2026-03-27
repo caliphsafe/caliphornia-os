@@ -98,11 +98,62 @@
           font-size: 14px;
         }
 
-        @media (max-width: 780px) {
-          .dash-grid {
-            grid-template-columns: 1fr;
-          }
-        }
+       @media (max-width: 780px) {
+  .dash-wrap {
+    padding: 20px 14px 28px;
+  }
+
+  .dash-hero {
+    margin-bottom: 18px;
+  }
+
+  .dash-kicker {
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+
+  h1 {
+    margin-bottom: 8px;
+    font-size: clamp(28px, 8vw, 38px);
+    line-height: 0.98;
+  }
+
+  .dash-copy {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .dash-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+
+  .dash-card {
+    padding: 18px 16px;
+    border-radius: 20px;
+  }
+
+  .dash-card-top {
+    margin-bottom: 10px;
+  }
+
+  .dash-badge {
+    min-height: 26px;
+    padding: 0 9px;
+    font-size: 11px;
+  }
+
+  .dash-card h2 {
+    margin-bottom: 8px;
+    font-size: 21px;
+  }
+
+  .dash-card p {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+}
 
 /* Import Songs */
 
@@ -468,22 +519,132 @@
         }
 
         @media (max-width: 760px) {
-          .grid-two,
-          .grid-three,
-          .order-row {
-            grid-template-columns: 1fr;
-          }
+  .manager-wrap {
+    padding: 18px 12px 26px;
+  }
 
-          .manager-hero-actions,
-          .order-topbar {
-            width: 100%;
-          }
+  .manager-hero {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
 
-          .manager-hero-actions > *,
-          .order-topbar > * {
-            flex: 1 1 100%;
-          }
-        }
+  .manager-kicker {
+    margin-bottom: 6px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+  }
+
+  .manager-hero h1 {
+    margin-bottom: 6px;
+    font-size: clamp(26px, 8vw, 34px);
+    line-height: 1;
+  }
+
+  .manager-copy {
+    font-size: 14px;
+    line-height: 1.5;
+  }
+
+  .manager-grid {
+    gap: 14px;
+  }
+
+  .panel,
+  .preview-panel {
+    border-radius: 20px;
+  }
+
+  .panel {
+    padding: 14px;
+  }
+
+  .preview-panel {
+    padding: 14px;
+  }
+
+  .grid-two,
+  .grid-three,
+  .order-row {
+    grid-template-columns: 1fr;
+  }
+
+  .manager-hero-actions,
+  .order-topbar {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .manager-hero-actions > *,
+  .order-topbar > * {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .ghost-btn,
+  .ghost-link,
+  .save-btn {
+    width: 100%;
+  }
+
+  .field input,
+  .field select,
+  .field textarea,
+  .order-topbar select,
+  .order-row input {
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
+
+  .preview-card {
+    gap: 12px;
+  }
+
+  .preview-cover {
+    border-radius: 20px;
+  }
+
+  .preview-meta h3 {
+    font-size: 24px;
+  }
+
+  .preview-artist {
+    font-size: 14px;
+  }
+
+  .preview-description {
+    font-size: 13px;
+    line-height: 1.5;
+  }
+
+  .preview-stats {
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .preview-stats div,
+  .preview-line {
+    border-radius: 14px;
+    padding: 9px 10px;
+  }
+
+  .order-row {
+    gap: 8px;
+    padding: 10px;
+    border-radius: 14px;
+  }
+
+  .order-title {
+    font-size: 13px;
+  }
+
+  .order-slug {
+    font-size: 11px;
+  }
+}
 
 /* Convo Builder */
 
@@ -970,35 +1131,173 @@
         }
 
         @media (max-width: 760px) {
-          .grid-two,
-          .message-grid,
-          .timestamp-grid,
-          .audio-grid,
-          .clip-grid,
-          .asset-grid {
-            grid-template-columns: 1fr;
-          }
+  .builder-wrap {
+    padding: 18px 12px 26px;
+  }
 
-          .wide-field {
-            grid-column: auto;
-          }
+  .builder-hero {
+    margin-bottom: 16px;
+    gap: 12px;
+  }
 
-          .hero-select {
-            min-width: 0;
-            width: 100%;
-          }
+  .builder-hero h1 {
+    margin-bottom: 6px;
+    font-size: clamp(26px, 8vw, 34px);
+    line-height: 1;
+  }
 
-          .builder-hero-actions {
-            width: 100%;
-          }
+  .builder-hero p {
+    font-size: 14px;
+    line-height: 1.5;
+  }
 
-          .builder-hero-actions > * {
-            flex: 1 1 100%;
-          }
+  .builder-grid {
+    gap: 14px;
+  }
 
-          .phone-shell {
-            width: 100%;
-          }
-        }
+  .panel,
+  .preview-wrap {
+    border-radius: 20px;
+  }
 
+  .panel,
+  .preview-wrap {
+    padding: 14px;
+  }
+
+  .grid-two,
+  .message-grid,
+  .timestamp-grid,
+  .audio-grid,
+  .clip-grid,
+  .asset-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .wide-field {
+    grid-column: auto;
+  }
+
+  .hero-select {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .builder-hero-actions {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 8px;
+  }
+
+  .builder-hero-actions > * {
+    width: 100%;
+    flex: 1 1 100%;
+  }
+
+  .ghost-btn,
+  .ghost-link,
+  .save-btn,
+  .tiny-btn {
+    width: 100%;
+  }
+
+  .section-head,
+  .message-head,
+  .asset-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .field input,
+  .field select {
+    min-height: 44px;
+    border-radius: 12px;
+    font-size: 16px;
+  }
+
+  .message-card,
+  .asset-card,
+  .clip-card {
+    border-radius: 16px;
+    padding: 10px;
+  }
+
+  .wave-shell {
+    border-radius: 12px;
+    padding: 8px 6px;
+  }
+
+  .wave-bars {
+    gap: 3px;
+    min-height: 34px;
+  }
+
+  .preview-column {
+    order: -1;
+  }
+
+  .phone-shell {
+    width: 100%;
+    border-radius: 28px;
+    padding: 12px 10px 14px;
+  }
+
+  .phone-notch {
+    width: 92px;
+    height: 20px;
+    margin-bottom: 10px;
+  }
+
+  .phone-thread {
+    max-height: none;
+  }
+
+  .bubble-stack {
+    max-width: 88%;
+  }
+
+  .bubble {
+    font-size: 13px;
+    padding: 9px 11px;
+  }
+
+  .bubble-audio {
+    min-width: 0;
+  }
+
+  .audio-pill-top,
+  .audio-pill-bottom {
+    font-size: 10px;
+  }
+}
+@media (max-width: 420px) {
+  .dash-wrap,
+  .manager-wrap,
+  .builder-wrap {
+    padding-left: 10px;
+    padding-right: 10px;
+  }
+
+  .dash-card,
+  .panel,
+  .preview-panel,
+  .preview-wrap {
+    border-radius: 18px;
+  }
+
+  .dash-card {
+    padding: 16px 14px;
+  }
+
+  .preview-meta h3,
+  .dash-card h2 {
+    font-size: 20px;
+  }
+
+  .preview-stats {
+    grid-template-columns: 1fr;
+  }
+}
 
