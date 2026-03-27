@@ -385,18 +385,22 @@ export default function FriendsBuilderPage() {
   }
 
   const senderOptions = useMemo(() => {
-    const names = new Set<string>();
-    names.add("Caliph");
+  const names = new Set<string>();
+  names.add("Caliph");
 
-    const rawArtists = selectedSong?.artist_name || "";
-    rawArtists
-      .split(",")
+  const collectNames = (value: string | null | undefined) => {
+    String(value || "")
+      .split(/,|&|\band\b|\bfeat\.?\b|\bft\.?\b/gi)
       .map((name) => name.trim())
       .filter(Boolean)
       .forEach((name) => names.add(name));
+  };
 
-    return Array.from(names);
-  }, [selectedSong]);
+  collectNames(selectedSong?.artist_name);
+  collectNames(selectedSong?.producer_names);
+
+  return Array.from(names);
+}, [selectedSong]);
 
   const audioSourceOptions = useMemo<AudioSourceOption[]>(() => {
     const base: AudioSourceOption[] = [];
