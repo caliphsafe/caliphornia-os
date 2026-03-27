@@ -2,39 +2,54 @@
 
 import { useEffect, useState } from "react";
 import styles from "@/app/apps/milia/milia.module.css";
-import {
-  playMiliaQueue,
-  subscribeMiliaPlayer,
-  type MiliaQueueItem,
-} from "@/lib/milia-player";
+import type { GlobalTrack } from "@/components/GlobalPlayer";
+
+function getCurrentTrackSlugFromPlayerState(data: any) {
+  return data?.playlistSongSlug || data?.slug || null;
+}
 
 export default function MiliaDetailPlayer({
   slug,
   title,
   artistName,
   placeLabel,
-  audioUrl,
   coverUrl,
-  projectQueue,
+  queue,
+  startIndex,
 }: {
   slug: string;
   title: string;
   artistName: string;
   placeLabel: string;
-  audioUrl: string | null;
   coverUrl: string | null;
-  projectQueue: MiliaQueueItem[];
+  queue: GlobalTrack[];
+  startIndex: number;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
 
   useEffect(() => {
-    return subscribeMiliaPlayer((state) => {
-      setIsPlaying(state.currentSlug === slug && state.isPlaying);
-    });
+    function onMessage(event: MessageEvent) {
+      const data = event.data;
+      if (!data || typeof data !== "object") return;
+      if (data.type !== "CALIPH_PLAYER_STATE") return;
+
+      const activeSlug = getCurrentTrackSlugFromPlayerState(data);
+      setIsPlaying(activeSlug === slug && Boolean(data.isPlaying));
+    }
+
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
   }, [slug]);
 
-  async function handlePlay() {
-    await playMiliaQueue(projectQueue, slug);
+  function handlePlay() {
+    window.postMessage(
+      {
+        type: "CALIPH_PLAYER_TOGGLE_TRACK",
+        tracks: queue,
+        startIndex,
+      },
+      "*"
+    );
   }
 
   return (
@@ -62,7 +77,6 @@ export default function MiliaDetailPlayer({
             type="button"
             className={`${styles.detailPlayButton} ${isPlaying ? styles.detailPlayButtonActive : ""}`}
             onClick={handlePlay}
-            disabled={!audioUrl}
             aria-label={isPlaying ? `Pause ${title}` : `Play ${title}`}
           >
             {isPlaying ? "Pause" : "Play"}
@@ -70,7 +84,7 @@ export default function MiliaDetailPlayer({
         </div>
 
         <p className={styles.detailPlayerHint}>
-          Playback uses the project queue and continues as you move around the app.
+          Playback uses the universal global player and continues across apps.
         </p>
       </div>
     </section>
