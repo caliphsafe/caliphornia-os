@@ -69,23 +69,37 @@ export default async function StatsPage() {
 
   const userEmail = session.email;
 
-  const [globalStatsRes, userStatsRes, favoritesRes, songsRes, eventLogsRes] =
-    await Promise.all([
-      supabaseAdmin
-        .from("global_song_stats")
-        .select("song_id, song_slug, play_count, unique_listener_count"),
+  const [
+    appUserRes,
+    globalStatsRes,
+    userStatsRes,
+    favoritesRes,
+    songsRes,
+    eventLogsRes,
+  ] = await Promise.all([
+    supabaseAdmin
+      .from("app_users")
+      .select("username")
+      .eq("email", userEmail)
+      .maybeSingle(),
 
-      supabaseAdmin
-        .from("user_song_stats")
-        .select("song_id, song_slug, play_count, last_played_at")
-        .eq("user_email", userEmail),
+    supabaseAdmin
+      .from("global_song_stats")
+      .select("song_id, song_slug, play_count, unique_listener_count"),
 
-      supabaseAdmin
-        .from("user_favorite_songs")
-        .select("song_id, song_slug, created_at")
-        .eq("user_email", userEmail),
+    supabaseAdmin
+      .from("user_song_stats")
+      .select("song_id, song_slug, play_count, last_played_at")
+      .eq("user_email", userEmail),
 
-      supabaseAdmin.from("songs").select(`
+    supabaseAdmin
+      .from("user_favorite_songs")
+      .select("song_id, song_slug, created_at")
+      .eq("user_email", userEmail),
+
+    supabaseAdmin
+      .from("songs")
+      .select(`
         id,
         slug,
         title,
@@ -96,11 +110,11 @@ export default async function StatsPage() {
         duration_label
       `),
 
-      supabaseAdmin
-        .from("event_logs")
-        .select("country, region, city")
-        .eq("user_email", userEmail),
-    ]);
+    supabaseAdmin
+      .from("event_logs")
+      .select("country, region, city")
+      .eq("user_email", userEmail),
+  ]);
 
   if (
     globalStatsRes.error ||
@@ -164,12 +178,8 @@ export default async function StatsPage() {
   const favoriteSongs: SongRow[] = await Promise.all(
     Array.from(favoriteSlugSet).map(async (songSlug) => {
       const song = songMap.get(songSlug);
-      const userStat = (userStatsRes.data || []).find(
-        (row) => row.song_slug === songSlug
-      );
-      const globalStat = (globalStatsRes.data || []).find(
-        (row) => row.song_slug === songSlug
-      );
+      const userStat = (userStatsRes.data || []).find((row) => row.song_slug === songSlug);
+      const globalStat = (globalStatsRes.data || []).find((row) => row.song_slug === songSlug);
       const coverImageUrl = await createSignedCoverUrl(song?.cover_image_path);
 
       return {
@@ -199,7 +209,7 @@ export default async function StatsPage() {
 
   return (
     <StatsPageClient
-      username={session.username || "user"}
+      username={appUserRes.data?.username || ""}
       globalSongs={globalSongs}
       userSongs={userSongs}
       favoriteSongs={favoriteSongs}
