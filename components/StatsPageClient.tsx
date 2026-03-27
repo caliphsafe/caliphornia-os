@@ -72,46 +72,6 @@ function getRingPercents({
   return { listening, favorites, reach };
 }
 
-function buildAwards({
-  totalUserPlays,
-  totalFavoriteSongs,
-  topCity,
-}: {
-  totalUserPlays: number;
-  totalFavoriteSongs: number;
-  topCity: CountRow | null;
-}) {
-  return [
-    {
-      id: "first-favorite",
-      title: "First Favorite",
-      subtitle:
-        totalFavoriteSongs > 0
-          ? "You saved your first song"
-          : "Save your first song to unlock",
-      earned: totalFavoriteSongs > 0,
-    },
-    {
-      id: "hundred-plays",
-      title: "100 Plays Club",
-      subtitle:
-        totalUserPlays >= 100
-          ? `${compactNumber(totalUserPlays)} total plays`
-          : "Reach 100 total plays to unlock",
-      earned: totalUserPlays >= 100,
-    },
-    {
-      id: "top-city",
-      title: "City Signal",
-      subtitle:
-        topCity
-          ? `Your strongest city is ${topCity.label}`
-          : "Location activity needed to unlock",
-      earned: Boolean(topCity),
-    },
-  ];
-}
-
 export default function StatsPageClient({
   username,
   globalSongs,
@@ -129,7 +89,7 @@ export default function StatsPageClient({
   topRegions: CountRow[];
   topCountries: CountRow[];
 }) {
-  const [activeTab, setActiveTab] = useState<"summary" | "songs" | "awards" | "places">("summary");
+  const [activeTab, setActiveTab] = useState<"summary" | "songs" | "places">("summary");
   const [selectedSong, setSelectedSong] = useState<SongRow | null>(null);
 
   const totals = useMemo(
@@ -150,12 +110,6 @@ export default function StatsPageClient({
   const topCity = topCities[0] || null;
   const topRegion = topRegions[0] || null;
   const topCountry = topCountries[0] || null;
-
-  const awards = buildAwards({
-    totalUserPlays: totals.totalUserPlays,
-    totalFavoriteSongs: totals.totalFavoriteSongs,
-    topCity,
-  });
 
   return (
     <main className={styles.page}>
@@ -301,20 +255,32 @@ export default function StatsPageClient({
           </div>
         </button>
 
-        <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("awards")}>
+        <button
+          className={`${styles.card} ${styles.tapCard}`}
+          onClick={() => latestFavorite && setSelectedSong(latestFavorite)}
+        >
           <div className={styles.cardHeaderMini}>
-            <h3 className={styles.cardTitle}>Milestones</h3>
+            <h3 className={styles.cardTitle}>Latest Favorite</h3>
             <span className={styles.chev}>›</span>
           </div>
 
-          <div className={styles.awardBadge}>
-            {awards.filter((award) => award.earned).length}
+          {latestFavorite?.coverImageUrl ? (
+            <img
+              src={latestFavorite.coverImageUrl}
+              alt={latestFavorite.title}
+              className={styles.sessionCover}
+            />
+          ) : (
+            <div className={styles.sessionCoverFallback}>♥</div>
+          )}
+
+          <div className={styles.sessionTitle}>{latestFavorite?.title || "No favorites yet"}</div>
+          <div className={styles.bigNumberGreen}>
+            {compactNumber(latestFavorite?.userPlayCount || 0)} plays
           </div>
-          <div className={styles.awardTitle}>Unlocked Achievements</div>
-          <div className={styles.awardSub}>
-            {awards.filter((award) => award.earned).length} of {awards.length} earned
+          <div className={styles.sessionDate}>
+            {latestFavorite?.favoritedAt ? formatShortDate(latestFavorite.favoritedAt) : "—"}
           </div>
-          <div className={styles.awardDate}>Live progress</div>
         </button>
       </section>
 
@@ -363,7 +329,7 @@ export default function StatsPageClient({
           </button>
 
           <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
-            <span className={styles.locationLabel}>Top Region</span>
+            <span className={styles.locationLabel}>Top State</span>
             <strong>{topRegion?.label || "—"}</strong>
             <span>{compactNumber(topRegion?.count || 0)} events</span>
           </button>
@@ -375,9 +341,9 @@ export default function StatsPageClient({
           </button>
 
           <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
-            <span className={styles.locationLabel}>Favorites</span>
+            <span className={styles.locationLabel}>Saved Songs</span>
             <strong>{compactNumber(totals.totalFavoriteSongs)}</strong>
-            <span>saved songs</span>
+            <span>favorites</span>
           </button>
         </div>
       </section>
@@ -389,7 +355,7 @@ export default function StatsPageClient({
               <div className={styles.bottomKicker}>Listening Overview</div>
               <div className={styles.bottomTitle}>Your music world in motion</div>
               <div className={styles.bottomSub}>
-                Plays, favorites, reach, recent listens, and location signals all in one place.
+                Plays, favorites, listener reach, recent listens, and location signals all in one place.
               </div>
             </>
           )}
@@ -415,23 +381,6 @@ export default function StatsPageClient({
             </>
           )}
 
-          {activeTab === "awards" && (
-            <>
-              <div className={styles.bottomKicker}>Awards</div>
-              <div className={styles.listStack}>
-                {awards.map((award) => (
-                  <div key={award.id} className={styles.awardRow}>
-                    <div className={`${styles.awardDot} ${award.earned ? styles.awardDotOn : ""}`} />
-                    <div className={styles.listRowText}>
-                      <strong>{award.title}</strong>
-                      <span>{award.subtitle}</span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </>
-          )}
-
           {activeTab === "places" && (
             <>
               <div className={styles.bottomKicker}>Places</div>
@@ -439,6 +388,16 @@ export default function StatsPageClient({
                 <div className={styles.placesCol}>
                   <strong>Cities</strong>
                   {topCities.slice(0, 5).map((row) => (
+                    <div key={row.label} className={styles.placeLine}>
+                      <span>{row.label}</span>
+                      <span>{compactNumber(row.count)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className={styles.placesCol}>
+                  <strong>States</strong>
+                  {topRegions.slice(0, 5).map((row) => (
                     <div key={row.label} className={styles.placeLine}>
                       <span>{row.label}</span>
                       <span>{compactNumber(row.count)}</span>
@@ -472,12 +431,6 @@ export default function StatsPageClient({
             onClick={() => setActiveTab("songs")}
           >
             Songs
-          </button>
-          <button
-            className={`${styles.bottomTab} ${activeTab === "awards" ? styles.bottomTabActive : ""}`}
-            onClick={() => setActiveTab("awards")}
-          >
-            Awards
           </button>
           <button
             className={`${styles.bottomTab} ${activeTab === "places" ? styles.bottomTabActive : ""}`}
