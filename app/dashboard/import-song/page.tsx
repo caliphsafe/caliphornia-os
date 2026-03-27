@@ -32,6 +32,16 @@ type SongDetail = {
     description: string | null;
     is_featured: boolean | null;
     source_app_slug: string | null;
+    weather_location_name?: string | null;
+    weather_city?: string | null;
+    weather_region?: string | null;
+    weather_country?: string | null;
+    weather_lat?: number | null;
+    weather_lng?: number | null;
+    weather_timezone?: string | null;
+    weather_search_label?: string | null;
+    weather_sort_order?: number | null;
+    location_note?: string | null;
   };
   appSong: {
     position: number | null;
@@ -72,6 +82,17 @@ type FormState = {
   isFeatured: boolean;
   lyricsBody: string;
   useConversationBuilder: boolean;
+
+  weatherLocationName: string;
+  weatherCity: string;
+  weatherRegion: string;
+  weatherCountry: string;
+  weatherLat: string;
+  weatherLng: string;
+  weatherTimezone: string;
+  weatherSearchLabel: string;
+  weatherSortOrder: string;
+  locationNote: string;
 };
 
 function safeFileName(name: string) {
@@ -181,7 +202,18 @@ const EMPTY_FORM: FormState = {
   description: "",
   isFeatured: false,
   lyricsBody: "",
-  useConversationBuilder: false
+  useConversationBuilder: false,
+
+  weatherLocationName: "",
+  weatherCity: "",
+  weatherRegion: "",
+  weatherCountry: "",
+  weatherLat: "",
+  weatherLng: "",
+  weatherTimezone: "",
+  weatherSearchLabel: "",
+  weatherSortOrder: "",
+  locationNote: ""
 };
 
 export default function ImportSongPage() {
@@ -206,6 +238,7 @@ export default function ImportSongPage() {
   const [form, setForm] = useState<FormState>(EMPTY_FORM);
 
   const isFriends = form.appSlug === "friends";
+  const isMilia = form.appSlug === "milia";
 
   const selectedAppName = useMemo(() => {
     return apps.find((app) => app.slug === form.appSlug)?.name || form.appSlug || "App";
@@ -305,7 +338,23 @@ export default function ImportSongPage() {
         description: detail.song.description || "",
         isFeatured: Boolean(detail.song.is_featured),
         lyricsBody: detail.lyric?.body || "",
-        useConversationBuilder: Boolean(detail.conversation)
+        useConversationBuilder: Boolean(detail.conversation),
+
+        weatherLocationName: detail.song.weather_location_name || "",
+        weatherCity: detail.song.weather_city || "",
+        weatherRegion: detail.song.weather_region || "",
+        weatherCountry: detail.song.weather_country || "",
+        weatherLat:
+          detail.song.weather_lat != null ? String(detail.song.weather_lat) : "",
+        weatherLng:
+          detail.song.weather_lng != null ? String(detail.song.weather_lng) : "",
+        weatherTimezone: detail.song.weather_timezone || "",
+        weatherSearchLabel: detail.song.weather_search_label || "",
+        weatherSortOrder:
+          detail.song.weather_sort_order != null
+            ? String(detail.song.weather_sort_order)
+            : "",
+        locationNote: detail.song.location_note || ""
       });
 
       setAudioFileName(detail.song.audio_path || "");
@@ -423,6 +472,19 @@ export default function ImportSongPage() {
       payload.append("lyricsBody", form.lyricsBody);
       payload.append("audioPath", audioPath);
       payload.append("coverImagePath", coverImagePath);
+
+      if (isMilia) {
+        payload.append("weatherLocationName", form.weatherLocationName.trim());
+        payload.append("weatherCity", form.weatherCity.trim());
+        payload.append("weatherRegion", form.weatherRegion.trim());
+        payload.append("weatherCountry", form.weatherCountry.trim());
+        payload.append("weatherLat", form.weatherLat.trim());
+        payload.append("weatherLng", form.weatherLng.trim());
+        payload.append("weatherTimezone", form.weatherTimezone.trim());
+        payload.append("weatherSearchLabel", form.weatherSearchLabel.trim());
+        payload.append("weatherSortOrder", form.weatherSortOrder.trim());
+        payload.append("locationNote", form.locationNote.trim());
+      }
 
       const res = await fetch("/api/dashboard/import-song", {
         method: "POST",
@@ -672,7 +734,7 @@ export default function ImportSongPage() {
                       type="file"
                       accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac"
                       onChange={handleAudioChange}
-                      required={mode === "new"}
+                      required={mode === "new" && !audioFileName}
                     />
                     {audioFileName ? <div className="file-meta">{audioFileName}</div> : null}
                   </label>
@@ -686,6 +748,32 @@ export default function ImportSongPage() {
                       onChange={handleCoverChange}
                     />
                     {coverFileName ? <div className="file-meta">{coverFileName}</div> : null}
+                  </label>
+                </div>
+
+                <div className="grid-two">
+                  <label className="field">
+                    <span>Existing Audio Path</span>
+                    <input
+                      value={audioFileName}
+                      onChange={(e) => setAudioFileName(e.target.value)}
+                      placeholder={
+                        isMilia
+                          ? "milia/outside/outside-final.mp3"
+                          : `${form.appSlug || "app"}/${form.slug || "song"}/${form.slug || "song"}-final.mp3`
+                      }
+                    />
+                  </label>
+
+                  <label className="field">
+                    <span>Existing Cover Path</span>
+                    <input
+                      value={coverFileName}
+                      onChange={(e) => setCoverFileName(e.target.value)}
+                      placeholder={
+                        `${form.appSlug || "app"}/${form.slug || "song"}/${form.slug || "song"}.png`
+                      }
+                    />
                   </label>
                 </div>
 
@@ -761,6 +849,121 @@ export default function ImportSongPage() {
                   <span>Featured song</span>
                 </label>
               </section>
+
+              {isMilia ? (
+                <section className="panel">
+                  <div className="section-head">
+                    <div>
+                      <h2>Milia Location Fields</h2>
+                      <p className="muted">
+                        These fields connect the song to a real place and power the Milia weather experience.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid-two">
+                    <label className="field">
+                      <span>Place Name</span>
+                      <input
+                        value={form.weatherLocationName}
+                        onChange={(e) => updateField("weatherLocationName", e.target.value)}
+                        placeholder="Dakar"
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Weather Search Label</span>
+                      <input
+                        value={form.weatherSearchLabel}
+                        onChange={(e) => updateField("weatherSearchLabel", e.target.value)}
+                        placeholder="Dakar, Senegal"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="grid-three">
+                    <label className="field">
+                      <span>City</span>
+                      <input
+                        value={form.weatherCity}
+                        onChange={(e) => updateField("weatherCity", e.target.value)}
+                        placeholder="Dakar"
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Region / State</span>
+                      <input
+                        value={form.weatherRegion}
+                        onChange={(e) => updateField("weatherRegion", e.target.value)}
+                        placeholder="Dakar Region"
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Country</span>
+                      <input
+                        value={form.weatherCountry}
+                        onChange={(e) => updateField("weatherCountry", e.target.value)}
+                        placeholder="Senegal"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="grid-three">
+                    <label className="field">
+                      <span>Latitude</span>
+                      <input
+                        value={form.weatherLat}
+                        onChange={(e) => updateField("weatherLat", e.target.value)}
+                        placeholder="14.7167"
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Longitude</span>
+                      <input
+                        value={form.weatherLng}
+                        onChange={(e) => updateField("weatherLng", e.target.value)}
+                        placeholder="-17.4677"
+                      />
+                    </label>
+
+                    <label className="field">
+                      <span>Timezone</span>
+                      <input
+                        value={form.weatherTimezone}
+                        onChange={(e) => updateField("weatherTimezone", e.target.value)}
+                        placeholder="Africa/Dakar"
+                      />
+                    </label>
+                  </div>
+
+                  <div className="grid-two">
+                    <label className="field">
+                      <span>Sort Order</span>
+                      <input
+                        value={form.weatherSortOrder}
+                        onChange={(e) => updateField("weatherSortOrder", e.target.value)}
+                        type="number"
+                        placeholder="1"
+                      />
+                    </label>
+
+                    <div />
+                  </div>
+
+                  <label className="field">
+                    <span>Location Note</span>
+                    <textarea
+                      value={form.locationNote}
+                      onChange={(e) => updateField("locationNote", e.target.value)}
+                      rows={4}
+                      placeholder="Optional note about why this place is connected to this song."
+                    />
+                  </label>
+                </section>
+              ) : null}
 
               <section className="panel">
                 <div className="section-head">
@@ -939,6 +1142,19 @@ export default function ImportSongPage() {
                     </div>
                   ) : null}
 
+                  {isMilia ? (
+                    <div className="preview-line">
+                      <span>Place</span>
+                      <strong>
+                        {form.weatherLocationName ||
+                          [form.weatherCity, form.weatherRegion, form.weatherCountry]
+                            .filter(Boolean)
+                            .join(", ") ||
+                          "No place set"}
+                      </strong>
+                    </div>
+                  ) : null}
+
                   {form.isFeatured ? <div className="preview-featured">Featured</div> : null}
                 </div>
               </div>
@@ -946,8 +1162,6 @@ export default function ImportSongPage() {
           </aside>
         </div>
       )}
-
-      
     </main>
   );
 }
