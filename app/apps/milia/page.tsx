@@ -1,5 +1,6 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import MiliaSongCard from "@/components/MiliaSongCard";
 import styles from "./milia.module.css";
 
 export const dynamic = "force-dynamic";
@@ -68,6 +69,27 @@ function weatherCodeLabel(code: number | null | undefined) {
   return map[code ?? -1] || "Forecast";
 }
 
+function getWeatherTheme(label?: string | null) {
+  const value = String(label || "").toLowerCase();
+
+  if (value.includes("thunder")) return "cardStorm";
+  if (value.includes("rain") || value.includes("drizzle") || value.includes("showers")) return "cardRain";
+  if (value.includes("cloud") || value.includes("fog")) return "cardCloud";
+  if (value.includes("clear") || value.includes("sun")) return "cardSun";
+  return "cardBlue";
+}
+
+async function createSignedAudioUrl(storagePath: string | null | undefined) {
+  if (!storagePath) return null;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from("songs")
+    .createSignedUrl(storagePath, 60 * 60);
+
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
 async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
   if (song.weather_lat == null || song.weather_lng == null) {
     return null;
@@ -77,18 +99,9 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
   url.searchParams.set("latitude", String(song.weather_lat));
   url.searchParams.set("longitude", String(song.weather_lng));
   url.searchParams.set("timezone", song.weather_timezone || "auto");
-  url.searchParams.set(
-    "current",
-    "temperature_2m,weather_code"
-  );
-  url.searchParams.set(
-    "hourly",
-    "temperature_2m,weather_code"
-  );
-  url.searchParams.set(
-    "daily",
-    "weather_code,temperature_2m_max,temperature_2m_min"
-  );
+  url.searchParams.set("current", "temperature_2m,weather_code");
+  url.searchParams.set("hourly", "temperature_2m,weather_code");
+  url.searchParams.set("daily", "weather_code,temperature_2m_max,temperature_2m_min");
   url.searchParams.set("forecast_days", "3");
 
   const res = await fetch(url.toString(), {
@@ -173,13 +186,20 @@ export default async function MiliaPage() {
   const songsWithWeather = await Promise.all(
     songs.map(async (song) => {
       try {
+        const [weather, audioUrl] = await Promise.all([
+          getWeatherForSong(song),
+          createSignedAudioUrl(song.audio_path),
+        ]);
+
         return {
           song,
-          weather: await getWeatherForSong(song),
+          audioUrl,
+          weather,
         };
       } catch {
         return {
           song,
+          audioUrl: null,
           weather: null,
         };
       }
@@ -192,15 +212,18 @@ export default async function MiliaPage() {
         <Link href="/home" className={styles.backPill} aria-label="Back to Home">
           ‹
         </Link>
-        <div className={styles.titlePill}>Milia</div>
+
+        <button type="button" className={styles.morePill} aria-label="More options">
+          •••
+        </button>
       </div>
 
       <div className={styles.container}>
         <section className={styles.hero}>
-          <p className={styles.heroKicker}>Weather songs</p>
-          <h1 className={styles.heroTitle}>Songs tied to real places</h1>
+          <p className={styles.heroKicker}>Weather music</p>
+          <h1 className={styles.heroTitle}>Milia</h1>
           <p className={styles.heroSub}>
-            Tap any song to open its place, current weather, forecast, and track details.
+            Songs connected to real places, with live weather unfolding around them.
           </p>
         </section>
 
@@ -208,54 +231,30 @@ export default async function MiliaPage() {
           {songsWithWeather.length === 0 ? (
             <div className={styles.empty}>No Milia songs yet.</div>
           ) : (
-            songsWithWeather.map(({ song, weather }) => (
-              <Link
-                key={song.slug}
-                href={`/apps/milia/${song.slug}`}
-                className={styles.card}
-              >
-                <div className={styles.cardTop}>
-                  <div>
-                    <h2 className={styles.cardTitle}>{song.title}</h2>
-                    <p className={styles.cardArtist}>{song.artist_name || "Unknown artist"}</p>
-                  </div>
+            songsWithWeather.map(({ song, weather, audioUrl }) => {
+              const placeLabel =
+                song.weather_location_name ||
+                [song.weather_city, song.weather_region, song.weather_country]
+                  .filter(Boolean)
+                  .join(", ") ||
+                song.weather_search_label ||
+                "Unknown location";
 
-                  <div className={styles.cardTemp}>
-                    {weather?.current?.temperature != null
-                      ? `${Math.round(weather.current.temperature)}°`
-                      : "—"}
-                  </div>
-                </div>
-
-                <div className={styles.cardMeta}>
-                  <div className={styles.cardCondition}>
-                    {weather?.today?.label || weather?.current?.label || "Forecast unavailable"}
-                  </div>
-                  <div className={styles.cardRange}>
-                    H:{weather?.today?.tempMax != null ? Math.round(weather.today.tempMax) : "—"}°
-                    {"  "}
-                    L:{weather?.today?.tempMin != null ? Math.round(weather.today.tempMin) : "—"}°
-                  </div>
-                </div>
-
-                {weather?.hourly?.length ? (
-                  <>
-                    <div className={styles.cardDivider} />
-                    <div className={styles.hourlyRow}>
-                      {weather.hourly.slice(0, 4).map((hour) => (
-                        <div key={hour.time} className={styles.hourChip}>
-                          <div className={styles.hourTime}>{formatHourLabel(hour.time)}</div>
-                          <div className={styles.hourTemp}>
-                            {hour.temperature != null ? `${Math.round(hour.temperature)}°` : "—"}
-                          </div>
-                          <div className={styles.hourLabel}>{hour.label}</div>
-                        </div>
-                      ))}
-                    </div>
-                  </>
-                ) : null}
-              </Link>
-            ))
+              return (
+                <MiliaSongCard
+                  key={song.slug}
+                  href={`/apps/milia/${song.slug}`}
+                  slug={song.slug}
+                  title={song.title}
+                  artistName={song.artist_name || "Unknown artist"}
+                  placeLabel={placeLabel}
+                  audioUrl={audioUrl}
+                  weather={weather}
+                  themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
+                  formatHourLabel={formatHourLabel}
+                />
+              );
+            })
           )}
         </section>
       </div>
