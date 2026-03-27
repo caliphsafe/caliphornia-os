@@ -438,19 +438,40 @@ function getCurrentTrackSongSlug(track: GlobalTrack | null) {
 
     audio.addEventListener("canplay", onCanPlay, { once: true });
 
-    analytic
+// 🔥 analytics (THIS is what you were missing)
+const analyticsSlug =
+  currentTrack?.analyticsSongSlug ||
+  currentTrack?.playlistSongSlug ||
+  currentTrack?.slug;
 
-    void refreshFavoriteState(currentTrack);
+if (analyticsSlug && currentTrack?.file) {
+  void fetch("/api/events/song-play", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json"
+    },
+    body: JSON.stringify({
+      userEmail: email,
+      songSlug: analyticsSlug,
+      sourcePath: window.location.pathname,
+      sourceApp: currentTrack?.sourceApp || null
+    })
+  }).catch(() => {});
+}
 
-    if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
-      const path = window.location.pathname;
-      const isOnFriendsConversationPage =
-        path.startsWith("/apps/friends/") && path !== "/apps/friends";
+// keep this
+void refreshFavoriteState(currentTrack);
 
-      if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) {
-        router.push(currentTrack.conversationRoute);
-      }
-    }
+// keep this
+if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
+  const path = window.location.pathname;
+  const isOnFriendsConversationPage =
+    path.startsWith("/apps/friends/") && path !== "/apps/friends";
+
+  if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) {
+    router.push(currentTrack.conversationRoute);
+  }
+}
 
     return () => {
       audio.removeEventListener("canplay", onCanPlay);
