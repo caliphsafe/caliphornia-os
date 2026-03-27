@@ -31,6 +31,20 @@ type SongRow = {
   globalPlayCount?: number;
 };
 
+function countByLabel(rows: { label: string }[]) {
+  const map = new Map<string, number>();
+
+  for (const row of rows) {
+    const label = String(row.label || "").trim();
+    if (!label) continue;
+    map.set(label, (map.get(label) || 0) + 1);
+  }
+
+  return Array.from(map.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export default async function StatsPage() {
   const cookieStore = await cookies();
   const token = cookieStore.get("caliph_os_session")?.value ?? null;
@@ -42,7 +56,7 @@ export default async function StatsPage() {
 
   const userEmail = session.email;
 
-  const [globalStatsRes, userStatsRes, favoritesRes, songsRes] = await Promise.all([
+  const [globalStatsRes, userStatsRes, favoritesRes, songsRes, eventLogsRes] = await Promise.all([
     supabaseAdmin
       .from("global_song_stats")
       .select("song_id, song_slug, play_count, unique_listener_count"),
@@ -69,9 +83,20 @@ export default async function StatsPage() {
         source_app_slug,
         duration_label
       `),
+
+    supabaseAdmin
+      .from("event_logs")
+      .select("country, region, city, platform")
+      .eq("user_email", userEmail),
   ]);
 
-  if (globalStatsRes.error || userStatsRes.error || favoritesRes.error || songsRes.error) {
+  if (
+    globalStatsRes.error ||
+    userStatsRes.error ||
+    favoritesRes.error ||
+    songsRes.error ||
+    eventLogsRes.error
+  ) {
     redirect("/home");
   }
 
@@ -150,6 +175,24 @@ export default async function StatsPage() {
   userSongs.sort((a, b) => (b.lastPlayedAt || "").localeCompare(a.lastPlayedAt || ""));
   favoriteSongs.sort((a, b) => (b.favoritedAt || "").localeCompare(a.favoritedAt || ""));
 
+  const eventLogs = eventLogsRes.data || [];
+
+  const topCities = countByLabel(
+    eventLogs.map((row) => ({ label: row.city || "" }))
+  );
+
+  const topRegions = countByLabel(
+    eventLogs.map((row) => ({ label: row.region || "" }))
+  );
+
+  const topCountries = countByLabel(
+    eventLogs.map((row) => ({ label: row.country || "" }))
+  );
+
+  const topPlatforms = countByLabel(
+    eventLogs.map((row) => ({ label: row.platform || "" }))
+  );
+
   return (
     <StatsClient
       username={session.username}
@@ -162,6 +205,10 @@ export default async function StatsPage() {
       globalSongs={globalSongs}
       userSongs={userSongs}
       favoriteSongs={favoriteSongs}
+      topCities={topCities}
+      topRegions={topRegions}
+      topCountries={topCountries}
+      topPlatforms={topPlatforms}
     />
   );
 }
