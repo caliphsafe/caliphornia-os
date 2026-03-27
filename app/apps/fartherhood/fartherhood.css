@@ -579,6 +579,7 @@ body.modal-lock{ overflow: hidden; }
   position: fixed;
   z-index: 3000;
   width: min(360px, calc(100vw - 24px));
+  max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 110px);
   border-radius: 26px;
   padding: 14px 14px 12px;
   background: rgba(28,28,30,0.72);
@@ -588,6 +589,8 @@ body.modal-lock{ overflow: hidden; }
   -webkit-backdrop-filter: blur(22px);
   display: none;
   transform-origin: top right;
+  overflow-y: auto;
+  overflow-x: hidden;
 }
 
 .collab-popover.open{ display: block; }
@@ -700,7 +703,9 @@ body.modal-lock{ overflow: hidden; }
   background: rgba(255,255,255,0.06);
   border: 1px solid rgba(255,255,255,0.10);
   border-radius: 18px;
-  overflow: hidden;
+  overflow-x: hidden;
+  overflow-y: auto;
+  max-height: min(42dvh, 420px);
 }
 
 .collab-row{
@@ -869,4 +874,42 @@ body.has-global-player .bottom-pill{
 
 body.has-global-player .compose-fab{
   bottom: calc(env(safe-area-inset-bottom) + 98px);
+}
+@media (max-width: 600px){
+  .collab-popover{
+    width: calc(100vw - 20px);
+    max-height: calc(100dvh - env(safe-area-inset-top) - env(safe-area-inset-bottom) - 90px);
+    padding: 12px 12px 10px;
+    border-radius: 22px;
+  }
+
+  .collab-list{
+    max-height: min(38dvh, 340px);
+  }
+
+  .collab-actions{
+    gap: 10px;
+  }
+
+  .collab-action{
+    padding: 10px 8px 9px;
+    border-radius: 14px;
+  }
+
+  .collab-row{
+    padding: 11px 10px;
+  }
+
+  .collab-row-title{
+    font-size: 0.96rem;
+  }
+
+  .collab-row-sub{
+    font-size: 0.9rem;
+  }
+
+  .collab-tag{
+    font-size: 0.8rem;
+    padding: 5px 9px;
+  }
 }
