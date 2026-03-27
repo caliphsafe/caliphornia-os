@@ -28,11 +28,11 @@ export default async function StatsPage() {
   const [globalStatsRes, userStatsRes, favoritesRes, songsRes] = await Promise.all([
     supabaseAdmin
       .from("global_song_stats")
-      .select("song_id, song_slug, play_count, completed_count, unique_listener_count"),
+      .select("song_id, song_slug, play_count, unique_listener_count"),
 
     supabaseAdmin
       .from("user_song_stats")
-      .select("song_id, song_slug, play_count, completed_count, last_played_at")
+      .select("song_id, song_slug, play_count, last_played_at")
       .eq("user_email", userEmail),
 
     supabaseAdmin
@@ -90,7 +90,6 @@ export default async function StatsPage() {
         durationLabel: song?.duration_label || "",
         coverImageUrl,
         playCount: row.play_count || 0,
-        completedCount: row.completed_count || 0,
         uniqueListenerCount: row.unique_listener_count || 0,
         isFavorite: favoriteSlugSet.has(row.song_slug)
       };
@@ -112,7 +111,6 @@ export default async function StatsPage() {
         durationLabel: song?.duration_label || "",
         coverImageUrl,
         playCount: row.play_count || 0,
-        completedCount: row.completed_count || 0,
         lastPlayedAt: row.last_played_at || null,
         isFavorite: favoriteSlugSet.has(row.song_slug)
       };
@@ -136,7 +134,6 @@ export default async function StatsPage() {
         coverImageUrl,
         favoritedAt: favoriteCreatedAtMap.get(songSlug) || null,
         userPlayCount: userStat?.play_count || 0,
-        userCompletedCount: userStat?.completed_count || 0,
         globalPlayCount: globalStat?.play_count || 0
       };
     })
@@ -149,8 +146,7 @@ export default async function StatsPage() {
   const totals = {
     totalUserPlayedSongs: userSongs.length,
     totalFavoriteSongs: favoriteSongs.length,
-    totalUserPlays: userSongs.reduce((sum, row) => sum + (row.playCount || 0), 0),
-    totalUserCompletions: userSongs.reduce((sum, row) => sum + (row.completedCount || 0), 0)
+    totalUserPlays: userSongs.reduce((sum, row) => sum + (row.playCount || 0), 0)
   };
 
   return (
@@ -175,10 +171,6 @@ export default async function StatsPage() {
         <div style={cardStyle}>
           <div style={labelStyle}>Your Total Plays</div>
           <div style={valueStyle}>{totals.totalUserPlays}</div>
-        </div>
-        <div style={cardStyle}>
-          <div style={labelStyle}>Your Completions</div>
-          <div style={valueStyle}>{totals.totalUserCompletions}</div>
         </div>
       </section>
 
@@ -233,7 +225,6 @@ function StatsSection({
                   {mode === "global" ? (
                     <>
                       <span>Plays: {row.playCount}</span>
-                      <span>Completed: {row.completedCount}</span>
                       <span>Listeners: {row.uniqueListenerCount}</span>
                     </>
                   ) : null}
@@ -241,7 +232,6 @@ function StatsSection({
                   {mode === "user" ? (
                     <>
                       <span>Plays: {row.playCount}</span>
-                      <span>Completed: {row.completedCount}</span>
                       <span>
                         Last Played:{" "}
                         {row.lastPlayedAt ? new Date(row.lastPlayedAt).toLocaleString() : "—"}
@@ -252,7 +242,6 @@ function StatsSection({
                   {mode === "favorites" ? (
                     <>
                       <span>User Plays: {row.userPlayCount}</span>
-                      <span>User Completed: {row.userCompletedCount}</span>
                       <span>Global Plays: {row.globalPlayCount}</span>
                     </>
                   ) : null}
