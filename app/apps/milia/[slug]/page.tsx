@@ -2,7 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import MiliaDetailPlayer from "@/components/MiliaDetailPlayer";
-import type { MiliaQueueItem } from "@/lib/milia-player";
+import type { GlobalTrack } from "@/components/GlobalPlayer";
 import styles from "../milia.module.css";
 
 export const dynamic = "force-dynamic";
