@@ -29,12 +29,7 @@ export async function GET() {
 
     const userEmail = session.email;
 
-    const [
-      globalStatsRes,
-      userStatsRes,
-      favoritesRes,
-      songsRes
-    ] = await Promise.all([
+    const [globalStatsRes, userStatsRes, favoritesRes, songsRes] = await Promise.all([
       supabaseAdmin
         .from("global_song_stats")
         .select("song_id, song_slug, play_count, unique_listener_count"),
@@ -92,9 +87,7 @@ export async function GET() {
     }
 
     const songs = songsRes.data || [];
-    const songMap = new Map(
-      songs.map((song) => [song.slug, song])
-    );
+    const songMap = new Map(songs.map((song) => [song.slug, song]));
 
     const favoriteSlugSet = new Set(
       (favoritesRes.data || []).map((row) => row.song_slug).filter(Boolean)
@@ -119,7 +112,6 @@ export async function GET() {
           durationLabel: song?.duration_label || "",
           coverImageUrl: coverUrl,
           playCount: row.play_count || 0,
-          completedCount: row.completed_count || 0,
           uniqueListenerCount: row.unique_listener_count || 0,
           isFavorite: favoriteSlugSet.has(row.song_slug)
         };
@@ -141,7 +133,6 @@ export async function GET() {
           durationLabel: song?.duration_label || "",
           coverImageUrl: coverUrl,
           playCount: row.play_count || 0,
-          completedCount: row.completed_count || 0,
           lastPlayedAt: row.last_played_at || null,
           isFavorite: favoriteSlugSet.has(row.song_slug)
         };
@@ -165,7 +156,6 @@ export async function GET() {
           coverImageUrl: coverUrl,
           favoritedAt: favoriteCreatedAtMap.get(songSlug) || null,
           userPlayCount: userStat?.play_count || 0,
-          userCompletedCount: userStat?.completed_count || 0,
           globalPlayCount: globalStat?.play_count || 0
         };
       })
@@ -178,8 +168,7 @@ export async function GET() {
     const totals = {
       totalUserPlayedSongs: mergedUser.length,
       totalFavoriteSongs: mergedFavorites.length,
-      totalUserPlays: mergedUser.reduce((sum, row) => sum + (row.playCount || 0), 0),
-      totalUserCompletions: mergedUser.reduce((sum, row) => sum + (row.completedCount || 0), 0)
+      totalUserPlays: mergedUser.reduce((sum, row) => sum + (row.playCount || 0), 0)
     };
 
     return NextResponse.json({
