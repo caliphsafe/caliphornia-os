@@ -150,7 +150,10 @@ export default function EmailWall() {
   }
 
   return (
-    <div className="lock-screen-panel ios-lock-shell">
+  <div
+    className="lock-screen-panel ios-lock-shell"
+    style={{ height: "100dvh", overflow: "hidden", touchAction: "none" }}
+  >
       <div className="lock-wallpaper-glow" />
       <div className="lock-noise" />
 
@@ -275,16 +278,18 @@ export default function EmailWall() {
 
       <style jsx>{`
         .lock-screen-panel {
-          position: relative;
-          min-height: 100dvh;
-          overflow: hidden;
-          display: flex;
-          flex-direction: column;
-          justify-content: center;
-          align-items: center;
-          padding: 24px 16px 40px;
-          color: #fff;
-        }
+  position: relative;
+  height: 100dvh;
+  min-height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  box-sizing: border-box;
+  padding: max(18px, env(safe-area-inset-top)) 16px max(18px, env(safe-area-inset-bottom));
+  color: #fff;
+}
 
         .lock-wallpaper-glow {
           position: absolute;
@@ -309,13 +314,12 @@ export default function EmailWall() {
         }
 
         .lock-screen-content {
-          position: relative;
-          z-index: 2;
-          text-align: center;
-          margin-bottom: 42px;
-          transition: transform 180ms ease, opacity 180ms ease;
-        }
-
+  position: relative;
+  z-index: 2;
+  text-align: center;
+  margin-bottom: clamp(20px, 4vh, 42px);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
         .lock-screen-content.is-unlocking {
           transform: scale(1.02) translateY(-4px);
           opacity: 0.9;
@@ -355,10 +359,11 @@ export default function EmailWall() {
         }
 
         .unlock-area {
-          position: relative;
-          z-index: 2;
-          width: min(520px, calc(100vw - 24px));
-        }
+  position: relative;
+  z-index: 2;
+  width: min(520px, calc(100vw - 24px));
+  flex-shrink: 0;
+}
 
         .unlock-track {
           position: relative;
@@ -439,21 +444,22 @@ export default function EmailWall() {
         }
 
         .email-card {
-          position: relative;
-          z-index: 2;
-          width: min(460px, calc(100vw - 24px));
-          border-radius: 28px;
-          border: 1px solid rgba(255,255,255,0.14);
-          background:
-            linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05)),
-            rgba(8, 17, 29, 0.76);
-          backdrop-filter: blur(26px) saturate(160%);
-          -webkit-backdrop-filter: blur(26px) saturate(160%);
-          box-shadow:
-            0 24px 50px rgba(0,0,0,0.28),
-            inset 0 1px 0 rgba(255,255,255,0.1);
-          padding: 20px;
-        }
+  position: relative;
+  z-index: 2;
+  width: min(460px, calc(100vw - 24px));
+  box-sizing: border-box;
+  border-radius: 28px;
+  border: 1px solid rgba(255,255,255,0.14);
+  background:
+    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.05)),
+    rgba(8, 17, 29, 0.76);
+  backdrop-filter: blur(26px) saturate(160%);
+  -webkit-backdrop-filter: blur(26px) saturate(160%);
+  box-shadow:
+    0 24px 50px rgba(0,0,0,0.28),
+    inset 0 1px 0 rgba(255,255,255,0.1);
+  padding: 20px;
+}
 
         .email-card-top {
           text-align: center;
@@ -549,9 +555,12 @@ export default function EmailWall() {
         }
 
         @media (max-width: 640px) {
-          .lock-screen-panel {
-            padding: 18px 12px 28px;
-          }
+  .lock-screen-panel {
+    padding:
+      max(12px, env(safe-area-inset-top))
+      12px
+      max(12px, env(safe-area-inset-bottom));
+  }
 
           .lock-date-top {
             font-size: 18px;
