@@ -5,14 +5,11 @@ import { verifySession } from "@/lib/session";
 
 export default async function Page() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("caliph_os_session")?.value;
+  const token = cookieStore.get("caliph_os_session")?.value ?? null;
+  const session = verifySession(token);
 
-  if (token) {
-    const session = verifySession(token);
-
-    if (session?.email) {
-      redirect("/home");
-    }
+  if (session?.email) {
+    redirect("/home");
   }
 
   return (
