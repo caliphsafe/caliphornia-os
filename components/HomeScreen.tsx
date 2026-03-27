@@ -50,7 +50,7 @@ export default function HomeScreen({
           {role === "admin" ? (
             <a href="/dashboard" className="ios-app-icon" aria-label="Dashboard">
               <div className="ios-app-icon-tile">
-                <div className="admin-app-glyph">⌘</div>
+                <div className="admin-app-glyph">⚙️</div>
                 <div className="icon-shine" />
                 <div className="icon-glow" />
               </div>
