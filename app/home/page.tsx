@@ -10,28 +10,29 @@ export default async function HomePage() {
 
   const session = verifySession(token);
 
-  //  No session → back to lock screen
   if (!session?.email) {
     redirect("/");
   }
 
-  //  Always fetch fresh user from DB
   const { data, error } = await supabaseAdmin
     .from("app_users")
-    .select("email, username")
+    .select("email, username, role")
     .eq("email", session.email)
     .limit(1);
 
   let username = "";
+  let role = "user";
 
   if (!error && data && data.length > 0) {
     username = data[0].username || "";
+    role = data[0].role || "user";
   }
 
   return (
     <HomeScreen
       email={session.email}
       username={username}
+      role={role}
     />
   );
 }
