@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import styles from "./milia.module.css";
+
 function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL;
@@ -16,6 +17,7 @@ function getBaseUrl() {
 
   return "http://localhost:3000";
 }
+
 type SongRow = {
   slug: string;
   title: string;
@@ -53,17 +55,6 @@ type WeatherData = {
   }>;
 };
 
-async function createSignedCoverUrl(storagePath: string | null | undefined) {
-  if (!storagePath) return null;
-
-  const { data, error } = await supabaseAdmin.storage
-    .from("cover-art")
-    .createSignedUrl(storagePath, 60 * 60);
-
-  if (error || !data?.signedUrl) return null;
-  return data.signedUrl;
-}
-
 function formatHourLabel(value: string) {
   try {
     return new Date(value).toLocaleTimeString("en-US", {
@@ -92,9 +83,12 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
 
   const baseUrl = getBaseUrl();
 
-const res = await fetch(`${baseUrl}/api/apps/milia/weather?${params.toString()}`, {
-  next: { revalidate: 60 * 15 },
-});
+  const res = await fetch(
+    `${baseUrl}/api/apps/milia/weather?${params.toString()}`,
+    {
+      next: { revalidate: 60 * 15 },
+    }
+  );
 
   if (!res.ok) return null;
 
@@ -140,22 +134,20 @@ export default async function MiliaPage() {
   const songs = (data || []) as SongRow[];
 
   const songsWithWeather = await Promise.all(
-  songs.map(async (song) => {
-    try {
-      return {
-        song,
-        coverUrl: await createSignedCoverUrl(song.cover_image_path),
-        weather: await getWeatherForSong(song),
-      };
-    } catch {
-      return {
-        song,
-        coverUrl: await createSignedCoverUrl(song.cover_image_path),
-        weather: null,
-      };
-    }
-  })
-);
+    songs.map(async (song) => {
+      try {
+        return {
+          song,
+          weather: await getWeatherForSong(song),
+        };
+      } catch {
+        return {
+          song,
+          weather: null,
+        };
+      }
+    })
+  );
 
   return (
     <main className={styles.page}>
@@ -180,11 +172,17 @@ export default async function MiliaPage() {
             <div className={styles.empty}>No Milia songs yet.</div>
           ) : (
             songsWithWeather.map(({ song, weather }) => (
-              <Link key={song.slug} href={`/apps/milia/${song.slug}`} className={styles.card}>
+              <Link
+                key={song.slug}
+                href={`/apps/milia/${song.slug}`}
+                className={styles.card}
+              >
                 <div className={styles.cardTop}>
                   <div>
                     <h2 className={styles.cardTitle}>{song.title}</h2>
-                    <p className={styles.cardArtist}>{song.artist_name || "Unknown artist"}</p>
+                    <p className={styles.cardArtist}>
+                      {song.artist_name || "Unknown artist"}
+                    </p>
                   </div>
 
                   <div className={styles.cardTemp}>
@@ -196,12 +194,21 @@ export default async function MiliaPage() {
 
                 <div className={styles.cardMeta}>
                   <div className={styles.cardCondition}>
-                    {weather?.today?.label || weather?.current?.label || "Forecast unavailable"}
+                    {weather?.today?.label ||
+                      weather?.current?.label ||
+                      "Forecast unavailable"}
                   </div>
                   <div className={styles.cardRange}>
-                    H:{weather?.today?.tempMax != null ? Math.round(weather.today.tempMax) : "—"}°
-                    {"  "}
-                    L:{weather?.today?.tempMin != null ? Math.round(weather.today.tempMin) : "—"}°
+                    H:
+                    {weather?.today?.tempMax != null
+                      ? Math.round(weather.today.tempMax)
+                      : "—"}
+                    °{"  "}
+                    L:
+                    {weather?.today?.tempMin != null
+                      ? Math.round(weather.today.tempMin)
+                      : "—"}
+                    °
                   </div>
                 </div>
 
@@ -211,9 +218,13 @@ export default async function MiliaPage() {
                     <div className={styles.hourlyRow}>
                       {weather.hourly.slice(0, 4).map((hour) => (
                         <div key={hour.time} className={styles.hourChip}>
-                          <div className={styles.hourTime}>{formatHourLabel(hour.time)}</div>
+                          <div className={styles.hourTime}>
+                            {formatHourLabel(hour.time)}
+                          </div>
                           <div className={styles.hourTemp}>
-                            {hour.temperature != null ? `${Math.round(hour.temperature)}°` : "—"}
+                            {hour.temperature != null
+                              ? `${Math.round(hour.temperature)}°`
+                              : "—"}
                           </div>
                           <div className={styles.hourLabel}>{hour.label}</div>
                         </div>
