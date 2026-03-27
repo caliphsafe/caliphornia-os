@@ -66,6 +66,14 @@ function formatDurationLabel(totalSeconds: number) {
   return `${mm}:${String(ss).padStart(2, "0")}`;
 }
 
+function getInitials(name: string) {
+  const clean = String(name || "").trim();
+  if (!clean) return "•";
+  const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 1) return parts[0].slice(0, 1).toUpperCase();
+  return `${parts[0][0] || ""}${parts[1][0] || ""}`.toUpperCase();
+}
+
 const EMPTY_MESSAGE = (): MessageRow => ({
   clientId: uid(),
   messageType: "text",
@@ -110,11 +118,9 @@ function AudioClipEditor({
   }, [sourceUrl]);
 
   function syncValues(nextStart: number, nextEnd: number | null, totalDuration: number) {
-    const safeStart = Math.max(0, Math.min(nextStart, totalDuration || 0));
-    const safeEnd =
-      nextEnd === null
-        ? totalDuration || 0
-        : Math.max(safeStart, Math.min(nextEnd, totalDuration || 0));
+    const total = Math.max(0, totalDuration || 0);
+    const safeStart = Math.max(0, Math.min(nextStart, total));
+    const safeEnd = nextEnd === null ? total : Math.max(safeStart, Math.min(nextEnd, total));
 
     onChange({
       clipStart: Number(safeStart.toFixed(2)),
@@ -123,32 +129,29 @@ function AudioClipEditor({
     });
   }
 
+  const waveBars = Array.from({ length: 48 }, (_, i) => {
+    const base = 12 + ((i * 7) % 26);
+    return base;
+  });
+
+  const total = duration || 0;
+  const startPct = total > 0 ? (clipStart / total) * 100 : 0;
+  const endPct = total > 0 ? (((clipEnd ?? total) / total) * 100) : 100;
+
   return (
-    <div
-      style={{
-        marginTop: 12,
-        border: "1px solid rgba(255,255,255,0.08)",
-        borderRadius: 12,
-        padding: 12
-      }}
-    >
-      <div style={{ marginBottom: 10, fontSize: 13, opacity: 0.75 }}>
-        Select the part of the audio that should play for this entry.
-      </div>
+    <div className="clip-card">
+      <div className="clip-copy">Choose the section of the audio that should play for this entry.</div>
 
       {sourceUrl ? (
         <audio
           controls
           src={sourceUrl}
-          style={{ width: "100%", marginBottom: 12 }}
+          className="clip-audio"
           onLoadedMetadata={(e) => {
             const d = Number(e.currentTarget.duration || 0);
             setDuration(d);
-
-            const endToUse =
-              clipEnd === null || clipEnd === 0 ? d : Math.min(clipEnd, d);
+            const endToUse = clipEnd === null || clipEnd === 0 ? d : Math.min(clipEnd, d);
             const startToUse = Math.min(clipStart || 0, endToUse);
-
             onChange({
               clipStart: Number(startToUse.toFixed(2)),
               clipEnd: Number(endToUse.toFixed(2)),
@@ -157,16 +160,28 @@ function AudioClipEditor({
           }}
         />
       ) : (
-        <div style={{ marginBottom: 12, opacity: 0.7 }}>
-          Choose an audio source to preview and trim.
-        </div>
+        <div className="clip-muted">Choose an audio source first.</div>
       )}
 
-      <div style={{ display: "grid", gap: 10 }}>
-        <label>
-          <div style={{ marginBottom: 6 }}>
-            Start: {clipStart.toFixed(2)}s
-          </div>
+      <div className="wave-shell">
+        <div className="wave-bars">
+          {waveBars.map((h, i) => (
+            <span key={i} className="wave-bar" style={{ height: h }} />
+          ))}
+        </div>
+
+        <div
+          className="wave-highlight"
+          style={{
+            left: `${startPct}%`,
+            width: `${Math.max(0, endPct - startPct)}%`
+          }}
+        />
+      </div>
+
+      <div className="clip-grid">
+        <label className="clip-label">
+          <div>Start: {clipStart.toFixed(2)}s</div>
           <input
             type="range"
             min={0}
@@ -179,14 +194,11 @@ function AudioClipEditor({
               const currentEnd = clipEnd === null ? duration : clipEnd;
               syncValues(nextStart, currentEnd, duration);
             }}
-            style={{ width: "100%" }}
           />
         </label>
 
-        <label>
-          <div style={{ marginBottom: 6 }}>
-            End: {(clipEnd ?? duration ?? 0).toFixed(2)}s
-          </div>
+        <label className="clip-label">
+          <div>End: {(clipEnd ?? duration ?? 0).toFixed(2)}s</div>
           <input
             type="range"
             min={0}
@@ -198,25 +210,114 @@ function AudioClipEditor({
               const nextEnd = Number(e.target.value);
               syncValues(clipStart, nextEnd, duration);
             }}
-            style={{ width: "100%" }}
           />
         </label>
+      </div>
 
-        <div style={{ fontSize: 13, opacity: 0.8 }}>
-          Clip length: {clipDurationLabelFromValues(clipStart, clipEnd, duration)}
+      <div className="clip-length">
+        Clip length: {formatDurationLabel(Math.max(0, (clipEnd ?? duration ?? 0) - clipStart))}
+      </div>
+    </div>
+  );
+}
+
+function PreviewPhone({
+  conversationTitle,
+  listPreview,
+  selectedSong,
+  messages,
+  audioSourceOptions
+}: {
+  conversationTitle: string;
+  listPreview: string;
+  selectedSong: SongOption | null;
+  messages: MessageRow[];
+  audioSourceOptions: AudioSourceOption[];
+}) {
+  function resolveSourceLabel(slug: string) {
+    return audioSourceOptions.find((a) => a.slug === slug)?.label || slug || "Audio";
+  }
+
+  return (
+    <div className="preview-wrap">
+      <div className="phone-shell">
+        <div className="phone-notch" />
+
+        <div className="phone-topbar">
+          <div className="phone-back">‹ Fri.ends</div>
+          <div className="phone-header">
+            <div className="phone-avatar">{getInitials(conversationTitle || selectedSong?.title || "F")}</div>
+            <div>
+              <div className="phone-title">{conversationTitle || selectedSong?.title || "Conversation"}</div>
+              <div className="phone-sub">{selectedSong?.artist_name || "Artists"}</div>
+            </div>
+          </div>
+          <div className="phone-more">⋯</div>
+        </div>
+
+        <div className="phone-inbox-preview">
+          <span className="phone-inbox-label">Inbox preview</span>
+          <span className="phone-inbox-text">{listPreview || "What shows in the inbox preview"}</span>
+        </div>
+
+        <div className="phone-thread">
+          {messages.length === 0 ? (
+            <div className="phone-empty">Add messages to preview the conversation.</div>
+          ) : (
+            messages.map((msg) => {
+              if (msg.messageType === "timestamp") {
+                return (
+                  <div className="bubble-time" key={msg.clientId}>
+                    {msg.body || "Today 7:15 PM"}
+                  </div>
+                );
+              }
+
+              const outgoing = msg.messageSide === "outgoing";
+              const sender = msg.senderName || (outgoing ? "Caliph" : "Sender");
+
+              return (
+                <div
+                  key={msg.clientId}
+                  className={`bubble-row ${outgoing ? "outgoing" : "incoming"}`}
+                >
+                  {!outgoing ? (
+                    <div className="bubble-avatar">{getInitials(sender)}</div>
+                  ) : null}
+
+                  <div className="bubble-stack">
+                    {!outgoing ? <div className="bubble-sender">{sender}</div> : null}
+
+                    {msg.messageType === "text" ? (
+                      <div className={`bubble ${outgoing ? "bubble-blue" : "bubble-gray"}`}>
+                        {msg.body || (outgoing ? "Type your message" : "Type collaborator message")}
+                      </div>
+                    ) : (
+                      <div className={`bubble bubble-audio ${outgoing ? "bubble-blue" : "bubble-gray"}`}>
+                        <div className="audio-pill-top">
+                          <span>{msg.audioLabel || resolveSourceLabel(msg.audioSourceSlug)}</span>
+                          <span>{msg.audioKind || "Song"}</span>
+                        </div>
+                        <div className="audio-wave">
+                          {Array.from({ length: 22 }, (_, i) => (
+                            <span key={i} style={{ height: 8 + ((i * 5) % 18) }} />
+                          ))}
+                        </div>
+                        <div className="audio-pill-bottom">
+                          <span>{resolveSourceLabel(msg.audioSourceSlug)}</span>
+                          <span>{msg.clipDurationLabel || "0:00"}</span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
         </div>
       </div>
     </div>
   );
-
-  function clipDurationLabelFromValues(
-    start: number,
-    end: number | null,
-    total: number
-  ) {
-    const safeEnd = end === null ? total : end;
-    return formatDurationLabel(Math.max(0, safeEnd - start));
-  }
 }
 
 export default function FriendsBuilderPage() {
@@ -248,18 +349,11 @@ export default function FriendsBuilderPage() {
   async function createSignedUploadTarget(bucket: string, path: string, upsert = true) {
     const res = await fetch("/api/dashboard/storage-upload", {
       method: "POST",
-      headers: {
-        "Content-Type": "application/json"
-      },
-      body: JSON.stringify({
-        bucket,
-        path,
-        upsert
-      })
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ bucket, path, upsert })
     });
 
     const data = await res.json();
-
     if (!data?.ok) {
       throw new Error(data?.error || "Could not create upload target.");
     }
@@ -291,7 +385,6 @@ export default function FriendsBuilderPage() {
 
   const senderOptions = useMemo(() => {
     const names = new Set<string>();
-
     names.add("Caliph");
 
     const rawArtists = selectedSong?.artist_name || "";
@@ -334,9 +427,7 @@ export default function FriendsBuilderPage() {
     try {
       const [songsRes, convosRes] = await Promise.all([
         fetch("/api/dashboard/friends-builder?mode=songs", { cache: "no-store" }),
-        fetch("/api/dashboard/friends-builder?mode=conversations", {
-          cache: "no-store"
-        })
+        fetch("/api/dashboard/friends-builder?mode=conversations", { cache: "no-store" })
       ]);
 
       const songsData = await songsRes.json();
@@ -382,9 +473,7 @@ export default function FriendsBuilderPage() {
 
     try {
       const res = await fetch(
-        `/api/dashboard/friends-builder?mode=conversation-detail&slug=${encodeURIComponent(
-          slug
-        )}`,
+        `/api/dashboard/friends-builder?mode=conversation-detail&slug=${encodeURIComponent(slug)}`,
         { cache: "no-store" }
       );
       const data = await res.json();
@@ -401,8 +490,7 @@ export default function FriendsBuilderPage() {
       setConversationTitle(detail.conversation.title || "");
       setListPreview(detail.conversation.list_preview || "");
       setSortOrder(
-        detail.conversation.sort_order !== null &&
-          detail.conversation.sort_order !== undefined
+        detail.conversation.sort_order !== null && detail.conversation.sort_order !== undefined
           ? String(detail.conversation.sort_order)
           : ""
       );
@@ -581,22 +669,13 @@ export default function FriendsBuilderPage() {
             displayTime: "",
             audioLabel: m.audioLabel,
             audioKind: m.audioKind,
-            assetSlug:
-              m.messageType === "audio"
-                ? m.audioSourceSlug || primarySongSlug
-                : "",
+            assetSlug: m.messageType === "audio" ? m.audioSourceSlug || primarySongSlug : "",
             clipTitle:
-              m.messageType === "audio"
-                ? m.audioLabel || m.audioKind || "Audio"
-                : "",
-            startSeconds:
-              m.messageType === "audio" ? String(m.clipStart || 0) : "",
+              m.messageType === "audio" ? m.audioLabel || m.audioKind || "Audio" : "",
+            startSeconds: m.messageType === "audio" ? String(m.clipStart || 0) : "",
             endSeconds:
-              m.messageType === "audio" && m.clipEnd !== null
-                ? String(m.clipEnd)
-                : "",
-            displayDuration:
-              m.messageType === "audio" ? m.clipDurationLabel || "" : ""
+              m.messageType === "audio" && m.clipEnd !== null ? String(m.clipEnd) : "",
+            displayDuration: m.messageType === "audio" ? m.clipDurationLabel || "" : ""
           }))
         )
       );
@@ -646,60 +725,68 @@ export default function FriendsBuilderPage() {
   }
 
   return (
-    <main style={{ padding: 24, maxWidth: 980, margin: "0 auto" }}>
-      <h1 style={{ marginBottom: 8 }}>Fri.ends Conversation Builder</h1>
-      <p style={{ marginTop: 0, marginBottom: 24, opacity: 0.75 }}>
-        Build the conversation first. Add alternate versions only if you need them.
-      </p>
+    <main className="builder-wrap">
+      <div className="builder-hero">
+        <div>
+          <h1>Fri.ends Conversation Builder</h1>
+          <p>
+            Build the story of how the song came together. Works on desktop and mobile.
+          </p>
+        </div>
+
+        <div className="builder-hero-actions">
+          <button
+            type="button"
+            onClick={resetBuilder}
+            className="ghost-btn"
+          >
+            New Conversation
+          </button>
+
+          <select
+            value={selectedConversationSlug}
+            onChange={(e) => {
+              const slug = e.target.value;
+              setSelectedConversationSlug(slug);
+              if (slug) loadConversation(slug);
+            }}
+            className="hero-select"
+          >
+            <option value="">Edit Existing Conversation</option>
+            {conversations.map((c) => (
+              <option key={c.slug} value={c.slug}>
+                {c.title} ({c.slug})
+              </option>
+            ))}
+          </select>
+
+          {conversationSlug ? (
+            <a
+              href={`/apps/friends/${slugify(conversationSlug)}`}
+              target="_blank"
+              rel="noreferrer"
+              className="ghost-link"
+            >
+              Preview in Fri.ends
+            </a>
+          ) : null}
+        </div>
+      </div>
 
       {loading ? (
-        <p>Loading…</p>
+        <p className="muted">Loading…</p>
       ) : (
-        <>
-          <div style={{ display: "flex", gap: 12, marginBottom: 24, flexWrap: "wrap" }}>
-            <button
-              type="button"
-              onClick={resetBuilder}
-              style={{ padding: "10px 14px", borderRadius: 10 }}
-            >
-              New Conversation
-            </button>
+        <div className="builder-grid">
+          <form onSubmit={handleSaveConversation} className="builder-form">
+            <section className="panel">
+              <h2>Conversation Setup</h2>
 
-            <select
-              value={selectedConversationSlug}
-              onChange={(e) => {
-                const slug = e.target.value;
-                setSelectedConversationSlug(slug);
-                if (slug) loadConversation(slug);
-              }}
-              style={{ padding: 10, minWidth: 280 }}
-            >
-              <option value="">Edit Existing Conversation</option>
-              {conversations.map((c) => (
-                <option key={c.slug} value={c.slug}>
-                  {c.title} ({c.slug})
-                </option>
-              ))}
-            </select>
-          </div>
-
-          <form onSubmit={handleSaveConversation} style={{ display: "grid", gap: 16 }}>
-            <section
-              style={{
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 16,
-                padding: 16
-              }}
-            >
-              <h2 style={{ marginTop: 0 }}>Conversation Setup</h2>
-
-              <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 16 }}>
-                <label>
-                  <div>Primary Song</div>
+              <div className="grid-two">
+                <label className="field">
+                  <span>Primary Song</span>
                   <select
                     value={primarySongSlug}
                     onChange={(e) => handlePrimarySongChange(e.target.value)}
-                    style={{ width: "100%", padding: 12 }}
                   >
                     <option value="">Choose the main song for this thread</option>
                     {songs.map((song) => (
@@ -710,86 +797,66 @@ export default function FriendsBuilderPage() {
                   </select>
                 </label>
 
-                <label>
-                  <div>Conversation Title</div>
+                <label className="field">
+                  <span>Conversation Title</span>
                   <input
                     value={conversationTitle}
                     onChange={(e) => setConversationTitle(e.target.value)}
                     placeholder="Conversation title, e.g. iMax"
-                    style={{ width: "100%", padding: 12 }}
                   />
                 </label>
               </div>
 
-              <div
-                style={{
-                  display: "grid",
-                  gridTemplateColumns: "1fr 1fr",
-                  gap: 16,
-                  marginTop: 16
-                }}
-              >
-                <label>
-                  <div>Conversation Slug</div>
+              <div className="grid-two">
+                <label className="field">
+                  <span>Conversation Slug</span>
                   <input
                     value={conversationSlug}
                     onChange={(e) => setConversationSlug(slugify(e.target.value))}
                     placeholder="Auto route, e.g. imax"
-                    style={{ width: "100%", padding: 12 }}
                   />
                 </label>
 
-                <label>
-                  <div>Inbox Preview</div>
+                <label className="field">
+                  <span>Inbox Preview</span>
                   <input
                     value={listPreview}
                     onChange={(e) => setListPreview(e.target.value)}
                     placeholder="What shows in the inbox preview"
-                    style={{ width: "100%", padding: 12 }}
                   />
                 </label>
               </div>
 
-              <div style={{ marginTop: 16, maxWidth: 220 }}>
-                <label>
-                  <div>Sort Order</div>
+              <div className="grid-small">
+                <label className="field">
+                  <span>Sort Order</span>
                   <input
                     value={sortOrder}
                     onChange={(e) => setSortOrder(e.target.value)}
                     type="number"
                     placeholder="1 = top"
-                    style={{ width: "100%", padding: 12 }}
                   />
                 </label>
               </div>
             </section>
 
-            <section
-              style={{
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 16,
-                padding: 16
-              }}
-            >
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
+            <section className="panel">
+              <div className="section-head">
                 <div>
-                  <h2 style={{ margin: 0 }}>Messages</h2>
-                  <p style={{ margin: "6px 0 0", opacity: 0.7 }}>
+                  <h2>Messages</h2>
+                  <p className="muted">
                     Timestamps only need timestamp text. Audio entries can preview and trim visually.
                   </p>
                 </div>
 
                 <button
                   type="button"
+                  className="ghost-btn"
                   onClick={() => {
                     const next = EMPTY_MESSAGE();
                     next.senderName = "Caliph";
                     next.messageSide = "outgoing";
-                    if (primarySongSlug) {
-                      next.audioSourceSlug = primarySongSlug;
-                    }
+                    if (primarySongSlug) next.audioSourceSlug = primarySongSlug;
                     setMessages((prev) => [...prev, next]);
                   }}
                 >
@@ -797,47 +864,32 @@ export default function FriendsBuilderPage() {
                 </button>
               </div>
 
-              <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
+              <div className="message-list">
                 {messages.map((msg, index) => {
                   const selectedSource =
                     audioSourceOptions.find((source) => source.slug === msg.audioSourceSlug) ||
                     null;
 
                   return (
-                    <div
-                      key={msg.clientId}
-                      style={{
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        borderRadius: 12,
-                        padding: 12
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "flex",
-                          justifyContent: "space-between",
-                          alignItems: "center",
-                          marginBottom: 12
-                        }}
-                      >
+                    <div key={msg.clientId} className="message-card">
+                      <div className="message-head">
                         <strong>Message {index + 1}</strong>
-                        <button type="button" onClick={() => removeMessage(msg.clientId)}>
+                        <button
+                          type="button"
+                          className="tiny-btn"
+                          onClick={() => removeMessage(msg.clientId)}
+                        >
                           Remove
                         </button>
                       </div>
 
                       <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns:
-                            msg.messageType === "timestamp"
-                              ? "180px 1fr"
-                              : "180px 180px 1fr",
-                          gap: 12
-                        }}
+                        className={`message-grid ${
+                          msg.messageType === "timestamp" ? "timestamp-grid" : ""
+                        }`}
                       >
-                        <label>
-                          <div>Type</div>
+                        <label className="field">
+                          <span>Type</span>
                           <select
                             value={msg.messageType}
                             onChange={(e) => {
@@ -858,7 +910,6 @@ export default function FriendsBuilderPage() {
                                   nextType === "audio" ? msg.clipDurationLabel || "" : ""
                               });
                             }}
-                            style={{ width: "100%", padding: 10 }}
                           >
                             <option value="text">Text</option>
                             <option value="audio">Audio</option>
@@ -867,8 +918,8 @@ export default function FriendsBuilderPage() {
                         </label>
 
                         {msg.messageType !== "timestamp" ? (
-                          <label>
-                            <div>Sender</div>
+                          <label className="field">
+                            <span>Sender</span>
                             <select
                               value={msg.senderName}
                               onChange={(e) => {
@@ -878,7 +929,6 @@ export default function FriendsBuilderPage() {
                                   messageSide: sender === "Caliph" ? "outgoing" : "incoming"
                                 });
                               }}
-                              style={{ width: "100%", padding: 10 }}
                             >
                               <option value="">Choose sender</option>
                               {senderOptions.map((name) => (
@@ -891,20 +941,19 @@ export default function FriendsBuilderPage() {
                         ) : null}
 
                         {msg.messageType === "timestamp" ? (
-                          <label style={{ gridColumn: "2 / 3" }}>
-                            <div>Timestamp Text</div>
+                          <label className="field wide-field">
+                            <span>Timestamp Text</span>
                             <input
                               value={msg.body}
                               onChange={(e) =>
                                 updateMessage(msg.clientId, { body: e.target.value })
                               }
                               placeholder="e.g. Today 7:15 PM"
-                              style={{ width: "100%", padding: 10 }}
                             />
                           </label>
                         ) : msg.messageType === "text" ? (
-                          <label style={{ gridColumn: "3 / 4" }}>
-                            <div>Message</div>
+                          <label className="field wide-field">
+                            <span>Message</span>
                             <input
                               value={msg.body}
                               onChange={(e) =>
@@ -915,7 +964,6 @@ export default function FriendsBuilderPage() {
                                   ? "Type your message"
                                   : "Type collaborator message"
                               }
-                              style={{ width: "100%", padding: 10 }}
                             />
                           </label>
                         ) : (
@@ -925,16 +973,9 @@ export default function FriendsBuilderPage() {
 
                       {msg.messageType === "audio" ? (
                         <>
-                          <div
-                            style={{
-                              display: "grid",
-                              gridTemplateColumns: "1fr 220px 180px",
-                              gap: 12,
-                              marginTop: 12
-                            }}
-                          >
-                            <label>
-                              <div>Audio Source</div>
+                          <div className="audio-grid">
+                            <label className="field">
+                              <span>Audio Source</span>
                               <select
                                 value={msg.audioSourceSlug}
                                 onChange={(e) =>
@@ -942,7 +983,6 @@ export default function FriendsBuilderPage() {
                                     audioSourceSlug: e.target.value
                                   })
                                 }
-                                style={{ width: "100%", padding: 10 }}
                               >
                                 <option value="">Choose audio source</option>
                                 {audioSourceOptions.map((source) => (
@@ -953,8 +993,8 @@ export default function FriendsBuilderPage() {
                               </select>
                             </label>
 
-                            <label>
-                              <div>Bubble Label</div>
+                            <label className="field">
+                              <span>Bubble Label</span>
                               <input
                                 value={msg.audioLabel}
                                 onChange={(e) =>
@@ -963,12 +1003,11 @@ export default function FriendsBuilderPage() {
                                   })
                                 }
                                 placeholder="e.g. Main, Open Verse, Demo"
-                                style={{ width: "100%", padding: 10 }}
                               />
                             </label>
 
-                            <label>
-                              <div>Kind</div>
+                            <label className="field">
+                              <span>Kind</span>
                               <select
                                 value={msg.audioKind}
                                 onChange={(e) =>
@@ -976,7 +1015,6 @@ export default function FriendsBuilderPage() {
                                     audioKind: e.target.value
                                   })
                                 }
-                                style={{ width: "100%", padding: 10 }}
                               >
                                 <option value="Song">Song</option>
                                 <option value="Demo">Demo</option>
@@ -1001,30 +1039,26 @@ export default function FriendsBuilderPage() {
               </div>
             </section>
 
-            <section
-              style={{
-                border: "1px solid rgba(255,255,255,0.12)",
-                borderRadius: 16,
-                padding: 16
-              }}
-            >
-              <div
-                style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}
-              >
+            <section className="panel">
+              <div className="section-head">
                 <div>
-                  <h2 style={{ margin: 0 }}>Alternate Versions (Optional)</h2>
-                  <p style={{ margin: "6px 0 0", opacity: 0.7 }}>
-                    Skip this if you only want to use the main song.
-                  </p>
+                  <h2>Alternate Versions (Optional)</h2>
+                  <p className="muted">Skip this if you only want to use the main song.</p>
                 </div>
 
-                <div style={{ display: "flex", gap: 10 }}>
-                  <button type="button" onClick={() => setAssetsOpen((prev) => !prev)}>
+                <div className="section-head-actions">
+                  <button
+                    type="button"
+                    className="ghost-btn"
+                    onClick={() => setAssetsOpen((prev) => !prev)}
+                  >
                     {assetsOpen ? "Hide" : "Show"}
                   </button>
+
                   {assetsOpen ? (
                     <button
                       type="button"
+                      className="ghost-btn"
                       onClick={() => setAssets((prev) => [...prev, EMPTY_ASSET()])}
                     >
                       Add Version
@@ -1034,29 +1068,14 @@ export default function FriendsBuilderPage() {
               </div>
 
               {assetsOpen ? (
-                <div style={{ display: "grid", gap: 16, marginTop: 16 }}>
-                  {!assets.length ? (
-                    <p style={{ opacity: 0.7, margin: 0 }}>No alternate versions added.</p>
-                  ) : null}
+                <div className="asset-list">
+                  {!assets.length ? <p className="muted">No alternate versions added.</p> : null}
 
                   {assets.map((asset) => (
-                    <div
-                      key={asset.clientId}
-                      style={{
-                        border: "1px solid rgba(255,255,255,0.08)",
-                        borderRadius: 12,
-                        padding: 12
-                      }}
-                    >
-                      <div
-                        style={{
-                          display: "grid",
-                          gridTemplateColumns: "1fr 1fr auto",
-                          gap: 12
-                        }}
-                      >
-                        <label>
-                          <div>Version Title</div>
+                    <div key={asset.clientId} className="asset-card">
+                      <div className="grid-two asset-grid">
+                        <label className="field">
+                          <span>Version Title</span>
                           <input
                             value={asset.title}
                             onChange={(e) => {
@@ -1067,12 +1086,11 @@ export default function FriendsBuilderPage() {
                               });
                             }}
                             placeholder="e.g. iMax Open Verse"
-                            style={{ width: "100%", padding: 10 }}
                           />
                         </label>
 
-                        <label>
-                          <div>Version Slug</div>
+                        <label className="field">
+                          <span>Version Slug</span>
                           <input
                             value={asset.slug}
                             onChange={(e) =>
@@ -1081,16 +1099,11 @@ export default function FriendsBuilderPage() {
                               })
                             }
                             placeholder="auto-generated from title"
-                            style={{ width: "100%", padding: 10 }}
                           />
                         </label>
-
-                        <button type="button" onClick={() => removeAsset(asset.clientId)}>
-                          Remove
-                        </button>
                       </div>
 
-                      <div style={{ marginTop: 12 }}>
+                      <div className="asset-actions">
                         <input
                           type="file"
                           accept="audio/mpeg,audio/mp3,audio/wav,audio/x-wav,audio/mp4,audio/aac"
@@ -1100,28 +1113,565 @@ export default function FriendsBuilderPage() {
                             })
                           }
                         />
-                        {asset.file ? (
-                          <div style={{ marginTop: 6, opacity: 0.7 }}>{asset.file.name}</div>
-                        ) : asset.existingAudioUrl ? (
-                          <div style={{ marginTop: 6, opacity: 0.7 }}>
-                            Existing audio attached
-                          </div>
-                        ) : null}
+
+                        <button
+                          type="button"
+                          className="tiny-btn"
+                          onClick={() => removeAsset(asset.clientId)}
+                        >
+                          Remove
+                        </button>
                       </div>
+
+                      {asset.file ? (
+                        <div className="muted" style={{ marginTop: 8 }}>
+                          {asset.file.name}
+                        </div>
+                      ) : asset.existingAudioUrl ? (
+                        <div className="muted" style={{ marginTop: 8 }}>
+                          Existing audio attached
+                        </div>
+                      ) : null}
                     </div>
                   ))}
                 </div>
               ) : null}
             </section>
 
-            <button type="submit" disabled={saving} style={{ padding: 14, borderRadius: 12 }}>
+            <button type="submit" disabled={saving} className="save-btn">
               {saving ? "Saving..." : "Save Conversation"}
             </button>
+
+            {result ? <p className="save-result">{result}</p> : null}
           </form>
 
-          {result ? <p style={{ marginTop: 20 }}>{result}</p> : null}
-        </>
+          <aside className="preview-column">
+            <PreviewPhone
+              conversationTitle={conversationTitle}
+              listPreview={listPreview}
+              selectedSong={selectedSong}
+              messages={messages}
+              audioSourceOptions={audioSourceOptions}
+            />
+          </aside>
+        </div>
       )}
+
+      <style jsx>{`
+        .builder-wrap {
+          min-height: 100dvh;
+          padding: 22px 16px 36px;
+          background:
+            radial-gradient(circle at top, rgba(255,255,255,0.08), transparent 40%),
+            linear-gradient(180deg, #07111f 0%, #0b1526 100%);
+          color: #f5f7fb;
+        }
+
+        .builder-hero {
+          max-width: 1320px;
+          margin: 0 auto 20px;
+          display: flex;
+          align-items: flex-end;
+          justify-content: space-between;
+          gap: 14px;
+          flex-wrap: wrap;
+        }
+
+        .builder-hero h1 {
+          margin: 0 0 8px;
+          font-size: clamp(28px, 5vw, 44px);
+        }
+
+        .builder-hero p {
+          margin: 0;
+          opacity: 0.78;
+        }
+
+        .builder-hero-actions {
+          display: flex;
+          flex-wrap: wrap;
+          gap: 10px;
+          align-items: center;
+        }
+
+        .builder-grid {
+          max-width: 1320px;
+          margin: 0 auto;
+          display: grid;
+          grid-template-columns: minmax(0, 1.2fr) minmax(320px, 420px);
+          gap: 18px;
+          align-items: start;
+        }
+
+        .builder-form {
+          display: grid;
+          gap: 16px;
+        }
+
+        .panel,
+        .preview-wrap {
+          border-radius: 24px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.1), rgba(255,255,255,0.04)),
+            rgba(10, 18, 33, 0.8);
+          backdrop-filter: blur(18px);
+          -webkit-backdrop-filter: blur(18px);
+          box-shadow:
+            0 20px 40px rgba(0,0,0,0.22),
+            inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .panel {
+          padding: 16px;
+        }
+
+        .panel h2 {
+          margin: 0 0 14px;
+          font-size: 20px;
+        }
+
+        .section-head {
+          display: flex;
+          align-items: flex-start;
+          justify-content: space-between;
+          gap: 12px;
+          margin-bottom: 14px;
+          flex-wrap: wrap;
+        }
+
+        .section-head h2 {
+          margin: 0;
+        }
+
+        .section-head-actions {
+          display: flex;
+          gap: 10px;
+        }
+
+        .grid-two {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 14px;
+          margin-bottom: 14px;
+        }
+
+        .grid-small {
+          max-width: 220px;
+        }
+
+        .field {
+          display: grid;
+          gap: 8px;
+        }
+
+        .field span {
+          font-size: 13px;
+          opacity: 0.78;
+        }
+
+        .field input,
+        .field select {
+          width: 100%;
+          min-height: 46px;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.06);
+          color: #f5f7fb;
+          padding: 0 12px;
+          outline: none;
+        }
+
+        .field input::placeholder {
+          color: rgba(255,255,255,0.45);
+        }
+
+        .message-list,
+        .asset-list {
+          display: grid;
+          gap: 14px;
+        }
+
+        .message-card,
+        .asset-card,
+        .clip-card {
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,0.08);
+          background: rgba(255,255,255,0.03);
+          padding: 12px;
+        }
+
+        .message-head,
+        .asset-actions {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 10px;
+        }
+
+        .message-grid {
+          display: grid;
+          grid-template-columns: 180px 180px 1fr;
+          gap: 12px;
+        }
+
+        .timestamp-grid {
+          grid-template-columns: 180px 1fr;
+        }
+
+        .wide-field {
+          grid-column: 3 / 4;
+        }
+
+        .audio-grid {
+          display: grid;
+          grid-template-columns: 1fr 220px 180px;
+          gap: 12px;
+          margin-top: 12px;
+        }
+
+        .clip-copy,
+        .muted {
+          opacity: 0.72;
+          font-size: 13px;
+          line-height: 1.5;
+        }
+
+        .clip-audio {
+          width: 100%;
+          margin: 12px 0;
+        }
+
+        .wave-shell {
+          position: relative;
+          margin: 10px 0 14px;
+          border-radius: 14px;
+          background: rgba(255,255,255,0.04);
+          border: 1px solid rgba(255,255,255,0.08);
+          overflow: hidden;
+          padding: 10px 8px;
+        }
+
+        .wave-bars {
+          display: grid;
+          grid-template-columns: repeat(48, 1fr);
+          align-items: center;
+          gap: 4px;
+          min-height: 40px;
+        }
+
+        .wave-bar {
+          display: block;
+          width: 100%;
+          border-radius: 999px;
+          align-self: center;
+          background: rgba(255,255,255,0.24);
+        }
+
+        .wave-highlight {
+          position: absolute;
+          top: 6px;
+          bottom: 6px;
+          border-radius: 12px;
+          background: rgba(255,255,255,0.12);
+          border: 1px solid rgba(255,255,255,0.18);
+          pointer-events: none;
+        }
+
+        .clip-grid {
+          display: grid;
+          grid-template-columns: 1fr 1fr;
+          gap: 12px;
+        }
+
+        .clip-label {
+          display: grid;
+          gap: 8px;
+          font-size: 13px;
+          opacity: 0.86;
+        }
+
+        .clip-length {
+          margin-top: 12px;
+          font-size: 13px;
+          opacity: 0.75;
+        }
+
+        .ghost-btn,
+        .tiny-btn,
+        .save-btn,
+        .ghost-link {
+          min-height: 42px;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.08);
+          color: #f5f7fb;
+          padding: 0 14px;
+          text-decoration: none;
+          display: inline-flex;
+          align-items: center;
+          justify-content: center;
+          cursor: pointer;
+        }
+
+        .hero-select {
+          min-height: 42px;
+          min-width: 280px;
+          border-radius: 14px;
+          border: 1px solid rgba(255,255,255,0.12);
+          background: rgba(255,255,255,0.08);
+          color: #f5f7fb;
+          padding: 0 12px;
+        }
+
+        .save-btn {
+          min-height: 50px;
+          background: rgba(255,255,255,0.95);
+          color: #0a1323;
+          font-weight: 700;
+        }
+
+        .save-result {
+          margin: 0;
+          font-size: 14px;
+          opacity: 0.84;
+        }
+
+        .preview-column {
+          position: sticky;
+          top: 16px;
+        }
+
+        .preview-wrap {
+          padding: 16px;
+        }
+
+        .phone-shell {
+          width: min(100%, 380px);
+          margin: 0 auto;
+          border-radius: 34px;
+          padding: 14px 12px 16px;
+          background:
+            linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)),
+            rgba(4, 9, 20, 0.95);
+          border: 1px solid rgba(255,255,255,0.12);
+          box-shadow:
+            0 28px 55px rgba(0,0,0,0.36),
+            inset 0 1px 0 rgba(255,255,255,0.08);
+        }
+
+        .phone-notch {
+          width: 108px;
+          height: 24px;
+          border-radius: 999px;
+          background: rgba(0,0,0,0.65);
+          margin: 0 auto 12px;
+        }
+
+        .phone-topbar {
+          display: grid;
+          grid-template-columns: auto 1fr auto;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 12px;
+        }
+
+        .phone-back,
+        .phone-more {
+          font-size: 13px;
+          opacity: 0.72;
+        }
+
+        .phone-header {
+          display: flex;
+          align-items: center;
+          gap: 10px;
+          justify-content: center;
+          text-align: left;
+        }
+
+        .phone-avatar,
+        .bubble-avatar {
+          width: 30px;
+          height: 30px;
+          border-radius: 999px;
+          display: grid;
+          place-items: center;
+          background: rgba(255,255,255,0.12);
+          font-size: 12px;
+          font-weight: 700;
+          flex-shrink: 0;
+        }
+
+        .phone-title {
+          font-size: 14px;
+          font-weight: 700;
+        }
+
+        .phone-sub {
+          font-size: 11px;
+          opacity: 0.65;
+        }
+
+        .phone-inbox-preview {
+          display: grid;
+          gap: 4px;
+          padding: 10px 12px;
+          border-radius: 16px;
+          background: rgba(255,255,255,0.05);
+          margin-bottom: 12px;
+        }
+
+        .phone-inbox-label {
+          font-size: 11px;
+          text-transform: uppercase;
+          letter-spacing: 0.08em;
+          opacity: 0.55;
+        }
+
+        .phone-inbox-text {
+          font-size: 13px;
+          opacity: 0.84;
+        }
+
+        .phone-thread {
+          display: grid;
+          gap: 10px;
+          max-height: 70dvh;
+          overflow: auto;
+          padding-right: 2px;
+        }
+
+        .phone-empty {
+          opacity: 0.65;
+          font-size: 13px;
+          padding: 18px 0;
+          text-align: center;
+        }
+
+        .bubble-time {
+          justify-self: center;
+          padding: 6px 10px;
+          border-radius: 999px;
+          background: rgba(255,255,255,0.08);
+          font-size: 11px;
+          opacity: 0.72;
+        }
+
+        .bubble-row {
+          display: flex;
+          align-items: flex-end;
+          gap: 8px;
+        }
+
+        .bubble-row.outgoing {
+          justify-content: flex-end;
+        }
+
+        .bubble-stack {
+          display: grid;
+          gap: 4px;
+          max-width: 82%;
+        }
+
+        .bubble-sender {
+          font-size: 11px;
+          opacity: 0.65;
+          padding-left: 4px;
+        }
+
+        .bubble {
+          padding: 10px 12px;
+          border-radius: 18px;
+          line-height: 1.4;
+          font-size: 14px;
+        }
+
+        .bubble-blue {
+          background: #1482ff;
+          color: white;
+          border-bottom-right-radius: 8px;
+        }
+
+        .bubble-gray {
+          background: rgba(255,255,255,0.1);
+          color: white;
+          border-bottom-left-radius: 8px;
+        }
+
+        .bubble-audio {
+          min-width: 210px;
+        }
+
+        .audio-pill-top,
+        .audio-pill-bottom {
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          gap: 12px;
+          font-size: 11px;
+          opacity: 0.9;
+        }
+
+        .audio-wave {
+          display: grid;
+          grid-template-columns: repeat(22, 1fr);
+          gap: 4px;
+          align-items: center;
+          min-height: 28px;
+          margin: 8px 0;
+        }
+
+        .audio-wave span {
+          display: block;
+          width: 100%;
+          border-radius: 999px;
+          background: currentColor;
+          opacity: 0.8;
+        }
+
+        @media (max-width: 1080px) {
+          .builder-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .preview-column {
+            position: static;
+          }
+        }
+
+        @media (max-width: 760px) {
+          .grid-two,
+          .message-grid,
+          .timestamp-grid,
+          .audio-grid,
+          .clip-grid,
+          .asset-grid {
+            grid-template-columns: 1fr;
+          }
+
+          .wide-field {
+            grid-column: auto;
+          }
+
+          .hero-select {
+            min-width: 0;
+            width: 100%;
+          }
+
+          .builder-hero-actions {
+            width: 100%;
+          }
+
+          .builder-hero-actions > * {
+            flex: 1 1 100%;
+          }
+
+          .phone-shell {
+            width: 100%;
+          }
+        }
+      `}</style>
     </main>
   );
 }
