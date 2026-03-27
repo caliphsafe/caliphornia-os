@@ -37,11 +37,11 @@ export async function GET() {
     ] = await Promise.all([
       supabaseAdmin
         .from("global_song_stats")
-        .select("song_id, song_slug, play_count, completed_count, unique_listener_count"),
+        .select("song_id, song_slug, play_count, unique_listener_count"),
 
       supabaseAdmin
         .from("user_song_stats")
-        .select("song_id, song_slug, play_count, completed_count, last_played_at")
+        .select("song_id, song_slug, play_count, last_played_at")
         .eq("user_email", userEmail),
 
       supabaseAdmin
