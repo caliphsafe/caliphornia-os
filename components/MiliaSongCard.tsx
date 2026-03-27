@@ -31,6 +31,16 @@ function notifyActiveAudioChange() {
   }
 }
 
+function formatHourLabel(value: string) {
+  try {
+    return new Date(value).toLocaleTimeString("en-US", {
+      hour: "numeric",
+    });
+  } catch {
+    return value;
+  }
+}
+
 export default function MiliaSongCard({
   href,
   slug,
@@ -40,7 +50,6 @@ export default function MiliaSongCard({
   audioUrl,
   weather,
   themeClassName,
-  formatHourLabel,
 }: {
   href: string;
   slug: string;
@@ -50,7 +59,6 @@ export default function MiliaSongCard({
   audioUrl: string | null;
   weather: WeatherData | null;
   themeClassName: string;
-  formatHourLabel: (value: string) => string;
 }) {
   const [isPlaying, setIsPlaying] = useState(false);
 
