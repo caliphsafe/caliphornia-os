@@ -1,5 +1,5 @@
 "use client";
-
+import Image from "next/image";
 import { useMemo, useState } from "react";
 import styles from "@/app/apps/stats/stats.module.css";
 
@@ -114,14 +114,20 @@ export default function StatsPageClient({
   return (
     <main className={styles.page}>
       <div className={styles.topChrome}>
-        <a href="/home" className={styles.backPill} aria-label="Back to Home">
-          <span className={styles.backChevron}>‹</span>
-        </a>
+  <a href="/home" className={styles.backPill} aria-label="Back to Home">
+    <Image
+      src="/apps/stats/back.png"
+      alt="Back"
+      width={22}
+      height={22}
+      className={styles.backImg}
+    />
+  </a>
 
-        <div className={styles.userChip}>
-          @{username || "user"}
-        </div>
-      </div>
+  <div className={styles.userChip} title={username ? `@${username}` : "@user"}>
+    @{username || "user"}
+  </div>
+</div>
 
       <div className={styles.header}>
         <div>
