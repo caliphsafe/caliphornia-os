@@ -26,8 +26,8 @@ export async function GET(request: NextRequest) {
 
   if (mode === "songs") {
     const { data, error } = await supabaseAdmin
-      .from("songs")
-      .select("slug, title, artist_name, audio_path, description, source_app_slug")
+  .from("songs")
+  .select("slug, title, artist_name, producer_names, audio_path, description")
       .eq("source_app_slug", "friends")
       .order("created_at", { ascending: false });
 
@@ -237,7 +237,7 @@ export async function POST(request: NextRequest) {
 
     const { data: primarySong, error: primarySongError } = await supabaseAdmin
       .from("songs")
-      .select("id, slug, title, artist_name, audio_path, cover_image_path")
+      .select("id, slug, title, artist_name, producer_names, audio_path, cover_image_path")
       .eq("slug", primarySongSlug)
       .single();
 
