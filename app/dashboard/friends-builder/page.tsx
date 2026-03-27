@@ -8,6 +8,7 @@ type SongOption = {
   slug: string;
   title: string;
   artist_name: string | null;
+  producer_names: string | null;
   audio_path: string | null;
   audio_url: string | null;
   description: string | null;
