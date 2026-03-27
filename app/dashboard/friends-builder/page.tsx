@@ -1,7 +1,7 @@
 "use client";
 
 import { FormEvent, useEffect, useMemo, useState } from "react";
-import { useSearchParams } from "next/navigation";
+import { useSearchParams, useRouter } from "next/navigation";
 import { supabaseBrowser } from "@/lib/supabase-browser";
 
 type SongOption = {
@@ -321,6 +321,7 @@ function PreviewPhone({
 }
 
 export default function FriendsBuilderPage() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const prefillSongSlug = searchParams.get("song") || "";
 
@@ -735,6 +736,14 @@ export default function FriendsBuilderPage() {
         </div>
 
         <div className="builder-hero-actions">
+          <button
+            type="button"
+            onClick={() => router.push("/dashboard")}
+            className="ghost-btn"
+          >
+            Back to Dashboard
+          </button>
+
           <button
             type="button"
             onClick={resetBuilder}
