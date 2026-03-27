@@ -2,8 +2,9 @@ import crypto from "crypto";
 
 const SESSION_SECRET = process.env.APP_SESSION_SECRET!;
 
-type SessionPayload = {
+export type SessionPayload = {
   email: string;
+  username?: string;
   iat: number;
 };
 
