@@ -1180,10 +1180,14 @@ const conversationPeopleLabel = useMemo(() => {
            <PreviewPhone
   conversationTitle={conversationTitle}
   listPreview={listPreview}
-  selectedSong={{
-    ...selectedSong,
-    artist_name: conversationPeopleLabel || selectedSong?.artist_name || ""
-  }}
+  selectedSong={
+    selectedSong
+      ? {
+          ...selectedSong,
+          artist_name: conversationPeopleLabel || selectedSong.artist_name || ""
+        }
+      : null
+  }
   messages={messages}
   audioSourceOptions={audioSourceOptions}
 />
