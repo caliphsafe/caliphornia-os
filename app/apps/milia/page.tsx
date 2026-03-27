@@ -90,17 +90,11 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
     params.set("timezone", song.weather_timezone);
   }
 
-  const baseUrl =
-    process.env.NEXT_PUBLIC_SITE_URL ||
-    process.env.VERCEL_PROJECT_PRODUCTION_URL?.startsWith("http")
-      ? process.env.VERCEL_PROJECT_PRODUCTION_URL
-      : process.env.VERCEL_PROJECT_PRODUCTION_URL
-      ? `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`
-      : "http://localhost:3000";
+  const baseUrl = getBaseUrl();
 
-  const res = await fetch(`${baseUrl}/api/apps/milia/weather?${params.toString()}`, {
-    next: { revalidate: 60 * 15 },
-  });
+const res = await fetch(`${baseUrl}/api/apps/milia/weather?${params.toString()}`, {
+  next: { revalidate: 60 * 15 },
+});
 
   if (!res.ok) return null;
 
@@ -146,12 +140,22 @@ export default async function MiliaPage() {
   const songs = (data || []) as SongRow[];
 
   const songsWithWeather = await Promise.all(
-    songs.map(async (song) => ({
-      song,
-      coverUrl: await createSignedCoverUrl(song.cover_image_path),
-      weather: await getWeatherForSong(song),
-    }))
-  );
+  songs.map(async (song) => {
+    try {
+      return {
+        song,
+        coverUrl: await createSignedCoverUrl(song.cover_image_path),
+        weather: await getWeatherForSong(song),
+      };
+    } catch {
+      return {
+        song,
+        coverUrl: await createSignedCoverUrl(song.cover_image_path),
+        weather: null,
+      };
+    }
+  })
+);
 
   return (
     <main className={styles.page}>
