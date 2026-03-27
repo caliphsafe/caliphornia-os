@@ -40,8 +40,16 @@ function countByLabel(rows: { label: string }[]) {
   const map = new Map<string, number>();
 
   for (const row of rows) {
-    const label = String(row.label || "").trim();
-    if (!label) continue;
+    const raw = String(row.label || "").trim();
+    if (!raw) continue;
+
+    let label = raw;
+    try {
+      label = decodeURIComponent(raw);
+    } catch {
+      label = raw.replace(/%20/g, " ");
+    }
+
     map.set(label, (map.get(label) || 0) + 1);
   }
 
