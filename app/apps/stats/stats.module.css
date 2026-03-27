@@ -457,7 +457,7 @@
 }
 
 .bottomContent{
-  padding:26px 22px 108px;
+  padding:26px 22px 98px;
 }
 
 .bottomKicker{
@@ -488,7 +488,7 @@
   right:18px;
   bottom:18px;
   display:grid;
-  grid-template-columns:repeat(4, 1fr);
+  grid-template-columns:repeat(3, minmax(0, 1fr));
   gap:10px;
   padding:10px;
   border-radius:999px;
@@ -499,7 +499,7 @@
 }
 
 .bottomTab{
-  min-height:64px;
+  min-height:58px;
   border-radius:999px;
   display:grid;
   place-items:center;
@@ -509,6 +509,7 @@
   background:none;
   border:0;
   cursor:pointer;
+  white-space:nowrap;
 }
 
 .bottomTabActive{
@@ -577,7 +578,7 @@
 
 .placesCols{
   display:grid;
-  grid-template-columns:1fr 1fr;
+  grid-template-columns:1fr;
   gap:18px;
   margin-top:16px;
 }
@@ -737,12 +738,23 @@
 }
 
 @media (max-width: 640px){
+  .page{
+    padding:20px 14px 120px;
+  }
+
   .title{
     font-size:44px;
   }
 
   .date{
     font-size:18px;
+  }
+
+  .userChip{
+    max-width:56vw;
+    overflow:hidden;
+    text-overflow:ellipsis;
+    white-space:nowrap;
   }
 
   .rings{
@@ -768,12 +780,16 @@
   }
 
   .bottomTabs{
-    grid-template-columns:repeat(2, 1fr);
-    border-radius:24px;
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    border-radius:999px;
+    gap:8px;
+    padding:8px;
   }
 
   .bottomTab{
-    min-height:54px;
+    min-height:50px;
+    font-size:14px;
+    padding:0 6px;
   }
 
   .modalStats{
