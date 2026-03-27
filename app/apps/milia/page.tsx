@@ -5,22 +5,6 @@ import styles from "./milia.module.css";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-function getBaseUrl() {
-  if (process.env.NEXT_PUBLIC_SITE_URL) {
-    return process.env.NEXT_PUBLIC_SITE_URL;
-  }
-
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return `https://${process.env.VERCEL_PROJECT_PRODUCTION_URL}`;
-  }
-
-  if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
-  }
-
-  return "http://localhost:3000";
-}
-
 type SongRow = {
   slug: string;
   title: string;
@@ -58,6 +42,87 @@ type WeatherData = {
   }>;
 };
 
+function weatherCodeLabel(code: number | null | undefined) {
+  const map: Record<number, string> = {
+    0: "Clear",
+    1: "Mostly Clear",
+    2: "Partly Cloudy",
+    3: "Cloudy",
+    45: "Fog",
+    48: "Fog",
+    51: "Light Drizzle",
+    53: "Drizzle",
+    55: "Heavy Drizzle",
+    61: "Light Rain",
+    63: "Rain",
+    65: "Heavy Rain",
+    71: "Light Snow",
+    73: "Snow",
+    75: "Heavy Snow",
+    80: "Light Showers",
+    81: "Showers",
+    82: "Heavy Showers",
+    95: "Thunderstorm",
+  };
+
+  return map[code ?? -1] || "Forecast";
+}
+
+async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
+  if (song.weather_lat == null || song.weather_lng == null) {
+    return null;
+  }
+
+  const url = new URL("https://api.open-meteo.com/v1/forecast");
+  url.searchParams.set("latitude", String(song.weather_lat));
+  url.searchParams.set("longitude", String(song.weather_lng));
+  url.searchParams.set("timezone", song.weather_timezone || "auto");
+  url.searchParams.set(
+    "current",
+    "temperature_2m,weather_code"
+  );
+  url.searchParams.set(
+    "hourly",
+    "temperature_2m,weather_code"
+  );
+  url.searchParams.set(
+    "daily",
+    "weather_code,temperature_2m_max,temperature_2m_min"
+  );
+  url.searchParams.set("forecast_days", "3");
+
+  const res = await fetch(url.toString(), {
+    cache: "no-store",
+  });
+
+  if (!res.ok) return null;
+
+  const data = await res.json();
+
+  const current = data?.current || {};
+  const hourly = data?.hourly || {};
+  const daily = data?.daily || {};
+
+  return {
+    current: {
+      temperature: current?.temperature_2m ?? null,
+      label: weatherCodeLabel(current?.weather_code),
+    },
+    today: {
+      tempMax: daily?.temperature_2m_max?.[0] ?? null,
+      tempMin: daily?.temperature_2m_min?.[0] ?? null,
+      label: weatherCodeLabel(daily?.weather_code?.[0] ?? current?.weather_code),
+    },
+    hourly: Array.isArray(hourly?.time)
+      ? hourly.time.slice(0, 4).map((time: string, index: number) => ({
+          time,
+          temperature: hourly?.temperature_2m?.[index] ?? null,
+          label: weatherCodeLabel(hourly?.weather_code?.[index]),
+        }))
+      : [],
+  };
+}
+
 function formatHourLabel(value: string) {
   try {
     return new Date(value).toLocaleTimeString("en-US", {
@@ -66,37 +131,6 @@ function formatHourLabel(value: string) {
   } catch {
     return value;
   }
-}
-
-async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
-  const params = new URLSearchParams();
-
-  if (song.weather_lat != null && song.weather_lng != null) {
-    params.set("lat", String(song.weather_lat));
-    params.set("lng", String(song.weather_lng));
-  } else if (song.weather_search_label) {
-    params.set("search", song.weather_search_label);
-  } else {
-    return null;
-  }
-
-  if (song.weather_timezone) {
-    params.set("timezone", song.weather_timezone);
-  }
-
-  const baseUrl = getBaseUrl();
-
-  const res = await fetch(
-    `${baseUrl}/api/apps/milia/weather?${params.toString()}`,
-    {
-      next: { revalidate: 60 * 15 },
-    }
-  );
-
-  if (!res.ok) return null;
-
-  const data = await res.json();
-  return data?.ok ? data.weather : null;
 }
 
 export default async function MiliaPage() {
@@ -183,9 +217,7 @@ export default async function MiliaPage() {
                 <div className={styles.cardTop}>
                   <div>
                     <h2 className={styles.cardTitle}>{song.title}</h2>
-                    <p className={styles.cardArtist}>
-                      {song.artist_name || "Unknown artist"}
-                    </p>
+                    <p className={styles.cardArtist}>{song.artist_name || "Unknown artist"}</p>
                   </div>
 
                   <div className={styles.cardTemp}>
@@ -197,21 +229,12 @@ export default async function MiliaPage() {
 
                 <div className={styles.cardMeta}>
                   <div className={styles.cardCondition}>
-                    {weather?.today?.label ||
-                      weather?.current?.label ||
-                      "Forecast unavailable"}
+                    {weather?.today?.label || weather?.current?.label || "Forecast unavailable"}
                   </div>
                   <div className={styles.cardRange}>
-                    H:
-                    {weather?.today?.tempMax != null
-                      ? Math.round(weather.today.tempMax)
-                      : "—"}
-                    °{"  "}
-                    L:
-                    {weather?.today?.tempMin != null
-                      ? Math.round(weather.today.tempMin)
-                      : "—"}
-                    °
+                    H:{weather?.today?.tempMax != null ? Math.round(weather.today.tempMax) : "—"}°
+                    {"  "}
+                    L:{weather?.today?.tempMin != null ? Math.round(weather.today.tempMin) : "—"}°
                   </div>
                 </div>
 
@@ -221,13 +244,9 @@ export default async function MiliaPage() {
                     <div className={styles.hourlyRow}>
                       {weather.hourly.slice(0, 4).map((hour) => (
                         <div key={hour.time} className={styles.hourChip}>
-                          <div className={styles.hourTime}>
-                            {formatHourLabel(hour.time)}
-                          </div>
+                          <div className={styles.hourTime}>{formatHourLabel(hour.time)}</div>
                           <div className={styles.hourTemp}>
-                            {hour.temperature != null
-                              ? `${Math.round(hour.temperature)}°`
-                              : "—"}
+                            {hour.temperature != null ? `${Math.round(hour.temperature)}°` : "—"}
                           </div>
                           <div className={styles.hourLabel}>{hour.label}</div>
                         </div>
