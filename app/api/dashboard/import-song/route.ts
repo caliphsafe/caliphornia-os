@@ -10,6 +10,17 @@ function slugify(value: string) {
     .replace(/^-+|-+$/g, "");
 }
 
+async function createSignedCoverUrl(storagePath: string | null | undefined) {
+  if (!storagePath) return null;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from("cover-art")
+    .createSignedUrl(storagePath, 60 * 60);
+
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
 export async function GET(request: NextRequest) {
   const mode = request.nextUrl.searchParams.get("mode");
 
@@ -111,10 +122,13 @@ export async function GET(request: NextRequest) {
       .eq("primary_song_id", song.id)
       .maybeSingle();
 
-    return NextResponse.json({
+        return NextResponse.json({
       ok: true,
       detail: {
-        song,
+        song: {
+          ...song,
+          cover_image_url: await createSignedCoverUrl(song.cover_image_path)
+        },
         appSong: appSong
           ? {
               position: appSong.position,
