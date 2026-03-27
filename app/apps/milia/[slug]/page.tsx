@@ -226,7 +226,12 @@ function getTempBarRange(daily: WeatherData["daily"]) {
   };
 }
 
-function getBarStyle(minTemp: number | null, maxTemp: number | null, rangeMin: number, rangeMax: number) {
+function getBarStyle(
+  minTemp: number | null,
+  maxTemp: number | null,
+  rangeMin: number,
+  rangeMax: number
+) {
   if (minTemp == null || maxTemp == null || rangeMax <= rangeMin) {
     return { left: "0%", width: "0%" };
   }
@@ -313,31 +318,31 @@ export default async function MiliaSongDetailPage({
 
   const queueData = queueRows.data || [];
 
-  const projectQueue: MiliaQueueItem[] = await Promise.all(
-    queueData.map(async (row) => {
-      const [rowAudioUrl, rowCoverUrl] = await Promise.all([
-        createSignedAudioUrl(row.audio_path),
-        createSignedCoverUrl(row.cover_image_path),
-      ]);
+  const projectQueue: GlobalTrack[] = (
+    await Promise.all(
+      queueData.map(async (row) => {
+        const [rowAudioUrl, rowCoverUrl] = await Promise.all([
+          createSignedAudioUrl(row.audio_path),
+          createSignedCoverUrl(row.cover_image_path),
+        ]);
 
-      const rowPlace =
-        row.weather_location_name ||
-        [row.weather_city, row.weather_region, row.weather_country]
-          .filter(Boolean)
-          .join(", ") ||
-        row.weather_search_label ||
-        "Unknown location";
+        if (!rowAudioUrl) return null;
 
-      return {
-        slug: row.slug,
-        title: row.title,
-        artistName: row.artist_name || "Unknown artist",
-        placeLabel: rowPlace,
-        audioUrl: rowAudioUrl,
-        coverUrl: rowCoverUrl,
-      };
-    })
-  );
+        return {
+          id: row.slug,
+          slug: row.slug,
+          title: row.title,
+          artist: row.artist_name || "Unknown artist",
+          displayTitle: row.title,
+          file: rowAudioUrl,
+          playlistSongSlug: row.slug,
+          analyticsSongSlug: row.slug,
+          sourceApp: "milia",
+          coverUrl: rowCoverUrl || undefined,
+        } satisfies GlobalTrack;
+      })
+    )
+  ).filter(Boolean) as GlobalTrack[];
 
   const pageThemeClass = getWeatherTheme(weather?.today?.label || weather?.current?.label);
   const range = getTempBarRange(weather?.daily || []);
@@ -436,9 +441,9 @@ export default async function MiliaSongDetailPage({
             title={song.title}
             artistName={song.artist_name || "Unknown artist"}
             placeLabel={placeLabel}
-            audioUrl={audioUrl}
             coverUrl={coverUrl}
-            projectQueue={projectQueue}
+            queue={projectQueue}
+            startIndex={projectQueue.findIndex((track) => track.slug === song.slug)}
           />
 
           <section className={styles.panel}>
