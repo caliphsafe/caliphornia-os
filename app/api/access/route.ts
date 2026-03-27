@@ -63,29 +63,43 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error } = await supabaseAdmin.from("app_users").upsert(
-      {
-        email,
-        username,
-        last_login_at: new Date().toISOString()
-      },
-      {
-        onConflict: "email"
-      }
-    );
+   const { error } = await supabaseAdmin.from("app_users").upsert(
+  {
+    email,
+    username,
+    last_login_at: new Date().toISOString()
+  },
+  {
+    onConflict: "email"
+  }
+);
 
-    if (error) {
-      return NextResponse.json(
-        { ok: false, error: error.message },
-        { status: 500 }
-      );
-    }
+if (error) {
+  return NextResponse.json(
+    { ok: false, error: error.message },
+    { status: 500 }
+  );
+}
 
-    const token = signSession({
-      email,
-      username,
-      iat: Date.now()
-    });
+const { data: userRow, error: userRowError } = await supabaseAdmin
+  .from("app_users")
+  .select("email, username, role")
+  .eq("email", email)
+  .single();
+
+if (userRowError || !userRow) {
+  return NextResponse.json(
+    { ok: false, error: userRowError?.message || "Could not load user." },
+    { status: 500 }
+  );
+}
+
+const token = signSession({
+  email: userRow.email,
+  username: userRow.username || username,
+  role: userRow.role || "user",
+  iat: Date.now()
+});
 
     const cookieStore = await cookies();
     cookieStore.set("caliph_os_session", token, {
