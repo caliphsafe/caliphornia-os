@@ -89,12 +89,12 @@ export async function POST(request: Request) {
 
     const cookieStore = await cookies();
     cookieStore.set("caliph_os_session", token, {
-      httpOnly: true,
-      secure: true,
-      sameSite: "lax",
-      path: "/",
-      maxAge: 60 * 60 * 24 * 30
-    });
+  httpOnly: true,
+  secure: process.env.NODE_ENV === "production",
+  sameSite: "lax",
+  path: "/",
+  maxAge: 60 * 60 * 24 * 30
+});
 
     return NextResponse.json({ ok: true });
   } catch {
