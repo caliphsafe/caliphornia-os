@@ -24,6 +24,7 @@ type SongDetail = {
     producer_names: string | null;
     audio_path: string | null;
     cover_image_path: string | null;
+    cover_image_url?: string | null;
     track_number: number | null;
     duration_seconds: number | null;
     duration_label: string | null;
@@ -309,7 +310,7 @@ export default function ImportSongPage() {
 
       setAudioFileName(detail.song.audio_path || "");
       setCoverFileName(detail.song.cover_image_path || "");
-      setCoverPreviewUrl(detail.song.cover_image_path || "");
+      setCoverPreviewUrl(detail.song.cover_image_url || "");
       setContinueToFriendsBuilderSlug(detail.conversation?.slug || "");
     } catch {
       setResult("Could not load song.");
