@@ -76,7 +76,16 @@ img {
   position: relative;
   overflow: hidden;
 }
-
+.admin-app-glyph {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  font-size: 28px;
+  font-weight: 700;
+  color: rgba(255,255,255,0.96);
+  text-shadow: 0 4px 14px rgba(0,0,0,0.2);
+}
 .lock-screen,
 .home-screen {
   display: flex;
