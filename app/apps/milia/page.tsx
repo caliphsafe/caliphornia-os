@@ -245,19 +245,18 @@ export default async function MiliaPage() {
             <div className={styles.empty}>No Milia songs yet.</div>
           ) : (
             songsWithMeta.map(({ song, weather, audioUrl, placeLabel }) => (
-              <MiliaSongCard
-                key={song.slug}
-                href={`/apps/milia/${song.slug}`}
-                slug={song.slug}
-                title={song.title}
-                artistName={song.artist_name || "Unknown artist"}
-                placeLabel={placeLabel}
-                audioUrl={audioUrl}
-                weather={weather}
-                themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
-                queue={projectQueue}
-                startIndex={projectQueue.findIndex((track) => track.slug === song.slug)}
-              />
+             <MiliaSongCard
+  key={song.slug}
+  href={`/apps/milia/${song.slug}`}
+  slug={song.slug}
+  title={song.title}
+  artistName={song.artist_name || "Unknown artist"}
+  placeLabel={placeLabel}
+  weather={weather}
+  themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
+  queue={projectQueue}
+  startIndex={projectQueue.findIndex((track) => track.slug === song.slug)}
+/>
             ))
           )}
         </section>
