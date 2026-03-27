@@ -2,9 +2,10 @@
   min-height:100vh;
   background:#000;
   color:#fff;
-  padding:24px 16px 120px;
+  padding:20px 14px 120px;
   max-width:920px;
   margin:0 auto;
+  transition:padding-bottom .28s ease;
 }
 
 .topChrome{
@@ -833,4 +834,16 @@ body.has-global-player .bottomPanel{
 
 body.has-global-player .bottomTabs{
   bottom:14px;
+}
+
+body.has-global-player .page{
+  padding-bottom: 230px;
+}
+
+body.has-global-player .bottomPanel{
+  bottom: 104px;
+}
+
+body.has-global-player .bottomTabs{
+  bottom: 14px;
 }
