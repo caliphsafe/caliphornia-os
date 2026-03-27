@@ -11,6 +11,9 @@ export default async function Page() {
   const token = cookieStore.get("caliph_os_session")?.value ?? null;
   const session = verifySession(token);
 
+  console.log("ROOT TOKEN EXISTS:", Boolean(token));
+  console.log("ROOT SESSION:", session);
+
   if (session?.email) {
     redirect("/home");
   }
