@@ -20,7 +20,6 @@ export const appRegistry: AppItem[] = [
   },
   {
   id: "milia",
-  slug: "milia",
   name: "Milia",
   href: "/apps/milia",
   icon: "/icons/milia.png"
