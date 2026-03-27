@@ -45,6 +45,8 @@ type StatsClientProps = {
   topPlatforms: PlatformRow[];
 };
 
+type SheetState = "peek" | "mid" | "open";
+
 function compactNumber(value: number) {
   return new Intl.NumberFormat("en-US", {
     notation: "compact",
@@ -71,16 +73,21 @@ function formatShortDate(value?: string | null) {
   }
 }
 
-function getBars(seed: string, positive = true) {
+function getBars(seed: string, accent: "red" | "green" | "blue" = "red") {
   const chars = seed.split("");
-  return Array.from({ length: 18 }, (_, i) => {
+  const bars = Array.from({ length: 16 }, (_, i) => {
     const code = chars[i % Math.max(chars.length, 1)]?.charCodeAt(0) || 65;
-    const raw = 16 + ((code * (i + 5)) % 40);
-    return {
-      height: raw,
-      positive,
-    };
+    return 16 + ((code * (i + 7)) % 34);
   });
+
+  const color =
+    accent === "green"
+      ? "linear-gradient(180deg, rgba(48,209,88,0.95), rgba(48,209,88,0.18))"
+      : accent === "blue"
+      ? "linear-gradient(180deg, rgba(10,132,255,0.95), rgba(10,132,255,0.18))"
+      : "linear-gradient(180deg, rgba(255,69,58,0.95), rgba(255,69,58,0.18))";
+
+  return { bars, color };
 }
 
 export default function StatsClient({
@@ -94,64 +101,69 @@ export default function StatsClient({
   topCountries,
   topPlatforms,
 }: StatsClientProps) {
-  const [sheetState, setSheetState] = useState<"collapsed" | "mid" | "open">("collapsed");
+  const [sheetState, setSheetState] = useState<SheetState>("peek");
   const [dragStartY, setDragStartY] = useState<number | null>(null);
-  const [dragOffset, setDragOffset] = useState(0);
+  const [dragCurrentY, setDragCurrentY] = useState<number | null>(null);
 
-  const featuredRows = useMemo(() => {
-    const topGlobal = globalSongs.slice(0, 4).map((row) => ({
-      kind: "global" as const,
-      row,
-      statValue: row.playCount || 0,
-      pillText: `${compactNumber(row.uniqueListenerCount || 0)} listeners`,
-      positive: false,
-      statLabel: "plays",
-    }));
+  const sheetBaseY =
+    sheetState === "open" ? 0 : sheetState === "mid" ? 260 : 560;
 
-    const recentUser = userSongs.slice(0, 4).map((row) => ({
-      kind: "user" as const,
-      row,
-      statValue: row.playCount || 0,
-      pillText: row.lastPlayedAt ? formatShortDate(row.lastPlayedAt) : "recent",
-      positive: true,
-      statLabel: "your plays",
-    }));
+  const dragDelta =
+    dragStartY !== null && dragCurrentY !== null ? dragCurrentY - dragStartY : 0;
 
-    return [...topGlobal, ...recentUser];
-  }, [globalSongs, userSongs]);
+  const translateY =
+    dragStartY !== null
+      ? Math.max(0, sheetBaseY + dragDelta)
+      : sheetBaseY;
 
-  const sheetTranslateY =
-    sheetState === "open" ? 0 :
-    sheetState === "mid" ? 250 :
-    470;
+  const topGlobalRows = useMemo(
+    () => globalSongs.slice(0, 6),
+    [globalSongs]
+  );
+
+  const recentUserRows = useMemo(
+    () => userSongs.slice(0, 6),
+    [userSongs]
+  );
+
+  function cycleSheet() {
+    setSheetState((prev) =>
+      prev === "peek" ? "mid" : prev === "mid" ? "open" : "peek"
+    );
+  }
 
   function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
     setDragStartY(e.clientY);
-    setDragOffset(0);
+    setDragCurrentY(e.clientY);
   }
 
   function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
     if (dragStartY === null) return;
-    setDragOffset(e.clientY - dragStartY);
+    setDragCurrentY(e.clientY);
   }
 
   function onPointerUp() {
-    if (dragStartY === null) return;
+    if (dragStartY === null || dragCurrentY === null) {
+      setDragStartY(null);
+      setDragCurrentY(null);
+      return;
+    }
 
-    if (dragOffset < -70) {
-      setSheetState((prev) => (prev === "collapsed" ? "mid" : "open"));
-    } else if (dragOffset > 70) {
-      setSheetState((prev) => (prev === "open" ? "mid" : "collapsed"));
+    const delta = dragCurrentY - dragStartY;
+
+    if (delta < -70) {
+      setSheetState((prev) =>
+        prev === "peek" ? "mid" : "open"
+      );
+    } else if (delta > 70) {
+      setSheetState((prev) =>
+        prev === "open" ? "mid" : "peek"
+      );
     }
 
     setDragStartY(null);
-    setDragOffset(0);
+    setDragCurrentY(null);
   }
-
-  const computedTranslate =
-    dragStartY === null
-      ? sheetTranslateY
-      : Math.max(0, sheetTranslateY + dragOffset);
 
   return (
     <main style={pageStyle}>
@@ -159,16 +171,14 @@ export default function StatsClient({
         <a href="/home" style={backLinkStyle}>← Home</a>
 
         <div style={topActionsStyle}>
-          <button style={circleActionStyle} type="button" aria-label="Search">⌕</button>
+          <button style={circleActionStyle} type="button" aria-label="Search">
+            ⌕
+          </button>
           <button
             style={circleActionStyle}
             type="button"
             aria-label="Toggle Listening Pulse"
-            onClick={() =>
-              setSheetState((prev) =>
-                prev === "collapsed" ? "mid" : prev === "mid" ? "open" : "collapsed"
-              )
-            }
+            onClick={cycleSheet}
           >
             •••
           </button>
@@ -180,31 +190,43 @@ export default function StatsClient({
         <div style={heroDateStyle}>{formatHeaderDate()}</div>
       </div>
 
-      <section style={listWrapStyle}>
-        {featuredRows.length === 0 ? (
-          <div style={emptyWrapStyle}>No song activity yet.</div>
-        ) : (
-          featuredRows.map((item) => (
-            <MusicStatsRow
-              key={`${item.kind}-${item.row.songSlug}`}
-              coverImageUrl={item.row.coverImageUrl}
-              title={item.row.title}
-              subtitle={item.row.artistName || "Music activity"}
-              statValue={item.statValue}
-              statLabel={item.statLabel}
-              pillText={item.pillText}
-              positive={item.positive}
-              seed={item.row.songSlug}
-            />
-          ))
-        )}
+      <section style={sectionStyle}>
+        {topGlobalRows.map((row) => (
+          <StatsRow
+            key={`global-${row.songSlug}`}
+            coverImageUrl={row.coverImageUrl}
+            title={row.title}
+            subtitle={row.artistName || "Unknown artist"}
+            rightTop={compactNumber(row.playCount || 0)}
+            rightBottom={`${compactNumber(row.uniqueListenerCount || 0)} listeners`}
+            rightBottomAccent="red"
+            barsSeed={row.songSlug}
+            barsAccent="red"
+          />
+        ))}
+      </section>
+
+      <section style={{ ...sectionStyle, marginBottom: 120 }}>
+        {recentUserRows.map((row) => (
+          <StatsRow
+            key={`user-${row.songSlug}`}
+            coverImageUrl={row.coverImageUrl}
+            title={row.title}
+            subtitle={row.artistName || "Unknown artist"}
+            rightTop={compactNumber(row.playCount || 0)}
+            rightBottom={formatShortDate(row.lastPlayedAt)}
+            rightBottomAccent="green"
+            barsSeed={`${row.songSlug}-${row.lastPlayedAt || ""}`}
+            barsAccent="green"
+          />
+        ))}
       </section>
 
       <div
         style={{
           ...bottomSheetStyle,
-          transform: `translateY(${computedTranslate}px)`,
-          transition: dragStartY === null ? "transform 220ms ease" : "none",
+          transform: `translateY(${translateY}px)`,
+          transition: dragStartY === null ? "transform 260ms ease" : "none",
         }}
       >
         <div
@@ -215,192 +237,176 @@ export default function StatsClient({
           onPointerCancel={onPointerUp}
         >
           <div style={sheetHandleStyle} />
-        </div>
+          <div style={sheetPeekHeaderStyle}>
+            <div>
+              <div style={sheetPeekTitleStyle}>Listening Pulse</div>
+              <div style={sheetPeekSubStyle}>From Caliphornia OS</div>
+            </div>
 
-        <div style={sheetTopRowStyle}>
-          <div>
-            <div style={sheetTitleStyle}>Listening Pulse</div>
-            <div style={sheetSubStyle}>From Caliphornia OS</div>
-          </div>
-
-          <div style={sheetActionsWrapStyle}>
-            <button type="button" style={sheetToggleBtnStyle} onClick={() => setSheetState("collapsed")}>
-              Hide
-            </button>
-            <button type="button" style={sheetToggleBtnStyle} onClick={() => setSheetState("open")}>
-              Expand
+            <button
+              type="button"
+              onClick={cycleSheet}
+              style={sheetPeekButtonStyle}
+            >
+              {sheetState === "peek" ? "Open" : sheetState === "mid" ? "Expand" : "Minimize"}
             </button>
           </div>
         </div>
 
-        <div style={sheetMetricsGridStyle}>
-          <MetricMiniCard label="Your Plays" value={compactNumber(totals.totalUserPlays)} />
-          <MetricMiniCard label="Favorites" value={compactNumber(totals.totalFavoriteSongs)} />
-          <MetricMiniCard label="Global Plays" value={compactNumber(totals.totalGlobalPlays)} />
-          <MetricMiniCard label="Reach" value={compactNumber(totals.totalGlobalReach)} />
-        </div>
+        <div style={sheetContentStyle}>
+          <div style={metricsGridStyle}>
+            <MetricCard label="Your Plays" value={compactNumber(totals.totalUserPlays)} />
+            <MetricCard label="Favorites" value={compactNumber(totals.totalFavoriteSongs)} />
+            <MetricCard label="Global Plays" value={compactNumber(totals.totalGlobalPlays)} />
+            <MetricCard label="Reach" value={compactNumber(totals.totalGlobalReach)} />
+          </div>
 
-        <div style={sheetDividerStyle} />
+          <div style={sheetDividerStyle} />
 
-        <div style={sheetSectionTitleStyle}>Music Insights</div>
-        <div style={sheetListStyle}>
-          <InsightSongRow
-            title="Top Global Song"
-            subtitle={
-              globalSongs[0]
-                ? `${globalSongs[0].title} · ${compactNumber(globalSongs[0].playCount || 0)} plays`
-                : "No global song data yet"
-            }
-            coverImageUrl={globalSongs[0]?.coverImageUrl || null}
-            accent="rgba(255, 69, 58, 0.95)"
-          />
+          <div style={sheetSectionTitleStyle}>Music Highlights</div>
+          <div style={sheetBlockGridStyle}>
+            <InsightCard
+              title="Top Global Song"
+              subtitle={
+                globalSongs[0]
+                  ? `${globalSongs[0].title} · ${compactNumber(globalSongs[0].playCount || 0)} plays`
+                  : "No global stats yet"
+              }
+              coverImageUrl={globalSongs[0]?.coverImageUrl || null}
+            />
 
-          <InsightSongRow
-            title="Latest Favorite"
-            subtitle={
-              favoriteSongs[0]
-                ? `${favoriteSongs[0].title} · saved ${formatShortDate(favoriteSongs[0].favoritedAt)}`
-                : "No favorites yet"
-            }
-            coverImageUrl={favoriteSongs[0]?.coverImageUrl || null}
-            accent="rgba(48, 209, 88, 0.95)"
-          />
+            <InsightCard
+              title="Latest Favorite"
+              subtitle={
+                favoriteSongs[0]
+                  ? `${favoriteSongs[0].title} · saved ${formatShortDate(favoriteSongs[0].favoritedAt)}`
+                  : "No favorites yet"
+              }
+              coverImageUrl={favoriteSongs[0]?.coverImageUrl || null}
+            />
 
-          <InsightSongRow
-            title="Top Listener"
-            subtitle={username ? `@${username}` : "Caliphornia OS user"}
-            coverImageUrl={null}
-            accent="rgba(10, 132, 255, 0.95)"
-          />
-        </div>
+            <InsightCard
+              title="Listener"
+              subtitle={username ? `@${username}` : "Caliphornia OS user"}
+              coverImageUrl={null}
+            />
+          </div>
 
-        <div style={sheetDividerStyle} />
+          <div style={sheetDividerStyle} />
 
-        <div style={sheetSectionTitleStyle}>Location</div>
-        <div style={gridTwoStyle}>
-          <MiniStatList title="Top Cities" rows={topCities} />
-          <MiniStatList title="Top Regions" rows={topRegions} />
-          <MiniStatList title="Top Countries" rows={topCountries} />
-          <MiniStatList title="Platforms" rows={topPlatforms} />
+          <div style={sheetSectionTitleStyle}>Location Insights</div>
+          <div style={locationGridStyle}>
+            <MiniStatList title="Cities" rows={topCities} />
+            <MiniStatList title="Regions" rows={topRegions} />
+            <MiniStatList title="Countries" rows={topCountries} />
+            <MiniStatList title="Platforms" rows={topPlatforms} />
+          </div>
         </div>
       </div>
     </main>
   );
 }
 
-function MusicStatsRow({
+function StatsRow({
   coverImageUrl,
   title,
   subtitle,
-  statValue,
-  statLabel,
-  pillText,
-  positive,
-  seed,
+  rightTop,
+  rightBottom,
+  rightBottomAccent,
+  barsSeed,
+  barsAccent,
 }: {
   coverImageUrl: string | null;
   title: string;
   subtitle: string;
-  statValue: number;
-  statLabel: string;
-  pillText: string;
-  positive: boolean;
-  seed: string;
+  rightTop: string;
+  rightBottom: string;
+  rightBottomAccent: "red" | "green";
+  barsSeed: string;
+  barsAccent: "red" | "green" | "blue";
 }) {
-  const bars = getBars(seed, positive);
+  const { bars, color } = getBars(barsSeed, barsAccent);
 
   return (
     <div style={rowStyle}>
-      <div style={rowLeftWrapStyle}>
-        <div style={rowCoverWrapStyle}>
-          {coverImageUrl ? (
-            <img src={coverImageUrl} alt={title} style={rowCoverImageStyle} />
-          ) : (
-            <div style={rowCoverFallbackStyle}>{title.slice(0, 1).toUpperCase()}</div>
-          )}
-        </div>
-
-        <div style={rowLeftStyle}>
-          <div style={rowTitleStyle}>{title}</div>
-          <div style={rowSubStyle}>{subtitle}</div>
-        </div>
+      <div style={coverCellStyle}>
+        {coverImageUrl ? (
+          <img src={coverImageUrl} alt={title} style={coverImageStyle} />
+        ) : (
+          <div style={coverFallbackStyle}>{title.slice(0, 1).toUpperCase()}</div>
+        )}
       </div>
 
-      <div style={chartWrapStyle}>
-        <div style={chartBarsStyle}>
-          {bars.map((bar, index) => (
+      <div style={textCellStyle}>
+        <div style={rowTitleStyle}>{title}</div>
+        <div style={rowSubStyle}>{subtitle}</div>
+      </div>
+
+      <div style={chartCellStyle}>
+        <div style={barsWrapStyle}>
+          {bars.map((height, i) => (
             <span
-              key={`${seed}-${index}`}
+              key={`${barsSeed}-${i}`}
               style={{
-                ...chartBarStyle,
-                height: `${bar.height}px`,
-                background: positive
-                  ? "linear-gradient(180deg, rgba(48, 209, 88, 0.95), rgba(48, 209, 88, 0.15))"
-                  : "linear-gradient(180deg, rgba(255, 69, 58, 0.95), rgba(255, 69, 58, 0.15))",
+                ...barStyle,
+                height,
+                background: color,
               }}
             />
           ))}
         </div>
       </div>
 
-      <div style={rowRightStyle}>
-        <div style={rowValueStyle}>{compactNumber(statValue)}</div>
+      <div style={rightCellStyle}>
+        <div style={rightTopStyle}>{rightTop}</div>
         <div
           style={{
-            ...deltaPillStyle,
-            background: positive
-              ? "rgba(48, 209, 88, 0.92)"
-              : "rgba(255, 69, 58, 0.96)",
+            ...rightPillStyle,
+            background:
+              rightBottomAccent === "green"
+                ? "rgba(48,209,88,0.95)"
+                : "rgba(255,69,58,0.96)",
           }}
         >
-          {pillText}
+          {rightBottom}
         </div>
-        <div style={rowLabelStyle}>{statLabel}</div>
       </div>
     </div>
   );
 }
 
-function MetricMiniCard({
+function MetricCard({
   label,
   value,
 }: {
   label: string;
-  value: string | number;
+  value: string;
 }) {
   return (
-    <div style={metricMiniCardStyle}>
-      <div style={metricMiniLabelStyle}>{label}</div>
-      <div style={metricMiniValueStyle}>{value}</div>
+    <div style={metricCardStyle}>
+      <div style={metricLabelStyle}>{label}</div>
+      <div style={metricValueStyle}>{value}</div>
     </div>
   );
 }
 
-function InsightSongRow({
+function InsightCard({
   title,
   subtitle,
   coverImageUrl,
-  accent,
 }: {
   title: string;
   subtitle: string;
   coverImageUrl: string | null;
-  accent: string;
 }) {
   return (
-    <div style={insightSongRowStyle}>
-      <div style={insightSongMediaWrapStyle}>
+    <div style={insightCardStyle}>
+      <div style={insightMediaWrapStyle}>
         {coverImageUrl ? (
-          <img src={coverImageUrl} alt={title} style={insightSongMediaImageStyle} />
+          <img src={coverImageUrl} alt={title} style={insightMediaImageStyle} />
         ) : (
-          <div
-            style={{
-              ...insightSongMediaFallbackStyle,
-              boxShadow: `0 0 18px ${accent}`,
-            }}
-          >
-            ●
-          </div>
+          <div style={insightMediaFallbackStyle}>●</div>
         )}
       </div>
 
@@ -424,13 +430,13 @@ function MiniStatList({
       <div style={miniListTitleStyle}>{title}</div>
 
       {rows.length === 0 ? (
-        <div style={miniListEmptyStyle}>No data yet</div>
+        <div style={miniEmptyStyle}>No data yet</div>
       ) : (
         <div style={{ display: "grid", gap: 10 }}>
           {rows.slice(0, 5).map((row) => (
-            <div key={`${title}-${row.label}`} style={miniListRowStyle}>
-              <span style={miniListLabelStyle}>{row.label}</span>
-              <span style={miniListValueStyle}>{compactNumber(row.count)}</span>
+            <div key={`${title}-${row.label}`} style={miniRowStyle}>
+              <span style={miniLabelStyle}>{row.label}</span>
+              <span style={miniValueStyle}>{compactNumber(row.count)}</span>
             </div>
           ))}
         </div>
@@ -443,8 +449,8 @@ const pageStyle: React.CSSProperties = {
   minHeight: "100vh",
   background: "#000",
   color: "#fff",
-  padding: "18px 16px 220px",
-  maxWidth: 920,
+  padding: "18px 16px 140px",
+  maxWidth: 980,
   margin: "0 auto",
 };
 
@@ -452,7 +458,7 @@ const topBarStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   alignItems: "center",
-  marginBottom: 22,
+  marginBottom: 24,
 };
 
 const backLinkStyle: React.CSSProperties = {
@@ -463,16 +469,16 @@ const backLinkStyle: React.CSSProperties = {
 
 const topActionsStyle: React.CSSProperties = {
   display: "flex",
-  gap: 10,
+  gap: 12,
 };
 
 const circleActionStyle: React.CSSProperties = {
-  minWidth: 54,
-  height: 54,
+  minWidth: 56,
+  height: 56,
   padding: "0 18px",
   borderRadius: 999,
   border: "1px solid rgba(255,255,255,0.12)",
-  background: "rgba(255,255,255,0.06)",
+  background: "rgba(255,255,255,0.05)",
   display: "grid",
   placeItems: "center",
   fontSize: 26,
@@ -486,68 +492,60 @@ const headerBlockStyle: React.CSSProperties = {
 
 const heroTitleStyle: React.CSSProperties = {
   margin: 0,
-  fontSize: 48,
-  lineHeight: 0.95,
+  fontSize: 54,
+  lineHeight: 0.92,
   letterSpacing: "-0.06em",
   fontWeight: 800,
 };
 
 const heroDateStyle: React.CSSProperties = {
   marginTop: 4,
-  fontSize: 34,
+  fontSize: 36,
   lineHeight: 0.95,
   letterSpacing: "-0.04em",
   color: "rgba(255,255,255,0.62)",
   fontWeight: 700,
 };
 
-const listWrapStyle: React.CSSProperties = {
+const sectionStyle: React.CSSProperties = {
   display: "grid",
   gap: 0,
-  marginBottom: 22,
 };
 
 const rowStyle: React.CSSProperties = {
   display: "grid",
-  gridTemplateColumns: "1.5fr 150px 170px",
+  gridTemplateColumns: "64px minmax(0, 1.35fr) 150px 160px",
   gap: 16,
   alignItems: "center",
   padding: "18px 0",
   borderBottom: "1px solid rgba(255,255,255,0.12)",
 };
 
-const rowLeftWrapStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "58px 1fr",
-  gap: 14,
-  alignItems: "center",
-  minWidth: 0,
-};
-
-const rowCoverWrapStyle: React.CSSProperties = {
-  width: 58,
-  height: 58,
-  borderRadius: 12,
+const coverCellStyle: React.CSSProperties = {
+  width: 64,
+  height: 64,
+  borderRadius: 14,
   overflow: "hidden",
   background: "rgba(255,255,255,0.08)",
 };
 
-const rowCoverImageStyle: React.CSSProperties = {
+const coverImageStyle: React.CSSProperties = {
   width: "100%",
   height: "100%",
   objectFit: "cover",
 };
 
-const rowCoverFallbackStyle: React.CSSProperties = {
+const coverFallbackStyle: React.CSSProperties = {
   width: "100%",
   height: "100%",
   display: "grid",
   placeItems: "center",
   background: "linear-gradient(145deg, #2b2b2b, #161616)",
   fontWeight: 800,
+  fontSize: 24,
 };
 
-const rowLeftStyle: React.CSSProperties = {
+const textCellStyle: React.CSSProperties = {
   minWidth: 0,
 };
 
@@ -561,59 +559,52 @@ const rowTitleStyle: React.CSSProperties = {
 const rowSubStyle: React.CSSProperties = {
   marginTop: 8,
   color: "rgba(255,255,255,0.58)",
-  fontSize: 17,
-  lineHeight: 1.4,
+  fontSize: 16,
+  lineHeight: 1.35,
 };
 
-const chartWrapStyle: React.CSSProperties = {
-  height: 76,
+const chartCellStyle: React.CSSProperties = {
+  height: 78,
   display: "flex",
   alignItems: "end",
 };
 
-const chartBarsStyle: React.CSSProperties = {
+const barsWrapStyle: React.CSSProperties = {
   width: "100%",
   height: "100%",
   display: "grid",
-  gridTemplateColumns: "repeat(18, 1fr)",
+  gridTemplateColumns: "repeat(16, 1fr)",
   alignItems: "end",
-  gap: 3,
+  gap: 4,
 };
 
-const chartBarStyle: React.CSSProperties = {
+const barStyle: React.CSSProperties = {
   display: "block",
   width: "100%",
   borderRadius: 999,
-  opacity: 0.95,
+  opacity: 0.96,
 };
 
-const rowRightStyle: React.CSSProperties = {
+const rightCellStyle: React.CSSProperties = {
   display: "grid",
   justifyItems: "end",
-  gap: 8,
+  gap: 10,
 };
 
-const rowValueStyle: React.CSSProperties = {
-  fontSize: 28,
+const rightTopStyle: React.CSSProperties = {
+  fontSize: 30,
   fontWeight: 800,
   letterSpacing: "-0.04em",
 };
 
-const deltaPillStyle: React.CSSProperties = {
-  minWidth: 120,
-  padding: "10px 14px",
-  borderRadius: 12,
+const rightPillStyle: React.CSSProperties = {
+  minWidth: 126,
+  padding: "11px 14px",
+  borderRadius: 14,
   textAlign: "center",
-  fontSize: 15,
+  fontSize: 16,
   fontWeight: 700,
   color: "#fff",
-};
-
-const rowLabelStyle: React.CSSProperties = {
-  fontSize: 12,
-  textTransform: "uppercase",
-  letterSpacing: "0.08em",
-  color: "rgba(255,255,255,0.5)",
 };
 
 const bottomSheetStyle: React.CSSProperties = {
@@ -621,23 +612,23 @@ const bottomSheetStyle: React.CSSProperties = {
   left: "max(16px, env(safe-area-inset-left))",
   right: "max(16px, env(safe-area-inset-right))",
   bottom: "calc(18px + env(safe-area-inset-bottom))",
-  borderRadius: 36,
-  padding: "0 18px 20px",
+  borderRadius: 34,
   border: "1px solid rgba(255,255,255,0.12)",
   background:
     "linear-gradient(180deg, rgba(255,255,255,0.12), rgba(255,255,255,0.04)), rgba(24,24,28,0.82)",
   backdropFilter: "blur(28px) saturate(150%)",
   WebkitBackdropFilter: "blur(28px) saturate(150%)",
   boxShadow: "0 22px 50px rgba(0,0,0,0.45)",
-  maxWidth: 860,
+  maxWidth: 900,
   margin: "0 auto",
   touchAction: "none",
+  overflow: "hidden",
 };
 
 const sheetDragZoneStyle: React.CSSProperties = {
-  paddingTop: 14,
-  paddingBottom: 10,
+  padding: "14px 18px 16px",
   cursor: "grab",
+  borderBottom: "1px solid rgba(255,255,255,0.08)",
 };
 
 const sheetHandleStyle: React.CSSProperties = {
@@ -645,37 +636,30 @@ const sheetHandleStyle: React.CSSProperties = {
   height: 6,
   borderRadius: 999,
   background: "rgba(255,255,255,0.28)",
-  margin: "0 auto",
+  margin: "0 auto 14px",
 };
 
-const sheetTopRowStyle: React.CSSProperties = {
+const sheetPeekHeaderStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
-  alignItems: "flex-start",
+  alignItems: "center",
   gap: 12,
 };
 
-const sheetTitleStyle: React.CSSProperties = {
-  fontSize: 34,
+const sheetPeekTitleStyle: React.CSSProperties = {
+  fontSize: 22,
   fontWeight: 800,
-  letterSpacing: "-0.05em",
+  letterSpacing: "-0.04em",
   lineHeight: 1,
 };
 
-const sheetSubStyle: React.CSSProperties = {
-  marginTop: 8,
+const sheetPeekSubStyle: React.CSSProperties = {
+  marginTop: 6,
   color: "rgba(255,255,255,0.66)",
-  fontSize: 18,
-  lineHeight: 1.35,
+  fontSize: 15,
 };
 
-const sheetActionsWrapStyle: React.CSSProperties = {
-  display: "flex",
-  gap: 8,
-  flexWrap: "wrap",
-};
-
-const sheetToggleBtnStyle: React.CSSProperties = {
+const sheetPeekButtonStyle: React.CSSProperties = {
   borderRadius: 999,
   padding: "10px 14px",
   border: "1px solid rgba(255,255,255,0.12)",
@@ -684,21 +668,26 @@ const sheetToggleBtnStyle: React.CSSProperties = {
   fontSize: 14,
 };
 
-const sheetMetricsGridStyle: React.CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: 10,
-  marginTop: 18,
+const sheetContentStyle: React.CSSProperties = {
+  padding: "16px 18px 20px",
+  maxHeight: "68vh",
+  overflow: "auto",
 };
 
-const metricMiniCardStyle: React.CSSProperties = {
+const metricsGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 12,
+};
+
+const metricCardStyle: React.CSSProperties = {
   borderRadius: 18,
   border: "1px solid rgba(255,255,255,0.08)",
   background: "rgba(255,255,255,0.04)",
   padding: 14,
 };
 
-const metricMiniLabelStyle: React.CSSProperties = {
+const metricLabelStyle: React.CSSProperties = {
   fontSize: 11,
   textTransform: "uppercase",
   letterSpacing: "0.08em",
@@ -706,7 +695,7 @@ const metricMiniLabelStyle: React.CSSProperties = {
   marginBottom: 8,
 };
 
-const metricMiniValueStyle: React.CSSProperties = {
+const metricValueStyle: React.CSSProperties = {
   fontSize: 24,
   fontWeight: 800,
   letterSpacing: "-0.04em",
@@ -715,7 +704,7 @@ const metricMiniValueStyle: React.CSSProperties = {
 const sheetDividerStyle: React.CSSProperties = {
   height: 1,
   background: "rgba(255,255,255,0.12)",
-  margin: "16px 0",
+  margin: "18px 0",
 };
 
 const sheetSectionTitleStyle: React.CSSProperties = {
@@ -724,19 +713,19 @@ const sheetSectionTitleStyle: React.CSSProperties = {
   marginBottom: 12,
 };
 
-const sheetListStyle: React.CSSProperties = {
+const sheetBlockGridStyle: React.CSSProperties = {
   display: "grid",
   gap: 12,
 };
 
-const insightSongRowStyle: React.CSSProperties = {
+const insightCardStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "48px 1fr",
   gap: 12,
   alignItems: "center",
 };
 
-const insightSongMediaWrapStyle: React.CSSProperties = {
+const insightMediaWrapStyle: React.CSSProperties = {
   width: 48,
   height: 48,
   borderRadius: 12,
@@ -744,13 +733,13 @@ const insightSongMediaWrapStyle: React.CSSProperties = {
   background: "rgba(255,255,255,0.06)",
 };
 
-const insightSongMediaImageStyle: React.CSSProperties = {
+const insightMediaImageStyle: React.CSSProperties = {
   width: "100%",
   height: "100%",
   objectFit: "cover",
 };
 
-const insightSongMediaFallbackStyle: React.CSSProperties = {
+const insightMediaFallbackStyle: React.CSSProperties = {
   width: "100%",
   height: "100%",
   display: "grid",
@@ -768,14 +757,13 @@ const insightSubStyle: React.CSSProperties = {
   marginTop: 4,
   color: "rgba(255,255,255,0.66)",
   fontSize: 15,
-  lineHeight: 1.45,
+  lineHeight: 1.4,
 };
 
-const gridTwoStyle: React.CSSProperties = {
+const locationGridStyle: React.CSSProperties = {
   display: "grid",
   gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
-  gap: 10,
-  marginTop: 12,
+  gap: 12,
 };
 
 const miniListCardStyle: React.CSSProperties = {
@@ -791,32 +779,24 @@ const miniListTitleStyle: React.CSSProperties = {
   marginBottom: 12,
 };
 
-const miniListEmptyStyle: React.CSSProperties = {
+const miniEmptyStyle: React.CSSProperties = {
   color: "rgba(255,255,255,0.62)",
   fontSize: 13,
 };
 
-const miniListRowStyle: React.CSSProperties = {
+const miniRowStyle: React.CSSProperties = {
   display: "flex",
   justifyContent: "space-between",
   gap: 10,
   alignItems: "center",
 };
 
-const miniListLabelStyle: React.CSSProperties = {
+const miniLabelStyle: React.CSSProperties = {
   color: "rgba(255,255,255,0.76)",
   fontSize: 14,
 };
 
-const miniListValueStyle: React.CSSProperties = {
+const miniValueStyle: React.CSSProperties = {
   fontWeight: 700,
   fontSize: 14,
-};
-
-const emptyWrapStyle: React.CSSProperties = {
-  borderRadius: 22,
-  border: "1px solid rgba(255,255,255,0.08)",
-  background: "rgba(255,255,255,0.04)",
-  padding: 18,
-  color: "rgba(255,255,255,0.72)",
 };
