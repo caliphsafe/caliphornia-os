@@ -2,9 +2,55 @@
   min-height:100vh;
   background:#000;
   color:#fff;
-  padding:18px 16px 120px;
+  padding:24px 16px 120px;
   max-width:920px;
   margin:0 auto;
+}
+
+.topChrome{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  margin-bottom:18px;
+}
+
+.backPill{
+  width:54px;
+  height:54px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  display:grid;
+  place-items:center;
+  text-decoration:none;
+  color:#fff;
+  box-shadow:0 18px 44px rgba(0,0,0,.35);
+}
+
+.backChevron{
+  font-size:28px;
+  line-height:1;
+  transform:translateX(-1px);
+}
+
+.userChip{
+  min-height:46px;
+  padding:0 16px;
+  border-radius:999px;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  color:#fff;
+  font-size:15px;
+  font-weight:700;
+  box-shadow:0 18px 44px rgba(0,0,0,.35);
 }
 
 .header{
@@ -30,26 +76,6 @@
   line-height:1.1;
 }
 
-.profileBtn{
-  width:74px;
-  height:74px;
-  border-radius:999px;
-  overflow:hidden;
-  display:grid;
-  place-items:center;
-  background:rgba(255,255,255,.06);
-  border:1px solid rgba(255,255,255,.12);
-  color:#fff;
-  text-decoration:none;
-  flex-shrink:0;
-}
-
-.profileImg{
-  width:100%;
-  height:100%;
-  object-fit:cover;
-}
-
 .card{
   border-radius:30px;
   background:
@@ -57,6 +83,14 @@
     rgba(24,24,28,.82);
   border:1px solid rgba(255,255,255,.08);
   box-shadow:0 24px 50px rgba(0,0,0,.34);
+}
+
+.tapCard{
+  appearance:none;
+  width:100%;
+  text-align:left;
+  color:inherit;
+  cursor:pointer;
 }
 
 .ringsCard{
@@ -88,24 +122,24 @@
   border-radius:999px;
 }
 
-.ringMove{
+.ringListening{
   background:
     radial-gradient(circle at center, transparent 58%, #2a0a12 58%, #2a0a12 66%, transparent 66%),
-    conic-gradient(#ff2d55 var(--move), rgba(255,45,85,.18) 0);
+    conic-gradient(#ff2d55 var(--listening), rgba(255,45,85,.18) 0);
 }
 
-.ringExercise{
+.ringFavorites{
   inset:22px;
   background:
     radial-gradient(circle at center, transparent 56%, #11240f 56%, #11240f 66%, transparent 66%),
-    conic-gradient(#32d74b var(--exercise), rgba(50,215,75,.18) 0);
+    conic-gradient(#32d74b var(--favorites), rgba(50,215,75,.18) 0);
 }
 
-.ringStand{
+.ringReach{
   inset:44px;
   background:
     radial-gradient(circle at center, transparent 52%, #0f1d28 52%, #0f1d28 66%, transparent 66%),
-    conic-gradient(#0a84ff var(--stand), rgba(10,132,255,.18) 0);
+    conic-gradient(#0a84ff var(--reach), rgba(10,132,255,.18) 0);
 }
 
 .ringsCenter{
@@ -150,9 +184,9 @@
   flex-shrink:0;
 }
 
-.moveDot{ background:#ff2d55; box-shadow:0 0 14px rgba(255,45,85,.6); }
-.exerciseDot{ background:#32d74b; box-shadow:0 0 14px rgba(50,215,75,.6); }
-.standDot{ background:#0a84ff; box-shadow:0 0 14px rgba(10,132,255,.6); }
+.listeningDot{ background:#ff2d55; box-shadow:0 0 14px rgba(255,45,85,.6); }
+.favoritesDot{ background:#32d74b; box-shadow:0 0 14px rgba(50,215,75,.6); }
+.reachDot{ background:#0a84ff; box-shadow:0 0 14px rgba(10,132,255,.6); }
 
 .twoColGrid{
   display:grid;
@@ -184,6 +218,7 @@
 .twoColGrid .card{
   padding:24px;
   min-height:320px;
+  border:0;
 }
 
 .miniLabel{
@@ -309,6 +344,16 @@
   margin-bottom:16px;
 }
 
+.highlightRowBtn{
+  background:none;
+  border:0;
+  padding:0;
+  width:100%;
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+
 .highlightRow{
   display:grid;
   grid-template-columns:90px 1fr;
@@ -377,6 +422,9 @@
   border:1px solid rgba(255,255,255,.08);
   display:grid;
   gap:6px;
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
 }
 
 .locationCell strong{
@@ -399,18 +447,17 @@
 .bottomPanel{
   position:relative;
   overflow:hidden;
-  min-height:220px;
+  min-height:260px;
   border-radius:30px;
   margin-top:10px;
-  padding:26px 22px 96px;
   background:
     linear-gradient(180deg, rgba(255,255,255,.10), rgba(255,255,255,.03)),
     rgba(60,40,18,.78);
   border:1px solid rgba(255,255,255,.08);
 }
 
-.bottomHero{
-  max-width:500px;
+.bottomContent{
+  padding:26px 22px 108px;
 }
 
 .bottomKicker{
@@ -432,6 +479,7 @@
   color:rgba(255,255,255,.74);
   font-size:17px;
   line-height:1.5;
+  max-width:580px;
 }
 
 .bottomTabs{
@@ -458,12 +506,202 @@
   text-align:center;
   color:rgba(255,255,255,.8);
   font-size:15px;
+  background:none;
+  border:0;
+  cursor:pointer;
 }
 
 .bottomTabActive{
   background:rgba(181,255,59,.18);
   color:#d5ff66;
   font-weight:700;
+}
+
+.listStack{
+  display:grid;
+  gap:12px;
+  margin-top:16px;
+}
+
+.listRow{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:14px 0;
+  background:none;
+  border:0;
+  border-bottom:1px solid rgba(255,255,255,.08);
+  color:inherit;
+  text-align:left;
+  cursor:pointer;
+}
+
+.listRowText{
+  display:grid;
+  gap:4px;
+}
+
+.listRowText strong{
+  font-size:18px;
+}
+
+.listRowText span{
+  color:rgba(255,255,255,.64);
+}
+
+.listRowValue{
+  font-size:18px;
+  font-weight:700;
+}
+
+.awardRow{
+  display:grid;
+  grid-template-columns:14px 1fr;
+  gap:12px;
+  align-items:start;
+}
+
+.awardDot{
+  width:14px;
+  height:14px;
+  border-radius:999px;
+  margin-top:6px;
+  background:rgba(255,255,255,.18);
+}
+
+.awardDotOn{
+  background:#d5ff66;
+  box-shadow:0 0 14px rgba(213,255,102,.5);
+}
+
+.placesCols{
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:18px;
+  margin-top:16px;
+}
+
+.placesCol{
+  display:grid;
+  gap:10px;
+}
+
+.placesCol strong{
+  font-size:18px;
+}
+
+.placeLine{
+  display:flex;
+  justify-content:space-between;
+  gap:12px;
+  color:rgba(255,255,255,.78);
+}
+
+.modalOverlay{
+  position:fixed;
+  inset:0;
+  background:rgba(0,0,0,.6);
+  display:grid;
+  place-items:center;
+  padding:20px;
+  z-index:3000;
+}
+
+.modalCard{
+  position:relative;
+  width:min(620px, 100%);
+  border-radius:28px;
+  background:
+    linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.04)),
+    rgba(24,24,28,.94);
+  border:1px solid rgba(255,255,255,.12);
+  box-shadow:0 28px 70px rgba(0,0,0,.5);
+  padding:26px;
+}
+
+.modalClose{
+  position:absolute;
+  top:16px;
+  right:16px;
+  width:42px;
+  height:42px;
+  border-radius:999px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+  color:#fff;
+  font-size:28px;
+  line-height:1;
+  cursor:pointer;
+}
+
+.modalBody{
+  display:grid;
+  grid-template-columns:130px 1fr;
+  gap:20px;
+  align-items:start;
+}
+
+.modalMedia{
+  width:130px;
+  height:130px;
+  border-radius:24px;
+  overflow:hidden;
+  background:rgba(255,255,255,.08);
+}
+
+.modalImg{
+  width:100%;
+  height:100%;
+  object-fit:cover;
+}
+
+.modalFallback{
+  width:100%;
+  height:100%;
+  display:grid;
+  place-items:center;
+  font-size:42px;
+}
+
+.modalCopy h3{
+  margin:0;
+  font-size:34px;
+  line-height:.95;
+  letter-spacing:-0.04em;
+}
+
+.modalCopy p{
+  margin:10px 0 0;
+  color:rgba(255,255,255,.68);
+  font-size:18px;
+}
+
+.modalStats{
+  margin-top:18px;
+  display:grid;
+  grid-template-columns:1fr 1fr;
+  gap:12px;
+}
+
+.modalStats div{
+  border-radius:16px;
+  padding:14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  display:grid;
+  gap:6px;
+}
+
+.modalStats span{
+  font-size:12px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:rgba(255,255,255,.48);
+}
+
+.modalStats strong{
+  font-size:18px;
 }
 
 @media (max-width: 820px){
@@ -482,6 +720,20 @@
   .locationGrid{
     grid-template-columns:1fr;
   }
+
+  .placesCols{
+    grid-template-columns:1fr;
+  }
+
+  .modalBody{
+    grid-template-columns:1fr;
+  }
+
+  .modalMedia{
+    width:100%;
+    max-width:220px;
+    height:220px;
+  }
 }
 
 @media (max-width: 640px){
@@ -493,18 +745,13 @@
     font-size:18px;
   }
 
-  .profileBtn{
-    width:64px;
-    height:64px;
-  }
-
   .rings{
     width:190px;
     height:190px;
   }
 
-  .ringExercise{ inset:20px; }
-  .ringStand{ inset:40px; }
+  .ringFavorites{ inset:20px; }
+  .ringReach{ inset:40px; }
   .ringsCenter{ inset:68px; }
 
   .highlightRow{
@@ -527,5 +774,9 @@
 
   .bottomTab{
     min-height:54px;
+  }
+
+  .modalStats{
+    grid-template-columns:1fr;
   }
 }
