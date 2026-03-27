@@ -52,14 +52,15 @@ export async function POST(request: Request) {
         user_email: userEmail,
         event_type: "song_play",
         song_id: song.id,
-        song_slug: song.slug,
         app_slug: resolvedAppSlug,
         source_path: sourcePath,
         user_agent: h.get("user-agent"),
         country: h.get("x-vercel-ip-country"),
         region: h.get("x-vercel-ip-country-region"),
         city: h.get("x-vercel-ip-city"),
-        metadata: {}
+        metadata: {
+          song_slug: song.slug
+        }
       });
 
     if (logError) {
