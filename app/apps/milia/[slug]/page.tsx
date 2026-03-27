@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import MiliaDetailPlayer from "@/components/MiliaDetailPlayer";
+import MiliaTrackSync from "@/components/MiliaTrackSync";
 import type { GlobalTrack } from "@/components/GlobalPlayer";
 import styles from "../milia.module.css";
 
@@ -349,6 +350,8 @@ export default async function MiliaSongDetailPage({
 
   return (
     <main className={`${styles.page} ${styles[pageThemeClass]}`}>
+      <MiliaTrackSync currentSlug={song.slug} />
+
       <div className={styles.chrome}>
         <Link href="/apps/milia" className={styles.backPill} aria-label="Back to Milia">
           ‹
@@ -447,34 +450,7 @@ export default async function MiliaSongDetailPage({
           />
 
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Weather Details</h2>
             <div className={styles.songMetaGrid}>
-              <div className={styles.metaCell}>
-                <span className={styles.metaLabel}>Associated Place</span>
-                <span className={styles.metaValue}>{placeLabel}</span>
-              </div>
-              <div className={styles.metaCell}>
-                <span className={styles.metaLabel}>Feels Like</span>
-                <span className={styles.metaValue}>
-                  {weather?.current?.apparentTemperature != null
-                    ? `${Math.round(weather.current.apparentTemperature)}°`
-                    : "—"}
-                </span>
-              </div>
-              <div className={styles.metaCell}>
-                <span className={styles.metaLabel}>Humidity</span>
-                <span className={styles.metaValue}>
-                  {weather?.current?.humidity != null ? `${weather.current.humidity}%` : "—"}
-                </span>
-              </div>
-              <div className={styles.metaCell}>
-                <span className={styles.metaLabel}>Wind</span>
-                <span className={styles.metaValue}>
-                  {weather?.current?.windSpeed != null
-                    ? `${Math.round(weather.current.windSpeed)} km/h`
-                    : "—"}
-                </span>
-              </div>
               <div className={styles.metaCell}>
                 <span className={styles.metaLabel}>Artist</span>
                 <span className={styles.metaValue}>{song.artist_name || "—"}</span>
@@ -486,6 +462,10 @@ export default async function MiliaSongDetailPage({
               <div className={styles.metaCell}>
                 <span className={styles.metaLabel}>Duration</span>
                 <span className={styles.metaValue}>{song.duration_label || "—"}</span>
+              </div>
+              <div className={styles.metaCell}>
+                <span className={styles.metaLabel}>Place</span>
+                <span className={styles.metaValue}>{placeLabel}</span>
               </div>
             </div>
 
