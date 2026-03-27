@@ -36,11 +36,15 @@ export async function POST(request: Request) {
     const resolvedAppSlug =
       sourceApp ||
       song.source_app_slug ||
-      (sourcePath?.startsWith("/apps/milia") ? "milia" :
-       sourcePath?.startsWith("/apps/friends") ? "friends" :
-       sourcePath?.startsWith("/apps/fartherhood") ? "fartherhood" :
-       sourcePath?.startsWith("/apps/music") ? "music" :
-       null);
+      (sourcePath?.startsWith("/apps/milia")
+        ? "milia"
+        : sourcePath?.startsWith("/apps/friends")
+          ? "friends"
+          : sourcePath?.startsWith("/apps/fartherhood")
+            ? "fartherhood"
+            : sourcePath?.startsWith("/apps/music")
+              ? "music"
+              : null);
 
     const { error: logError } = await supabaseAdmin
       .from("event_logs")
