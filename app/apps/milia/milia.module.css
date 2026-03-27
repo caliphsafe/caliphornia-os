@@ -4,50 +4,49 @@
   padding:18px 14px 120px;
   background:
     radial-gradient(circle at 50% 0%, rgba(255,255,255,0.18), transparent 24%),
-    linear-gradient(180deg, #62707f 0%, #67788e 22%, #6a84a2 50%, #8caac5 100%);
+    linear-gradient(180deg, #667385 0%, #6b7d94 30%, #7d98b6 62%, #91b1cc 100%);
 }
 
 .cardSun,
 .detailSun{
   background:
-    radial-gradient(circle at 45% 10%, rgba(255,255,255,0.24), transparent 18%),
-    radial-gradient(circle at 18% 14%, rgba(255,255,255,0.10), transparent 14%),
-    radial-gradient(circle at 30% 30%, rgba(255,255,255,0.12), transparent 5%),
-    radial-gradient(circle at 64% 58%, rgba(255,255,255,0.10), transparent 6%),
-    linear-gradient(180deg, rgba(164,202,255,0.48), rgba(97,155,228,0.34)),
-    linear-gradient(180deg, #71a9f0 0%, #5d95dd 40%, #4e84ce 100%) !important;
+    radial-gradient(circle at 50% 5%, rgba(255,255,255,0.30), transparent 18%),
+    radial-gradient(circle at 28% 32%, rgba(255,255,255,0.10), transparent 5%),
+    radial-gradient(circle at 60% 58%, rgba(255,255,255,0.08), transparent 6%),
+    linear-gradient(180deg, rgba(185,214,255,0.40), rgba(92,145,221,0.22)),
+    linear-gradient(180deg, #6fa6ec 0%, #5b91d9 46%, #4f84cf 100%) !important;
 }
 
 .cardCloud,
 .detailCloud{
   background:
-    radial-gradient(circle at 50% 12%, rgba(255,255,255,0.16), transparent 18%),
-    linear-gradient(180deg, rgba(209,218,229,0.26), rgba(140,163,196,0.18)),
-    linear-gradient(180deg, #a7b2bf 0%, #92a1b6 36%, #6f88ab 100%) !important;
+    radial-gradient(circle at 50% 8%, rgba(255,255,255,0.18), transparent 18%),
+    linear-gradient(180deg, rgba(219,227,236,0.24), rgba(130,152,182,0.14)),
+    linear-gradient(180deg, #b0bac7 0%, #95a6bc 40%, #7c93b1 100%) !important;
 }
 
 .cardRain,
 .detailRain{
   background:
-    radial-gradient(circle at 30% 8%, rgba(255,255,255,0.12), transparent 14%),
-    linear-gradient(180deg, rgba(112,139,191,0.24), rgba(57,86,132,0.20)),
-    linear-gradient(180deg, #6f8fb7 0%, #4a72aa 50%, #355d90 100%) !important;
+    radial-gradient(circle at 44% 8%, rgba(255,255,255,0.12), transparent 18%),
+    linear-gradient(180deg, rgba(98,126,171,0.24), rgba(55,86,135,0.16)),
+    linear-gradient(180deg, #6d8bb4 0%, #4d74aa 46%, #3b628f 100%) !important;
 }
 
 .cardStorm,
 .detailStorm{
   background:
-    radial-gradient(circle at 35% 10%, rgba(255,255,255,0.10), transparent 12%),
-    linear-gradient(180deg, rgba(88,92,123,0.24), rgba(36,40,59,0.18)),
-    linear-gradient(180deg, #4c577b 0%, #36425e 44%, #252f47 100%) !important;
+    radial-gradient(circle at 48% 8%, rgba(255,255,255,0.08), transparent 18%),
+    linear-gradient(180deg, rgba(81,88,126,0.24), rgba(36,42,63,0.16)),
+    linear-gradient(180deg, #545f83 0%, #3a4664 46%, #29334b 100%) !important;
 }
 
 .cardBlue,
 .detailBlue{
   background:
-    radial-gradient(circle at 45% 10%, rgba(255,255,255,0.18), transparent 18%),
-    linear-gradient(180deg, rgba(160,198,245,0.24), rgba(78,126,198,0.20)),
-    linear-gradient(180deg, #6e97cf 0%, #4f79b8 42%, #395f96 100%) !important;
+    radial-gradient(circle at 50% 8%, rgba(255,255,255,0.18), transparent 18%),
+    linear-gradient(180deg, rgba(150,189,242,0.24), rgba(70,112,182,0.16)),
+    linear-gradient(180deg, #7398cc 0%, #547db7 46%, #416493 100%) !important;
 }
 
 .chrome{
@@ -69,10 +68,10 @@
   width:48px;
   height:48px;
   border-radius:999px;
-  background:rgba(78,95,124,0.22);
+  background:rgba(86,104,132,0.20);
   border:1px solid rgba(255,255,255,0.20);
-  backdrop-filter:blur(20px) saturate(150%);
-  -webkit-backdrop-filter:blur(20px) saturate(150%);
+  backdrop-filter:blur(22px) saturate(150%);
+  -webkit-backdrop-filter:blur(22px) saturate(150%);
   box-shadow:
     0 16px 36px rgba(0,0,0,0.18),
     inset 0 1px 0 rgba(255,255,255,0.10);
@@ -115,24 +114,16 @@
   text-shadow:0 10px 28px rgba(0,0,0,0.16);
 }
 
-.heroSub{
-  margin:10px 0 0;
-  max-width:40ch;
-  color:rgba(255,255,255,.84);
-  line-height:1.5;
-  font-size:15px;
-}
-
 .stack{
   display:grid;
-  gap:18px;
+  gap:16px;
 }
 
 .card{
   display:block;
   width:100%;
   text-align:left;
-  padding:22px 18px 18px;
+  padding:18px 18px 16px;
   border:0;
   border-radius:30px;
   color:#fff;
@@ -141,11 +132,12 @@
   backdrop-filter:blur(18px) saturate(145%);
   -webkit-backdrop-filter:blur(18px) saturate(145%);
   box-shadow:
-    0 26px 48px rgba(0,0,0,.18),
+    0 24px 44px rgba(0,0,0,.16),
     inset 0 1px 0 rgba(255,255,255,.10);
   cursor:pointer;
   overflow:hidden;
   position:relative;
+  min-height:168px;
 }
 
 .card::before{
@@ -153,16 +145,14 @@
   position:absolute;
   inset:0;
   background:
-    linear-gradient(180deg, rgba(255,255,255,0.12), transparent 30%),
-    linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.05) 100%);
+    linear-gradient(180deg, rgba(255,255,255,0.12), transparent 34%),
+    linear-gradient(180deg, transparent 55%, rgba(0,0,0,0.04) 100%);
   pointer-events:none;
 }
 
 .cardTop,
-.cardMeta,
-.cardFooter,
-.hourlyRow,
-.cardDivider{
+.cardBottomMeta,
+.cardActions{
   position:relative;
   z-index:1;
 }
@@ -180,9 +170,9 @@
 
 .cardTitle{
   margin:0;
-  font-size:28px;
+  font-size:34px;
   line-height:1;
-  letter-spacing:-0.04em;
+  letter-spacing:-0.05em;
   font-weight:800;
   text-shadow:0 8px 18px rgba(0,0,0,0.14);
 }
@@ -190,14 +180,15 @@
 .cardArtist{
   margin:6px 0 0;
   color:rgba(255,255,255,.88);
-  font-size:15px;
-  font-weight:600;
+  font-size:14px;
+  font-weight:700;
 }
 
 .cardPlace{
   margin:4px 0 0;
   color:rgba(255,255,255,.76);
-  font-size:14px;
+  font-size:15px;
+  font-weight:600;
 }
 
 .cardTemp{
@@ -209,8 +200,8 @@
   text-shadow:0 8px 22px rgba(0,0,0,0.10);
 }
 
-.cardMeta{
-  margin-top:18px;
+.cardBottomMeta{
+  margin-top:28px;
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -219,7 +210,7 @@
 
 .cardCondition{
   font-size:14px;
-  color:rgba(255,255,255,.92);
+  color:rgba(255,255,255,.94);
   font-weight:600;
 }
 
@@ -229,94 +220,38 @@
   font-weight:700;
 }
 
-.cardFooter{
-  margin-top:16px;
-  display:flex;
-  align-items:center;
-  justify-content:space-between;
-  gap:12px;
+.cardActions{
+  position:absolute;
+  right:18px;
+  bottom:18px;
 }
 
-.playPill{
-  min-height:42px;
+.cardPlayButton{
+  width:42px;
+  height:42px;
   border-radius:999px;
-  padding:0 14px 0 12px;
   border:1px solid rgba(255,255,255,.18);
-  background:rgba(15,20,28,.32);
+  background:rgba(15,20,28,.30);
   color:#fff;
-  display:inline-flex;
-  align-items:center;
-  gap:10px;
+  display:grid;
+  place-items:center;
   cursor:pointer;
-  font-weight:700;
   backdrop-filter:blur(18px);
   -webkit-backdrop-filter:blur(18px);
 }
 
-.playPillActive{
+.cardPlayButtonActive{
   background:rgba(255,255,255,.22);
 }
 
-.playPill:disabled{
+.cardPlayButton:disabled{
   opacity:.6;
   cursor:not-allowed;
 }
 
-.playGlyph{
-  width:20px;
-  display:inline-flex;
-  align-items:center;
-  justify-content:center;
-  font-size:12px;
-}
-
-.openHint{
+.cardPlayGlyph{
   font-size:13px;
-  color:rgba(255,255,255,.74);
-  font-weight:700;
-}
-
-.cardDivider{
-  height:1px;
-  background:rgba(255,255,255,.16);
-  margin:16px 0 14px;
-}
-
-.hourlyRow{
-  display:grid;
-  grid-template-columns:repeat(4, minmax(0, 1fr));
-  gap:10px;
-}
-
-.hourChip{
-  border-radius:18px;
-  padding:10px 8px;
-  background:rgba(255,255,255,.10);
-  border:1px solid rgba(255,255,255,.14);
-  text-align:center;
-  backdrop-filter:blur(16px);
-  -webkit-backdrop-filter:blur(16px);
-}
-
-.hourTime{
-  font-size:12px;
-  color:rgba(255,255,255,.72);
-  font-weight:700;
-}
-
-.hourTemp{
-  margin-top:8px;
-  font-size:18px;
-  font-weight:800;
-}
-
-.hourLabel{
-  margin-top:4px;
-  font-size:11px;
-  color:rgba(255,255,255,.78);
-  white-space:nowrap;
-  overflow:hidden;
-  text-overflow:ellipsis;
+  transform:translateX(1px);
 }
 
 .empty{
@@ -332,18 +267,20 @@
   text-align:center;
 }
 
+.detailLocationKicker{
+  margin:0 0 4px;
+  font-size:18px;
+  color:rgba(255,255,255,.90);
+  font-weight:600;
+  text-shadow:0 6px 16px rgba(0,0,0,.10);
+}
+
 .detailCityTitle{
   margin:0;
-  font-size:50px;
+  font-size:52px;
   line-height:.95;
   letter-spacing:-0.05em;
   font-weight:500;
-}
-
-.detailPlace{
-  margin:8px 0 0;
-  font-size:18px;
-  color:rgba(255,255,255,.84);
 }
 
 .detailWeatherCenter{
@@ -393,8 +330,8 @@
   padding:18px;
   border:1px solid rgba(255,255,255,.14);
   background:
-    linear-gradient(180deg, rgba(91,141,224,.26), rgba(79,124,204,.18)),
-    rgba(56,96,162,.22);
+    linear-gradient(180deg, rgba(107,151,224,.24), rgba(84,124,198,.16)),
+    rgba(56,96,162,.20);
   backdrop-filter:blur(20px) saturate(145%);
   -webkit-backdrop-filter:blur(20px) saturate(145%);
   box-shadow:
@@ -407,6 +344,38 @@
   font-size:22px;
   line-height:1;
   letter-spacing:-0.03em;
+}
+
+.hourlyForecastRow{
+  display:grid;
+  grid-template-columns:repeat(6, minmax(0, 1fr));
+  gap:10px;
+}
+
+.forecastHourItem{
+  text-align:center;
+  padding:10px 6px;
+  border-radius:18px;
+  background:rgba(255,255,255,.08);
+  border:1px solid rgba(255,255,255,.12);
+}
+
+.forecastHourTime{
+  font-size:12px;
+  color:rgba(255,255,255,.74);
+  font-weight:700;
+}
+
+.forecastHourIcon{
+  margin-top:10px;
+  font-size:28px;
+  line-height:1;
+}
+
+.forecastHourTemp{
+  margin-top:10px;
+  font-size:16px;
+  font-weight:700;
 }
 
 .songMetaGrid{
@@ -442,9 +411,9 @@
   gap:10px;
 }
 
-.dayRow{
+.weatherDayRow{
   display:grid;
-  grid-template-columns:88px 1fr auto;
+  grid-template-columns:76px 42px 52px 1fr 52px;
   align-items:center;
   gap:12px;
   border-radius:18px;
@@ -455,20 +424,37 @@
 
 .dayName{
   font-size:14px;
-  color:rgba(255,255,255,.92);
+  color:rgba(255,255,255,.94);
   font-weight:700;
 }
 
-.dayLabel{
-  font-size:14px;
-  color:#fff;
+.dayIcon{
+  font-size:26px;
+  line-height:1;
+  text-align:center;
 }
 
-.dayTemps{
+.dayMin,
+.dayMax{
   font-size:14px;
   color:rgba(255,255,255,.90);
-  white-space:nowrap;
   font-weight:700;
+}
+
+.tempTrack{
+  position:relative;
+  height:6px;
+  border-radius:999px;
+  background:rgba(78,105,146,.50);
+  overflow:hidden;
+}
+
+.tempTrackFill{
+  position:absolute;
+  top:0;
+  bottom:0;
+  border-radius:999px;
+  background:linear-gradient(90deg, #54c6ff 0%, #8fd7dd 52%, #bddf7d 100%);
 }
 
 .audioBlock{
@@ -502,8 +488,55 @@
   color:rgba(255,255,255,.86);
 }
 
-.audioPlayer{
-  width:100%;
+.detailPlayerHeader{
+  display:flex;
+  align-items:center;
+  justify-content:space-between;
+  gap:16px;
+}
+
+.detailPlayerTitle{
+  font-size:26px;
+  font-weight:800;
+  line-height:1;
+}
+
+.detailPlayerSub{
+  margin-top:6px;
+  color:rgba(255,255,255,.78);
+  font-size:14px;
+}
+
+.detailPlayButton{
+  min-height:42px;
+  border-radius:999px;
+  padding:0 16px;
+  border:1px solid rgba(255,255,255,.18);
+  background:rgba(15,20,28,.30);
+  color:#fff;
+  display:inline-flex;
+  align-items:center;
+  justify-content:center;
+  cursor:pointer;
+  font-weight:700;
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+}
+
+.detailPlayButtonActive{
+  background:rgba(255,255,255,.22);
+}
+
+.detailPlayButton:disabled{
+  opacity:.6;
+  cursor:not-allowed;
+}
+
+.detailPlayerHint{
+  margin:0;
+  color:rgba(255,255,255,.80);
+  font-size:13px;
+  line-height:1.5;
 }
 
 .note{
@@ -518,19 +551,15 @@
   }
 
   .cardTitle{
-    font-size:24px;
+    font-size:30px;
   }
 
   .cardTemp{
     font-size:52px;
   }
 
-  .hourlyRow{
-    grid-template-columns:repeat(2, minmax(0, 1fr));
-  }
-
   .detailCityTitle{
-    font-size:40px;
+    font-size:42px;
   }
 
   .detailNow{
@@ -541,11 +570,16 @@
     font-size:22px;
   }
 
+  .hourlyForecastRow{
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+  }
+
   .songMetaGrid{
     grid-template-columns:1fr;
   }
 
-  .dayRow{
-    grid-template-columns:72px 1fr auto;
+  .weatherDayRow{
+    grid-template-columns:62px 34px 42px 1fr 42px;
+    gap:10px;
   }
 }
