@@ -11,5 +11,8 @@ export default async function HomePage() {
     redirect("/");
   }
 
-  return <HomeScreen email={session.email} />;
+  return <HomeScreen
+  email={session.email}
+  username={session.username}
+/>;
 }
