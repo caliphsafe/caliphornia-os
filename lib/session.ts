@@ -5,6 +5,7 @@ const SESSION_SECRET = process.env.SESSION_SECRET || "dev_session_secret_change_
 export type SessionPayload = {
   email: string;
   username?: string;
+  role?: string;
   iat: number;
 };
 
@@ -52,10 +53,11 @@ export function verifySession(token?: string | null): SessionPayload | null {
     if (typeof parsed.iat !== "number") return null;
 
     return {
-      email: parsed.email,
-      username: typeof parsed.username === "string" ? parsed.username : undefined,
-      iat: parsed.iat
-    };
+  email: parsed.email,
+  username: typeof parsed.username === "string" ? parsed.username : undefined,
+  role: typeof parsed.role === "string" ? parsed.role : undefined,
+  iat: parsed.iat
+};
   } catch {
     return null;
   }
