@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import MiliaDetailPlayer from "@/components/MiliaDetailPlayer";
+import type { MiliaQueueItem } from "@/lib/milia-player";
 import styles from "../milia.module.css";
 
 export const dynamic = "force-dynamic";
@@ -79,6 +81,19 @@ function weatherCodeLabel(code: number | null | undefined) {
   };
 
   return map[code ?? -1] || "Forecast";
+}
+
+function weatherGlyph(label?: string | null) {
+  const value = String(label || "").toLowerCase();
+
+  if (value.includes("thunder")) return "⚡";
+  if (value.includes("rain") || value.includes("drizzle") || value.includes("showers")) return "☔";
+  if (value.includes("cloud")) return "☁";
+  if (value.includes("fog")) return "〰";
+  if (value.includes("snow")) return "❄";
+  if (value.includes("clear") || value.includes("sun")) return "☀";
+  if (value.includes("partly")) return "⛅";
+  return "☁";
 }
 
 function getWeatherTheme(label?: string | null) {
@@ -180,7 +195,7 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
       sunset: daily?.sunset?.[0] ?? null,
     },
     hourly: Array.isArray(hourly?.time)
-      ? hourly.time.slice(0, 8).map((time: string, index: number) => ({
+      ? hourly.time.slice(0, 6).map((time: string, index: number) => ({
           time,
           temperature: hourly?.temperature_2m?.[index] ?? null,
           label: weatherCodeLabel(hourly?.weather_code?.[index]),
@@ -194,6 +209,35 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
           tempMin: daily?.temperature_2m_min?.[index] ?? null,
         }))
       : [],
+  };
+}
+
+function getTempBarRange(daily: WeatherData["daily"]) {
+  const mins = daily.map((day) => day.tempMin).filter((v): v is number => v != null);
+  const maxes = daily.map((day) => day.tempMax).filter((v): v is number => v != null);
+
+  if (!mins.length || !maxes.length) {
+    return { min: 0, max: 100 };
+  }
+
+  return {
+    min: Math.min(...mins),
+    max: Math.max(...maxes),
+  };
+}
+
+function getBarStyle(minTemp: number | null, maxTemp: number | null, rangeMin: number, rangeMax: number) {
+  if (minTemp == null || maxTemp == null || rangeMax <= rangeMin) {
+    return { left: "0%", width: "0%" };
+  }
+
+  const total = rangeMax - rangeMin;
+  const left = ((minTemp - rangeMin) / total) * 100;
+  const width = ((maxTemp - minTemp) / total) * 100;
+
+  return {
+    left: `${left}%`,
+    width: `${Math.max(width, 8)}%`,
   };
 }
 
@@ -236,22 +280,6 @@ export default async function MiliaSongDetailPage({
 
   const song = data as SongRow;
 
-  let coverUrl: string | null = null;
-  let audioUrl: string | null = null;
-  let weather: WeatherData | null = null;
-
-  try {
-    [coverUrl, audioUrl, weather] = await Promise.all([
-      createSignedCoverUrl(song.cover_image_path),
-      createSignedAudioUrl(song.audio_path),
-      getWeatherForSong(song),
-    ]);
-  } catch {
-    coverUrl = await createSignedCoverUrl(song.cover_image_path);
-    audioUrl = await createSignedAudioUrl(song.audio_path);
-    weather = null;
-  }
-
   const placeLabel =
     song.weather_location_name ||
     [song.weather_city, song.weather_region, song.weather_country]
@@ -260,7 +288,59 @@ export default async function MiliaSongDetailPage({
     song.weather_search_label ||
     "Unknown location";
 
+  const [coverUrl, audioUrl, weather, queueRows] = await Promise.all([
+    createSignedCoverUrl(song.cover_image_path),
+    createSignedAudioUrl(song.audio_path),
+    getWeatherForSong(song),
+    supabaseAdmin
+      .from("songs")
+      .select(`
+        slug,
+        title,
+        artist_name,
+        audio_path,
+        cover_image_path,
+        weather_location_name,
+        weather_city,
+        weather_region,
+        weather_country,
+        weather_search_label,
+        weather_sort_order
+      `)
+      .eq("source_app_slug", "milia")
+      .order("weather_sort_order", { ascending: true, nullsFirst: false }),
+  ]);
+
+  const queueData = queueRows.data || [];
+
+  const projectQueue: MiliaQueueItem[] = await Promise.all(
+    queueData.map(async (row) => {
+      const [rowAudioUrl, rowCoverUrl] = await Promise.all([
+        createSignedAudioUrl(row.audio_path),
+        createSignedCoverUrl(row.cover_image_path),
+      ]);
+
+      const rowPlace =
+        row.weather_location_name ||
+        [row.weather_city, row.weather_region, row.weather_country]
+          .filter(Boolean)
+          .join(", ") ||
+        row.weather_search_label ||
+        "Unknown location";
+
+      return {
+        slug: row.slug,
+        title: row.title,
+        artistName: row.artist_name || "Unknown artist",
+        placeLabel: rowPlace,
+        audioUrl: rowAudioUrl,
+        coverUrl: rowCoverUrl,
+      };
+    })
+  );
+
   const pageThemeClass = getWeatherTheme(weather?.today?.label || weather?.current?.label);
+  const range = getTempBarRange(weather?.daily || []);
 
   return (
     <main className={`${styles.page} ${styles[pageThemeClass]}`}>
@@ -276,7 +356,7 @@ export default async function MiliaSongDetailPage({
 
       <div className={styles.container}>
         <section className={styles.detailHero}>
-          <p className={styles.heroKicker}>{placeLabel}</p>
+          <p className={styles.detailLocationKicker}>{placeLabel}</p>
           <h1 className={styles.detailCityTitle}>{song.title}</h1>
 
           <div className={styles.detailWeatherCenter}>
@@ -302,17 +382,19 @@ export default async function MiliaSongDetailPage({
         <div className={styles.detailGrid}>
           <section className={styles.panel}>
             <p className={styles.detailIntro}>
-              {song.artist_name || "Unknown artist"} · Weather unfolding in {placeLabel}.
+              {song.artist_name || "Unknown artist"} · Weather and music unfolding in {placeLabel}.
             </p>
 
-            <div className={styles.hourlyRow}>
-              {(weather?.hourly || []).slice(0, 6).map((hour) => (
-                <div key={hour.time} className={styles.hourChip}>
-                  <div className={styles.hourTime}>{formatHourLabel(hour.time)}</div>
-                  <div className={styles.hourTemp}>
+            <div className={styles.hourlyForecastRow}>
+              {(weather?.hourly || []).slice(0, 6).map((hour, index) => (
+                <div key={hour.time} className={styles.forecastHourItem}>
+                  <div className={styles.forecastHourTime}>
+                    {index === 0 ? "Now" : formatHourLabel(hour.time)}
+                  </div>
+                  <div className={styles.forecastHourIcon}>{weatherGlyph(hour.label)}</div>
+                  <div className={styles.forecastHourTemp}>
                     {hour.temperature != null ? `${Math.round(hour.temperature)}°` : "—"}
                   </div>
-                  <div className={styles.hourLabel}>{hour.label}</div>
                 </div>
               ))}
             </div>
@@ -321,61 +403,43 @@ export default async function MiliaSongDetailPage({
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>10-Day Forecast</h2>
             <div className={styles.dayList}>
-              {(weather?.daily || []).map((day, index) => (
-                <div key={day.time} className={styles.dayRow}>
-                  <div className={styles.dayName}>
-                    {index === 0 ? "Today" : formatDayLabel(day.time)}
+              {(weather?.daily || []).map((day, index) => {
+                const barStyle = getBarStyle(day.tempMin, day.tempMax, range.min, range.max);
+
+                return (
+                  <div key={day.time} className={styles.weatherDayRow}>
+                    <div className={styles.dayName}>
+                      {index === 0 ? "Today" : formatDayLabel(day.time)}
+                    </div>
+
+                    <div className={styles.dayIcon}>{weatherGlyph(day.label)}</div>
+
+                    <div className={styles.dayMin}>
+                      {day.tempMin != null ? `${Math.round(day.tempMin)}°` : "—"}
+                    </div>
+
+                    <div className={styles.tempTrack}>
+                      <span className={styles.tempTrackFill} style={barStyle} />
+                    </div>
+
+                    <div className={styles.dayMax}>
+                      {day.tempMax != null ? `${Math.round(day.tempMax)}°` : "—"}
+                    </div>
                   </div>
-                  <div className={styles.dayLabel}>{day.label}</div>
-                  <div className={styles.dayTemps}>
-                    {day.tempMin != null ? Math.round(day.tempMin) : "—"}°
-                    {"  "}
-                    {day.tempMax != null ? Math.round(day.tempMax) : "—"}°
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           </section>
 
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Now Playing</h2>
-
-            <div className={styles.audioBlock}>
-              <div className={styles.audioCover}>
-                {coverUrl ? (
-                  <img src={coverUrl} alt={song.title} />
-                ) : (
-                  <div className={styles.audioFallback}>♪</div>
-                )}
-              </div>
-
-              {audioUrl ? (
-                <audio controls className={styles.audioPlayer} src={audioUrl} />
-              ) : null}
-
-              <div className={styles.songMetaGrid}>
-                <div className={styles.metaCell}>
-                  <span className={styles.metaLabel}>Song</span>
-                  <span className={styles.metaValue}>{song.title}</span>
-                </div>
-                <div className={styles.metaCell}>
-                  <span className={styles.metaLabel}>Artist</span>
-                  <span className={styles.metaValue}>{song.artist_name || "—"}</span>
-                </div>
-                <div className={styles.metaCell}>
-                  <span className={styles.metaLabel}>Producer</span>
-                  <span className={styles.metaValue}>{song.producer_names || "—"}</span>
-                </div>
-                <div className={styles.metaCell}>
-                  <span className={styles.metaLabel}>Duration</span>
-                  <span className={styles.metaValue}>{song.duration_label || "—"}</span>
-                </div>
-              </div>
-
-              {song.description ? <p className={styles.note}>{song.description}</p> : null}
-              {song.location_note ? <p className={styles.note}>{song.location_note}</p> : null}
-            </div>
-          </section>
+          <MiliaDetailPlayer
+            slug={song.slug}
+            title={song.title}
+            artistName={song.artist_name || "Unknown artist"}
+            placeLabel={placeLabel}
+            audioUrl={audioUrl}
+            coverUrl={coverUrl}
+            projectQueue={projectQueue}
+          />
 
           <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Weather Details</h2>
@@ -406,7 +470,22 @@ export default async function MiliaSongDetailPage({
                     : "—"}
                 </span>
               </div>
+              <div className={styles.metaCell}>
+                <span className={styles.metaLabel}>Artist</span>
+                <span className={styles.metaValue}>{song.artist_name || "—"}</span>
+              </div>
+              <div className={styles.metaCell}>
+                <span className={styles.metaLabel}>Producer</span>
+                <span className={styles.metaValue}>{song.producer_names || "—"}</span>
+              </div>
+              <div className={styles.metaCell}>
+                <span className={styles.metaLabel}>Duration</span>
+                <span className={styles.metaValue}>{song.duration_label || "—"}</span>
+              </div>
             </div>
+
+            {song.description ? <p className={styles.note}>{song.description}</p> : null}
+            {song.location_note ? <p className={styles.note}>{song.location_note}</p> : null}
           </section>
         </div>
       </div>
