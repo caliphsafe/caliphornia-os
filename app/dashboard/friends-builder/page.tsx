@@ -402,7 +402,24 @@ export default function FriendsBuilderPage() {
 
   return Array.from(names);
 }, [selectedSong]);
+  
+const conversationPeopleLabel = useMemo(() => {
+  const names = new Set<string>();
 
+  const collectNames = (value: string | null | undefined) => {
+    String(value || "")
+      .split(/,|&|\band\b|\bfeat\.?\b|\bft\.?\b/gi)
+      .map((name) => name.trim())
+      .filter(Boolean)
+      .forEach((name) => names.add(name));
+  };
+
+  collectNames(selectedSong?.artist_name);
+  collectNames(selectedSong?.producer_names);
+
+  return Array.from(names).join(", ");
+}, [selectedSong]);
+  
   const audioSourceOptions = useMemo<AudioSourceOption[]>(() => {
     const base: AudioSourceOption[] = [];
 
@@ -637,7 +654,7 @@ export default function FriendsBuilderPage() {
       payload.append("primarySongSlug", primarySongSlug);
       payload.append("conversationSlug", slugify(conversationSlug));
       payload.append("conversationTitle", conversationTitle);
-      payload.append("conversationSubtitle", selectedSong?.artist_name || "");
+      payload.append("conversationSubtitle", conversationPeopleLabel || "");
       payload.append("listPreview", listPreview);
       payload.append("avatarLetter", (conversationTitle[0] || "F").toUpperCase());
       payload.append("lastActivityLabel", "");
@@ -1160,13 +1177,16 @@ export default function FriendsBuilderPage() {
           </form>
 
           <aside className="preview-column">
-            <PreviewPhone
-              conversationTitle={conversationTitle}
-              listPreview={listPreview}
-              selectedSong={selectedSong}
-              messages={messages}
-              audioSourceOptions={audioSourceOptions}
-            />
+           <PreviewPhone
+  conversationTitle={conversationTitle}
+  listPreview={listPreview}
+  selectedSong={{
+    ...selectedSong,
+    artist_name: conversationPeopleLabel || selectedSong?.artist_name || ""
+  }}
+  messages={messages}
+  audioSourceOptions={audioSourceOptions}
+/>
           </aside>
         </div>
       )}
