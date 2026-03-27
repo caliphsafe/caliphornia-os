@@ -6,23 +6,32 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
-  const token = cookieStore.get("caliph_os_session")?.value;
+  const token = cookieStore.get("caliph_os_session")?.value ?? null;
+
   const session = verifySession(token);
 
+  //  No session → back to lock screen
   if (!session?.email) {
     redirect("/");
   }
 
-  const { data: userRow } = await supabaseAdmin
+  //  Always fetch fresh user from DB
+  const { data, error } = await supabaseAdmin
     .from("app_users")
-    .select("username")
+    .select("email, username")
     .eq("email", session.email)
-    .maybeSingle();
+    .limit(1);
+
+  let username = "";
+
+  if (!error && data && data.length > 0) {
+    username = data[0].username || "";
+  }
 
   return (
     <HomeScreen
       email={session.email}
-      username={userRow?.username || ""}
+      username={username}
     />
   );
 }
