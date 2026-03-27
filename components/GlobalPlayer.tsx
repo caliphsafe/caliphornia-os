@@ -450,10 +450,11 @@ function getCurrentTrackSongSlug(track: GlobalTrack | null) {
           "Content-Type": "application/json"
         },
         body: JSON.stringify({
-          userEmail: email,
-          songSlug: analyticsSlug,
-          sourcePath: window.location.pathname
-        })
+  userEmail: email,
+  songSlug: analyticsSlug,
+  sourcePath: window.location.pathname,
+  sourceApp: currentTrack?.sourceApp || null
+})
       });
     }
 
