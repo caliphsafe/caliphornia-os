@@ -81,6 +81,16 @@ function weatherCodeLabel(code: number | null | undefined) {
   return map[code ?? -1] || "Forecast";
 }
 
+function getWeatherTheme(label?: string | null) {
+  const value = String(label || "").toLowerCase();
+
+  if (value.includes("thunder")) return "detailStorm";
+  if (value.includes("rain") || value.includes("drizzle") || value.includes("showers")) return "detailRain";
+  if (value.includes("cloud") || value.includes("fog")) return "detailCloud";
+  if (value.includes("clear") || value.includes("sun")) return "detailSun";
+  return "detailBlue";
+}
+
 async function createSignedCoverUrl(storagePath: string | null | undefined) {
   if (!storagePath) return null;
 
@@ -136,10 +146,7 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
     "current",
     "temperature_2m,apparent_temperature,relative_humidity_2m,wind_speed_10m,weather_code"
   );
-  url.searchParams.set(
-    "hourly",
-    "temperature_2m,weather_code"
-  );
+  url.searchParams.set("hourly", "temperature_2m,weather_code");
   url.searchParams.set(
     "daily",
     "weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset"
@@ -253,31 +260,37 @@ export default async function MiliaSongDetailPage({
     song.weather_search_label ||
     "Unknown location";
 
+  const pageThemeClass = getWeatherTheme(weather?.today?.label || weather?.current?.label);
+
   return (
-    <main className={styles.page}>
+    <main className={`${styles.page} ${styles[pageThemeClass]}`}>
       <div className={styles.chrome}>
         <Link href="/apps/milia" className={styles.backPill} aria-label="Back to Milia">
           ‹
         </Link>
-        <div className={styles.titlePill}>Milia</div>
+
+        <button type="button" className={styles.morePill} aria-label="More options">
+          •••
+        </button>
       </div>
 
       <div className={styles.container}>
         <section className={styles.detailHero}>
-          <p className={styles.heroKicker}>{song.artist_name || "Unknown artist"}</p>
-          <h1 className={styles.heroTitle}>{song.title}</h1>
-          <p className={styles.detailPlace}>{placeLabel}</p>
+          <p className={styles.heroKicker}>{placeLabel}</p>
+          <h1 className={styles.detailCityTitle}>{song.title}</h1>
 
-          <div className={styles.detailWeather}>
+          <div className={styles.detailWeatherCenter}>
             <div className={styles.detailNow}>
               {weather?.current?.temperature != null
                 ? `${Math.round(weather.current.temperature)}°`
                 : "—"}
             </div>
 
-            <div className={styles.detailNowMeta}>
-              <div>{weather?.current?.label || "Forecast unavailable"}</div>
-              <div>
+            <div className={styles.detailConditionBlock}>
+              <div className={styles.detailConditionText}>
+                {weather?.current?.label || "Forecast unavailable"}
+              </div>
+              <div className={styles.detailRangeText}>
                 H:{weather?.today?.tempMax != null ? Math.round(weather.today.tempMax) : "—"}°
                 {"  "}
                 L:{weather?.today?.tempMin != null ? Math.round(weather.today.tempMin) : "—"}°
@@ -288,7 +301,44 @@ export default async function MiliaSongDetailPage({
 
         <div className={styles.detailGrid}>
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Song</h2>
+            <p className={styles.detailIntro}>
+              {song.artist_name || "Unknown artist"} · Weather unfolding in {placeLabel}.
+            </p>
+
+            <div className={styles.hourlyRow}>
+              {(weather?.hourly || []).slice(0, 6).map((hour) => (
+                <div key={hour.time} className={styles.hourChip}>
+                  <div className={styles.hourTime}>{formatHourLabel(hour.time)}</div>
+                  <div className={styles.hourTemp}>
+                    {hour.temperature != null ? `${Math.round(hour.temperature)}°` : "—"}
+                  </div>
+                  <div className={styles.hourLabel}>{hour.label}</div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.panel}>
+            <h2 className={styles.panelTitle}>10-Day Forecast</h2>
+            <div className={styles.dayList}>
+              {(weather?.daily || []).map((day, index) => (
+                <div key={day.time} className={styles.dayRow}>
+                  <div className={styles.dayName}>
+                    {index === 0 ? "Today" : formatDayLabel(day.time)}
+                  </div>
+                  <div className={styles.dayLabel}>{day.label}</div>
+                  <div className={styles.dayTemps}>
+                    {day.tempMin != null ? Math.round(day.tempMin) : "—"}°
+                    {"  "}
+                    {day.tempMax != null ? Math.round(day.tempMax) : "—"}°
+                  </div>
+                </div>
+              ))}
+            </div>
+          </section>
+
+          <section className={styles.panel}>
+            <h2 className={styles.panelTitle}>Now Playing</h2>
 
             <div className={styles.audioBlock}>
               <div className={styles.audioCover}>
@@ -305,20 +355,20 @@ export default async function MiliaSongDetailPage({
 
               <div className={styles.songMetaGrid}>
                 <div className={styles.metaCell}>
+                  <span className={styles.metaLabel}>Song</span>
+                  <span className={styles.metaValue}>{song.title}</span>
+                </div>
+                <div className={styles.metaCell}>
                   <span className={styles.metaLabel}>Artist</span>
                   <span className={styles.metaValue}>{song.artist_name || "—"}</span>
                 </div>
                 <div className={styles.metaCell}>
-                  <span className={styles.metaLabel}>Producers</span>
+                  <span className={styles.metaLabel}>Producer</span>
                   <span className={styles.metaValue}>{song.producer_names || "—"}</span>
                 </div>
                 <div className={styles.metaCell}>
                   <span className={styles.metaLabel}>Duration</span>
                   <span className={styles.metaValue}>{song.duration_label || "—"}</span>
-                </div>
-                <div className={styles.metaCell}>
-                  <span className={styles.metaLabel}>Place</span>
-                  <span className={styles.metaValue}>{placeLabel}</span>
                 </div>
               </div>
 
@@ -328,40 +378,12 @@ export default async function MiliaSongDetailPage({
           </section>
 
           <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>Hourly</h2>
-            <div className={styles.hourlyRow}>
-              {(weather?.hourly || []).slice(0, 8).map((hour) => (
-                <div key={hour.time} className={styles.hourChip}>
-                  <div className={styles.hourTime}>{formatHourLabel(hour.time)}</div>
-                  <div className={styles.hourTemp}>
-                    {hour.temperature != null ? `${Math.round(hour.temperature)}°` : "—"}
-                  </div>
-                  <div className={styles.hourLabel}>{hour.label}</div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className={styles.panel}>
-            <h2 className={styles.panelTitle}>7-Day Forecast</h2>
-            <div className={styles.dayList}>
-              {(weather?.daily || []).map((day) => (
-                <div key={day.time} className={styles.dayRow}>
-                  <div className={styles.dayName}>{formatDayLabel(day.time)}</div>
-                  <div className={styles.dayLabel}>{day.label}</div>
-                  <div className={styles.dayTemps}>
-                    {day.tempMax != null ? Math.round(day.tempMax) : "—"}°
-                    {" / "}
-                    {day.tempMin != null ? Math.round(day.tempMin) : "—"}°
-                  </div>
-                </div>
-              ))}
-            </div>
-          </section>
-
-          <section className={styles.panel}>
             <h2 className={styles.panelTitle}>Weather Details</h2>
             <div className={styles.songMetaGrid}>
+              <div className={styles.metaCell}>
+                <span className={styles.metaLabel}>Associated Place</span>
+                <span className={styles.metaValue}>{placeLabel}</span>
+              </div>
               <div className={styles.metaCell}>
                 <span className={styles.metaLabel}>Feels Like</span>
                 <span className={styles.metaValue}>
@@ -383,10 +405,6 @@ export default async function MiliaSongDetailPage({
                     ? `${Math.round(weather.current.windSpeed)} km/h`
                     : "—"}
                 </span>
-              </div>
-              <div className={styles.metaCell}>
-                <span className={styles.metaLabel}>Timezone</span>
-                <span className={styles.metaValue}>{song.weather_timezone || "Auto"}</span>
               </div>
             </div>
           </section>
