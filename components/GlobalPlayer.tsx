@@ -438,25 +438,7 @@ function getCurrentTrackSongSlug(track: GlobalTrack | null) {
 
     audio.addEventListener("canplay", onCanPlay, { once: true });
 
-    const analyticsSlug =
-      currentTrack.analyticsSongSlug ||
-      currentTrack.playlistSongSlug ||
-      currentTrack.slug;
-
-    if (analyticsSlug) {
-      void fetch("/api/events/song-play", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-  userEmail: email,
-  songSlug: analyticsSlug,
-  sourcePath: window.location.pathname,
-  sourceApp: currentTrack?.sourceApp || null
-})
-      });
-    }
+    analytic
 
     void refreshFavoriteState(currentTrack);
 
