@@ -5,10 +5,12 @@ import { appRegistry } from "@/lib/app-registry";
 
 export default function HomeScreen({
   email,
-  username
+  username,
+  role
 }: {
   email: string;
   username?: string;
+  role?: string;
 }) {
 
   return (
@@ -40,10 +42,21 @@ export default function HomeScreen({
           </div>
         </section>
 
-        <section className="app-grid ios-app-grid">
+               <section className="app-grid ios-app-grid">
           {appRegistry.map((app) => (
-           <AppIcon key={app.id} app={app} email={email} />
+            <AppIcon key={app.id} app={app} email={email} />
           ))}
+
+          {role === "admin" ? (
+            <a href="/dashboard" className="ios-app-icon" aria-label="Dashboard">
+              <div className="ios-app-icon-tile">
+                <div className="admin-app-glyph">⌘</div>
+                <div className="icon-shine" />
+                <div className="icon-glow" />
+              </div>
+              <div className="app-icon-label">Dashboard</div>
+            </a>
+          ) : null}
         </section>
       </div>
     </main>
