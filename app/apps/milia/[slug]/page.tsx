@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import styles from "../milia.module.css";
+
 function getBaseUrl() {
   if (process.env.NEXT_PUBLIC_SITE_URL) {
     return process.env.NEXT_PUBLIC_SITE_URL;
@@ -17,6 +18,7 @@ function getBaseUrl() {
 
   return "http://localhost:3000";
 }
+
 type SongRow = {
   slug: string;
   title: string;
@@ -126,9 +128,12 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
 
   const baseUrl = getBaseUrl();
 
-const res = await fetch(`${baseUrl}/api/apps/milia/weather?${params.toString()}`, {
-  next: { revalidate: 60 * 15 },
-});
+  const res = await fetch(
+    `${baseUrl}/api/apps/milia/weather?${params.toString()}`,
+    {
+      next: { revalidate: 60 * 15 },
+    }
+  );
 
   if (!res.ok) return null;
 
@@ -174,25 +179,28 @@ export default async function MiliaSongDetailPage({
   }
 
   const song = data as SongRow;
-  let coverUrl: string | null = null;
-let audioUrl: string | null = null;
-let weather: WeatherData | null = null;
 
-try {
-  [coverUrl, audioUrl, weather] = await Promise.all([
-    createSignedCoverUrl(song.cover_image_path),
-    createSignedAudioUrl(song.audio_path),
-    getWeatherForSong(song),
-  ]);
-} catch {
-  coverUrl = await createSignedCoverUrl(song.cover_image_path);
-  audioUrl = await createSignedAudioUrl(song.audio_path);
-  weather = null;
-}
+  let coverUrl: string | null = null;
+  let audioUrl: string | null = null;
+  let weather: WeatherData | null = null;
+
+  try {
+    [coverUrl, audioUrl, weather] = await Promise.all([
+      createSignedCoverUrl(song.cover_image_path),
+      createSignedAudioUrl(song.audio_path),
+      getWeatherForSong(song),
+    ]);
+  } catch {
+    coverUrl = await createSignedCoverUrl(song.cover_image_path);
+    audioUrl = await createSignedAudioUrl(song.audio_path);
+    weather = null;
+  }
 
   const placeLabel =
     song.weather_location_name ||
-    [song.weather_city, song.weather_region, song.weather_country].filter(Boolean).join(", ") ||
+    [song.weather_city, song.weather_region, song.weather_country]
+      .filter(Boolean)
+      .join(", ") ||
     song.weather_search_label ||
     "Unknown location";
 
