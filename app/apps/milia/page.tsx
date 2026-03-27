@@ -1,7 +1,8 @@
 import Link from "next/link";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 import MiliaSongCard from "@/components/MiliaSongCard";
-import type { MiliaQueueItem } from "@/lib/milia-player";
+import type { GlobalTrack } from "@/components/GlobalPlayer";
+/*import type { MiliaQueueItem } from "@/lib/milia-player"; */
 import styles from "./milia.module.css";
 
 export const dynamic = "force-dynamic";
@@ -206,13 +207,21 @@ export default async function MiliaPage() {
     })
   );
 
-  const projectQueue: MiliaQueueItem[] = songsWithMeta.map(({ song, audioUrl, coverUrl, placeLabel }) => ({
+  const projectQueue: GlobalTrack[] = songsWithMeta
+  .filter(({ audioUrl }) => Boolean(audioUrl))
+  .map(({ song, audioUrl, coverUrl }) => ({
+    id: song.slug,
     slug: song.slug,
     title: song.title,
-    artistName: song.artist_name || "Unknown artist",
-    placeLabel,
-    audioUrl,
-    coverUrl,
+    artist: song.artist_name || "Unknown artist",
+    displayTitle: song.title,
+    duration: song.duration_label || undefined,
+    description: song.description || undefined,
+    file: audioUrl as string,
+    playlistSongSlug: song.slug,
+    analyticsSongSlug: song.slug,
+    sourceApp: "milia",
+    coverUrl: coverUrl || undefined,
   }));
 
   return (
@@ -245,10 +254,10 @@ export default async function MiliaPage() {
                 title={song.title}
                 artistName={song.artist_name || "Unknown artist"}
                 placeLabel={placeLabel}
-                audioUrl={audioUrl}
                 weather={weather}
                 themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
-                projectQueue={projectQueue}
+                queue={projectQueue}
+                startIndex={projectQueue.findIndex((track) => track.slug === song.slug)}
               />
             ))
           )}
