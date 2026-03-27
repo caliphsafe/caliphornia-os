@@ -1,5 +1,6 @@
 .page{
   min-height:100vh;
+  min-height:100dvh;
   color:#fff;
   padding:18px 14px 120px;
   background:
@@ -97,12 +98,6 @@
 
 .hero{
   margin:8px 0 18px;
-}
-
-.heroKicker{
-  font-size:14px;
-  color:rgba(255,255,255,.82);
-  margin:0 0 8px;
 }
 
 .heroTitle{
@@ -364,8 +359,8 @@
 }
 
 .panelTitle{
-  margin:0 0 14px;
-  font-size:22px;
+  margin:0 0 12px;
+  font-size:20px;
   line-height:1;
   letter-spacing:-0.03em;
 }
@@ -614,4 +609,12 @@
     width:46px;
     height:46px;
   }
+}
+
+:global(html),
+:global(body){
+  min-height:100%;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255,255,255,0.18), transparent 24%),
+    linear-gradient(180deg, #667385 0%, #6b7d94 30%, #7d98b6 62%, #91b1cc 100%);
 }
