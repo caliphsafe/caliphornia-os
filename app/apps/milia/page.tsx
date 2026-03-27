@@ -136,16 +136,6 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
   };
 }
 
-function formatHourLabel(value: string) {
-  try {
-    return new Date(value).toLocaleTimeString("en-US", {
-      hour: "numeric",
-    });
-  } catch {
-    return value;
-  }
-}
-
 export default async function MiliaPage() {
   const { data, error } = await supabaseAdmin
     .from("songs")
@@ -251,7 +241,6 @@ export default async function MiliaPage() {
                   audioUrl={audioUrl}
                   weather={weather}
                   themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
-                  formatHourLabel={formatHourLabel}
                 />
               );
             })
