@@ -738,6 +738,59 @@
   font-size:18px;
 }
 
+/* ===== ADDED FOR CLEANER STATS ORGANIZATION ===== */
+
+.sectionHeader{
+  margin-bottom:10px;
+}
+
+.sectionKicker{
+  font-size:20px;
+  font-weight:800;
+  letter-spacing:-0.03em;
+}
+
+.sectionSub{
+  margin-top:4px;
+  font-size:15px;
+  color:rgba(255,255,255,.58);
+}
+
+.rankingGrid{
+  display:grid;
+  grid-template-columns:repeat(2, minmax(0, 1fr));
+  gap:12px;
+  margin-top:12px;
+}
+
+.rankingCard{
+  border-radius:18px;
+  border:1px solid rgba(255,255,255,.08);
+  background:rgba(255,255,255,.04);
+  padding:16px;
+}
+
+.rankingKicker{
+  font-size:11px;
+  text-transform:uppercase;
+  letter-spacing:.08em;
+  color:rgba(255,255,255,.54);
+  margin-bottom:10px;
+}
+
+.rankingValue{
+  font-size:20px;
+  line-height:1.1;
+  letter-spacing:-0.03em;
+  font-weight:800;
+}
+
+.rankingSub{
+  margin-top:8px;
+  color:rgba(255,255,255,.62);
+  font-size:14px;
+}
+
 @media (max-width: 820px){
   .ringsCard{
     grid-template-columns:1fr;
@@ -768,6 +821,10 @@
     max-width:220px;
     height:220px;
   }
+
+  .rankingGrid{
+    grid-template-columns:1fr;
+  }
 }
 
 @media (max-width: 640px){
@@ -782,7 +839,6 @@
   .date{
     font-size:18px;
   }
-
 
   .rings{
     width:190px;
@@ -807,17 +863,17 @@
   }
 
   .bottomTabs{
-  grid-template-columns:repeat(3, minmax(0, 1fr));
-  border-radius:999px;
-  gap:8px;
-  padding:8px;
-}
+    grid-template-columns:repeat(3, minmax(0, 1fr));
+    border-radius:999px;
+    gap:8px;
+    padding:8px;
+  }
 
-.bottomTab{
-  min-height:48px;
-  font-size:14px;
-  padding:0 6px;
-}
+  .bottomTab{
+    min-height:48px;
+    font-size:14px;
+    padding:0 6px;
+  }
 
   .modalStats{
     grid-template-columns:1fr;
