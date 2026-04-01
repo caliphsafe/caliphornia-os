@@ -516,22 +516,42 @@ export default function GlobalPlayer({ email }: Props) {
     };
   }, [currentTrack, currentIndex, queue, friendsFinalQueue]);
 
-  useEffect(() => {
+    useEffect(() => {
     if (!currentSongSlug) {
       setResolvedCoverUrl(null);
       return;
     }
 
+    const songSlug = currentSongSlug;
     let isCancelled = false;
 
     async function fetchCover() {
       try {
         const res = await fetch(
-          `/api/songs/by-slug/${encodeURIComponent(currentSongSlug)}`,
+          `/api/songs/by-slug/${encodeURIComponent(songSlug)}`,
           {
             cache: "no-store"
           }
         );
+
+        const data = await res.json();
+
+        if (!isCancelled) {
+          setResolvedCoverUrl(data?.ok ? data.song?.coverUrl || null : null);
+        }
+      } catch {
+        if (!isCancelled) {
+          setResolvedCoverUrl(null);
+        }
+      }
+    }
+
+    fetchCover();
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentSongSlug]);
 
         const data = await res.json();
 
