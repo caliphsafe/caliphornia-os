@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import StatsPageClient from "@/components/StatsPageClient";
+import StatsPageClient from "@/components/StatsClient";
 
 async function createSignedCoverUrl(storagePath: string | null | undefined) {
   if (!storagePath) return null;
