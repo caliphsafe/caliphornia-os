@@ -55,7 +55,7 @@ function compactNumber(value: number) {
 }
 
 function formatHeaderDate(date = new Date()) {
-  return new Intl.DateTimeFormat("en-US", {
+  return new Intl.NumberFormat("en-US", {
     month: "long",
     day: "numeric",
   }).format(date);
@@ -126,6 +126,41 @@ export default function StatsClient({
     [userSongs]
   );
 
+  const userAppRows = useMemo(() => {
+    const map = new Map<string, number>();
+
+    userSongs.forEach((row) => {
+      const key = row.appSlug || "unknown";
+      map.set(key, (map.get(key) || 0) + (row.playCount || 0));
+    });
+
+    return Array.from(map.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [userSongs]);
+
+  const globalAppRows = useMemo(() => {
+    const map = new Map<string, number>();
+
+    globalSongs.forEach((row) => {
+      const key = row.appSlug || "unknown";
+      map.set(key, (map.get(key) || 0) + (row.playCount || 0));
+    });
+
+    return Array.from(map.entries())
+      .map(([label, count]) => ({ label, count }))
+      .sort((a, b) => b.count - a.count);
+  }, [globalSongs]);
+
+  const topUserSong = userSongs[0] || null;
+  const topGlobalSong = globalSongs[0] || null;
+  const latestFavorite = favoriteSongs[0] || null;
+  const topUserApp = userAppRows[0] || null;
+  const topGlobalApp = globalAppRows[0] || null;
+  const topCity = topCities[0] || null;
+  const topRegion = topRegions[0] || null;
+  const topCountry = topCountries[0] || null;
+
   function cycleSheet() {
     setSheetState((prev) =>
       prev === "peek" ? "mid" : prev === "mid" ? "open" : "peek"
@@ -186,38 +221,52 @@ export default function StatsClient({
       </div>
 
       <div style={headerBlockStyle}>
-        <h1 style={heroTitleStyle}>Stats</h1>
+        <h1 style={heroTitleStyle}>Your Listening Summary</h1>
         <div style={heroDateStyle}>{formatHeaderDate()}</div>
       </div>
 
-      <section style={sectionStyle}>
-        {topGlobalRows.map((row) => (
-          <StatsRow
-            key={`global-${row.songSlug}`}
-            coverImageUrl={row.coverImageUrl}
-            title={row.title}
-            subtitle={row.artistName || "Unknown artist"}
-            rightTop={compactNumber(row.playCount || 0)}
-            rightBottom={`${compactNumber(row.uniqueListenerCount || 0)} listeners`}
-            rightBottomAccent="red"
-            barsSeed={row.songSlug}
-            barsAccent="red"
-          />
-        ))}
-      </section>
+      <div style={sectionHeaderStyle}>
+        <div style={sectionKickerStyle}>Your Listening</div>
+        <div style={sectionSubStyle}>
+          Recent listening activity and your top personal stats.
+        </div>
+      </div>
 
-      <section style={{ ...sectionStyle, marginBottom: 120 }}>
+      <section style={sectionStyle}>
         {recentUserRows.map((row) => (
           <StatsRow
             key={`user-${row.songSlug}`}
             coverImageUrl={row.coverImageUrl}
             title={row.title}
-            subtitle={row.artistName || "Unknown artist"}
+            subtitle={`${row.artistName || "Unknown artist"} · ${row.appSlug || "Unknown app"}`}
             rightTop={compactNumber(row.playCount || 0)}
-            rightBottom={formatShortDate(row.lastPlayedAt)}
+            rightBottom={`Played ${formatShortDate(row.lastPlayedAt)}`}
             rightBottomAccent="green"
             barsSeed={`${row.songSlug}-${row.lastPlayedAt || ""}`}
             barsAccent="green"
+          />
+        ))}
+      </section>
+
+      <div style={sectionHeaderStyle}>
+        <div style={sectionKickerStyle}>Global Song Activity</div>
+        <div style={sectionSubStyle}>
+          Most-played songs across all listeners.
+        </div>
+      </div>
+
+      <section style={{ ...sectionStyle, marginBottom: 120 }}>
+        {topGlobalRows.map((row) => (
+          <StatsRow
+            key={`global-${row.songSlug}`}
+            coverImageUrl={row.coverImageUrl}
+            title={row.title}
+            subtitle={`${row.artistName || "Unknown artist"} · ${row.appSlug || "Unknown app"}`}
+            rightTop={compactNumber(row.playCount || 0)}
+            rightBottom={`${compactNumber(row.uniqueListenerCount || 0)} listeners`}
+            rightBottomAccent="red"
+            barsSeed={row.songSlug}
+            barsAccent="red"
           />
         ))}
       </section>
@@ -239,8 +288,8 @@ export default function StatsClient({
           <div style={sheetHandleStyle} />
           <div style={sheetPeekHeaderStyle}>
             <div>
-              <div style={sheetPeekTitleStyle}>Listening Pulse</div>
-              <div style={sheetPeekSubStyle}>From Caliphornia OS</div>
+              <div style={sheetPeekTitleStyle}>Listening Dashboard</div>
+              <div style={sheetPeekSubStyle}>Organized by personal, global, app, and location stats</div>
             </div>
 
             <button
@@ -254,35 +303,46 @@ export default function StatsClient({
         </div>
 
         <div style={sheetContentStyle}>
+          <div style={sheetSectionTitleStyle}>Your Listening Summary</div>
           <div style={metricsGridStyle}>
             <MetricCard label="Your Plays" value={compactNumber(totals.totalUserPlays)} />
-            <MetricCard label="Favorites" value={compactNumber(totals.totalFavoriteSongs)} />
-            <MetricCard label="Global Plays" value={compactNumber(totals.totalGlobalPlays)} />
-            <MetricCard label="Reach" value={compactNumber(totals.totalGlobalReach)} />
+            <MetricCard label="Your Favorites" value={compactNumber(totals.totalFavoriteSongs)} />
+            <MetricCard label="Your Top Song" value={topUserSong?.title || "—"} />
+            <MetricCard label="Your Top App" value={topUserApp?.label || "—"} />
           </div>
 
           <div style={sheetDividerStyle} />
 
-          <div style={sheetSectionTitleStyle}>Music Highlights</div>
-          <div style={sheetBlockGridStyle}>
-            <InsightCard
-              title="Top Global Song"
-              subtitle={
-                globalSongs[0]
-                  ? `${globalSongs[0].title} · ${compactNumber(globalSongs[0].playCount || 0)} plays`
-                  : "No global stats yet"
-              }
-              coverImageUrl={globalSongs[0]?.coverImageUrl || null}
-            />
+          <div style={sheetSectionTitleStyle}>Global Summary</div>
+          <div style={metricsGridStyle}>
+            <MetricCard label="Global Plays" value={compactNumber(totals.totalGlobalPlays)} />
+            <MetricCard label="Global Reach" value={compactNumber(totals.totalGlobalReach)} />
+            <MetricCard label="Top Song" value={topGlobalSong?.title || "—"} />
+            <MetricCard label="Top App" value={topGlobalApp?.label || "—"} />
+          </div>
 
+          <div style={sheetDividerStyle} />
+
+          <div style={sheetSectionTitleStyle}>Your Favorites</div>
+          <div style={sheetBlockGridStyle}>
             <InsightCard
               title="Latest Favorite"
               subtitle={
-                favoriteSongs[0]
-                  ? `${favoriteSongs[0].title} · saved ${formatShortDate(favoriteSongs[0].favoritedAt)}`
+                latestFavorite
+                  ? `${latestFavorite.title} · saved ${formatShortDate(latestFavorite.favoritedAt)}`
                   : "No favorites yet"
               }
-              coverImageUrl={favoriteSongs[0]?.coverImageUrl || null}
+              coverImageUrl={latestFavorite?.coverImageUrl || null}
+            />
+
+            <InsightCard
+              title="Your Top Song"
+              subtitle={
+                topUserSong
+                  ? `${topUserSong.title} · ${compactNumber(topUserSong.playCount || 0)} plays`
+                  : "No personal song stats yet"
+              }
+              coverImageUrl={topUserSong?.coverImageUrl || null}
             />
 
             <InsightCard
@@ -294,12 +354,55 @@ export default function StatsClient({
 
           <div style={sheetDividerStyle} />
 
-          <div style={sheetSectionTitleStyle}>Location Insights</div>
+          <div style={sheetSectionTitleStyle}>App / Project Stats</div>
+          <div style={locationGridStyle}>
+            <MiniStatList title="Your Top Apps" rows={userAppRows} />
+            <MiniStatList title="Global Top Apps" rows={globalAppRows} />
+            <MiniStatList title="Top Cities" rows={topCities} />
+            <MiniStatList title="Top Countries" rows={topCountries} />
+          </div>
+
+          <div style={sheetDividerStyle} />
+
+          <div style={sheetSectionTitleStyle}>Global Location Stats</div>
           <div style={locationGridStyle}>
             <MiniStatList title="Cities" rows={topCities} />
-            <MiniStatList title="Regions" rows={topRegions} />
+            <MiniStatList title="States / Regions" rows={topRegions} />
             <MiniStatList title="Countries" rows={topCountries} />
-            <MiniStatList title="Platforms" rows={topPlatforms} />
+            <MiniStatList
+              title="Compact Snapshot"
+              rows={[
+                topCity ? { label: `Top City: ${topCity.label}`, count: topCity.count } : { label: "Top City: —", count: 0 },
+                topRegion ? { label: `Top State: ${topRegion.label}`, count: topRegion.count } : { label: "Top State: —", count: 0 },
+                topCountry ? { label: `Top Country: ${topCountry.label}`, count: topCountry.count } : { label: "Top Country: —", count: 0 },
+              ]}
+            />
+          </div>
+
+          <div style={sheetDividerStyle} />
+
+          <div style={sheetSectionTitleStyle}>Rankings</div>
+          <div style={rankingGridStyle}>
+            <RankingCard
+              title="Top Song"
+              value={topGlobalSong?.title || "—"}
+              sub={topGlobalSong ? `${compactNumber(topGlobalSong.playCount || 0)} plays` : "No data yet"}
+            />
+            <RankingCard
+              title="Top App"
+              value={topGlobalApp?.label || "—"}
+              sub={topGlobalApp ? `${compactNumber(topGlobalApp.count || 0)} plays` : "No data yet"}
+            />
+            <RankingCard
+              title="Top City"
+              value={topCity?.label || "—"}
+              sub={topCity ? `${compactNumber(topCity.count || 0)} plays` : "No data yet"}
+            />
+            <RankingCard
+              title="Top Country"
+              value={topCountry?.label || "—"}
+              sub={topCountry ? `${compactNumber(topCountry.count || 0)} plays` : "No data yet"}
+            />
           </div>
         </div>
       </div>
@@ -445,6 +548,24 @@ function MiniStatList({
   );
 }
 
+function RankingCard({
+  title,
+  value,
+  sub,
+}: {
+  title: string;
+  value: string;
+  sub: string;
+}) {
+  return (
+    <div style={rankingCardStyle}>
+      <div style={rankingKickerStyle}>{title}</div>
+      <div style={rankingValueStyle}>{value}</div>
+      <div style={rankingSubStyle}>{sub}</div>
+    </div>
+  );
+}
+
 const pageStyle: React.CSSProperties = {
   minHeight: "100vh",
   background: "#000",
@@ -505,6 +626,22 @@ const heroDateStyle: React.CSSProperties = {
   letterSpacing: "-0.04em",
   color: "rgba(255,255,255,0.62)",
   fontWeight: 700,
+};
+
+const sectionHeaderStyle: React.CSSProperties = {
+  marginBottom: 10,
+};
+
+const sectionKickerStyle: React.CSSProperties = {
+  fontSize: 20,
+  fontWeight: 800,
+  letterSpacing: "-0.03em",
+};
+
+const sectionSubStyle: React.CSSProperties = {
+  marginTop: 4,
+  fontSize: 15,
+  color: "rgba(255,255,255,0.58)",
 };
 
 const sectionStyle: React.CSSProperties = {
@@ -798,5 +935,39 @@ const miniLabelStyle: React.CSSProperties = {
 
 const miniValueStyle: React.CSSProperties = {
   fontWeight: 700,
+  fontSize: 14,
+};
+
+const rankingGridStyle: React.CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "repeat(2, minmax(0, 1fr))",
+  gap: 12,
+};
+
+const rankingCardStyle: React.CSSProperties = {
+  borderRadius: 18,
+  border: "1px solid rgba(255,255,255,0.08)",
+  background: "rgba(255,255,255,0.04)",
+  padding: 16,
+};
+
+const rankingKickerStyle: React.CSSProperties = {
+  fontSize: 11,
+  textTransform: "uppercase",
+  letterSpacing: "0.08em",
+  color: "rgba(255,255,255,0.54)",
+  marginBottom: 10,
+};
+
+const rankingValueStyle: React.CSSProperties = {
+  fontSize: 20,
+  fontWeight: 800,
+  lineHeight: 1.1,
+  letterSpacing: "-0.03em",
+};
+
+const rankingSubStyle: React.CSSProperties = {
+  marginTop: 8,
+  color: "rgba(255,255,255,0.62)",
   fontSize: 14,
 };
