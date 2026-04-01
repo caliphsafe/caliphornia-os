@@ -16,7 +16,7 @@ export async function POST(request: Request) {
 
     const { data: song, error: songError } = await supabaseAdmin
       .from("songs")
-      .select("id")
+      .select("id, slug, source_app_slug")
       .eq("slug", songSlug)
       .single();
 
@@ -54,12 +54,25 @@ export async function POST(request: Request) {
         );
       }
 
-      await supabaseAdmin.from("event_logs").insert({
-        user_email: userEmail,
-        event_type: "playlist_remove",
-        song_id: song.id,
-        metadata: {}
-      });
+      const { error: logError } = await supabaseAdmin
+        .from("event_logs")
+        .insert({
+          user_email: userEmail,
+          event_type: "playlist_remove",
+          song_id: song.id,
+          song_slug: song.slug,
+          app_slug: song.source_app_slug || null,
+          metadata: {
+            song_slug: song.slug
+          }
+        });
+
+      if (logError) {
+        return NextResponse.json(
+          { ok: false, error: logError.message },
+          { status: 500 }
+        );
+      }
 
       return NextResponse.json({ ok: true, saved: false });
     }
@@ -68,7 +81,8 @@ export async function POST(request: Request) {
       .from("user_favorite_songs")
       .insert({
         user_email: userEmail,
-        song_id: song.id
+        song_id: song.id,
+        song_slug: song.slug
       });
 
     if (insertError) {
@@ -78,12 +92,25 @@ export async function POST(request: Request) {
       );
     }
 
-    await supabaseAdmin.from("event_logs").insert({
-      user_email: userEmail,
-      event_type: "playlist_add",
-      song_id: song.id,
-      metadata: {}
-    });
+    const { error: logError } = await supabaseAdmin
+      .from("event_logs")
+      .insert({
+        user_email: userEmail,
+        event_type: "playlist_add",
+        song_id: song.id,
+        song_slug: song.slug,
+        app_slug: song.source_app_slug || null,
+        metadata: {
+          song_slug: song.slug
+        }
+      });
+
+    if (logError) {
+      return NextResponse.json(
+        { ok: false, error: logError.message },
+        { status: 500 }
+      );
+    }
 
     return NextResponse.json({ ok: true, saved: true });
   } catch {
