@@ -46,12 +46,13 @@ export async function POST(request: Request) {
               ? "music"
               : null);
 
-    const { error: logError } = await supabaseAdmin
+        const { error: logError } = await supabaseAdmin
       .from("event_logs")
       .insert({
         user_email: userEmail,
         event_type: "song_play",
         song_id: song.id,
+        song_slug: song.slug,
         app_slug: resolvedAppSlug,
         source_path: sourcePath,
         user_agent: h.get("user-agent"),
