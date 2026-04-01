@@ -74,6 +74,29 @@ function getRingPercents({
   return { listening, favorites, reach };
 }
 
+function aggregateAppCounts(
+  rows: Array<{ appSlug?: string; playCount?: number; uniqueListenerCount?: number }>,
+  metric: "plays" | "reach" = "plays"
+) {
+  const map = new Map<string, number>();
+
+  rows.forEach((row) => {
+    const label = String(row.appSlug || "").trim();
+    if (!label) return;
+
+    const value =
+      metric === "reach"
+        ? row.uniqueListenerCount || 0
+        : row.playCount || 0;
+
+    map.set(label, (map.get(label) || 0) + value);
+  });
+
+  return Array.from(map.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
 export default function StatsPageClient({
   username,
   globalSongs,
@@ -106,12 +129,48 @@ export default function StatsPageClient({
 
   const ringPercents = getRingPercents(totals);
 
-  const topSong = globalSongs[0] || null;
-  const latestListen = userSongs[0] || null;
+  const topGlobalSong = globalSongs[0] || null;
+  const topUserSong = userSongs[0] || null;
   const latestFavorite = favoriteSongs[0] || null;
   const topCity = topCities[0] || null;
   const topRegion = topRegions[0] || null;
   const topCountry = topCountries[0] || null;
+
+  const userAppRows = useMemo(() => aggregateAppCounts(userSongs, "plays"), [userSongs]);
+  const globalAppRows = useMemo(() => aggregateAppCounts(globalSongs, "plays"), [globalSongs]);
+
+  const topUserApp = userAppRows[0] || null;
+  const topGlobalApp = globalAppRows[0] || null;
+
+  const rankedSummaryRows = useMemo(
+    () => [
+      {
+        label: "Top Song",
+        value: topGlobalSong?.title || "—",
+        sub: topGlobalSong
+          ? `${compactNumber(topGlobalSong.playCount || 0)} global plays`
+          : "No data yet",
+      },
+      {
+        label: "Top App",
+        value: topGlobalApp?.label || "—",
+        sub: topGlobalApp
+          ? `${compactNumber(topGlobalApp.count || 0)} total plays`
+          : "No data yet",
+      },
+      {
+        label: "Top City",
+        value: topCity?.label || "—",
+        sub: topCity ? `${compactNumber(topCity.count || 0)} plays` : "No data yet",
+      },
+      {
+        label: "Top Country",
+        value: topCountry?.label || "—",
+        sub: topCountry ? `${compactNumber(topCountry.count || 0)} plays` : "No data yet",
+      },
+    ],
+    [topGlobalSong, topGlobalApp, topCity, topCountry]
+  );
 
   return (
     <main className={styles.page}>
@@ -133,7 +192,7 @@ export default function StatsPageClient({
 
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>Your Summary</h1>
+          <h1 className={styles.title}>Your Listening Summary</h1>
           <p className={styles.date}>{formatHeaderDate()}</p>
         </div>
       </div>
@@ -192,7 +251,7 @@ export default function StatsPageClient({
             <h3 className={styles.cardTitle}>Your Play Count</h3>
             <span className={styles.chev}>›</span>
           </div>
-          <p className={styles.miniLabel}>Today</p>
+          <p className={styles.miniLabel}>Personal</p>
           <div className={styles.bigNumberPurple}>{compactNumber(totals.totalUserPlays)}</div>
           <div className={styles.sparkWrap}>
             {Array.from({ length: 24 }).map((_, i) => (
@@ -211,12 +270,12 @@ export default function StatsPageClient({
           </div>
         </button>
 
-        <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("places")}>
+        <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("songs")}>
           <div className={styles.cardHeaderMini}>
             <h3 className={styles.cardTitle}>Global Listener Reach</h3>
             <span className={styles.chev}>›</span>
           </div>
-          <p className={styles.miniLabel}>Today</p>
+          <p className={styles.miniLabel}>Global</p>
           <div className={styles.bigNumberBlue}>{compactNumber(totals.totalGlobalReach)}</div>
           <div className={styles.sparkWrap}>
             {Array.from({ length: 24 }).map((_, i) => (
@@ -237,29 +296,29 @@ export default function StatsPageClient({
 
         <button
           className={`${styles.card} ${styles.tapCard}`}
-          onClick={() => latestListen && setSelectedSong(latestListen)}
+          onClick={() => topUserSong && setSelectedSong(topUserSong)}
         >
           <div className={styles.cardHeaderMini}>
-            <h3 className={styles.cardTitle}>Your Recent Listen</h3>
+            <h3 className={styles.cardTitle}>Your Top Song</h3>
             <span className={styles.chev}>›</span>
           </div>
 
-          {latestListen?.coverImageUrl ? (
+          {topUserSong?.coverImageUrl ? (
             <img
-              src={latestListen.coverImageUrl}
-              alt={latestListen.title}
+              src={topUserSong.coverImageUrl}
+              alt={topUserSong.title}
               className={styles.sessionCover}
             />
           ) : (
             <div className={styles.sessionCoverFallback}>♪</div>
           )}
 
-          <div className={styles.sessionTitle}>{latestListen?.title || "No recent listen"}</div>
+          <div className={styles.sessionTitle}>{topUserSong?.title || "No listens yet"}</div>
           <div className={styles.bigNumberGreen}>
-            {compactNumber(latestListen?.playCount || 0)} plays
+            {compactNumber(topUserSong?.playCount || 0)} plays
           </div>
           <div className={styles.sessionDate}>
-            {latestListen?.lastPlayedAt ? formatShortDate(latestListen.lastPlayedAt) : "—"}
+            {topUserSong?.lastPlayedAt ? formatShortDate(topUserSong.lastPlayedAt) : "—"}
           </div>
         </button>
 
@@ -298,22 +357,22 @@ export default function StatsPageClient({
           <span className={styles.chev}>›</span>
         </div>
 
-        {topSong ? (
-          <button className={styles.highlightRowBtn} onClick={() => setSelectedSong(topSong)}>
+        {topGlobalSong ? (
+          <button className={styles.highlightRowBtn} onClick={() => setSelectedSong(topGlobalSong)}>
             <div className={styles.highlightRow}>
               <div className={styles.highlightMedia}>
-                {topSong.coverImageUrl ? (
-                  <img src={topSong.coverImageUrl} alt={topSong.title} className={styles.highlightImg} />
+                {topGlobalSong.coverImageUrl ? (
+                  <img src={topGlobalSong.coverImageUrl} alt={topGlobalSong.title} className={styles.highlightImg} />
                 ) : (
                   <div className={styles.highlightFallback}>♪</div>
                 )}
               </div>
               <div className={styles.highlightBody}>
-                <div className={styles.highlightTitle}>{topSong.title}</div>
-                <div className={styles.highlightSub}>{topSong.artistName || "Unknown artist"}</div>
+                <div className={styles.highlightTitle}>{topGlobalSong.title}</div>
+                <div className={styles.highlightSub}>{topGlobalSong.artistName || "Unknown artist"}</div>
                 <div className={styles.highlightMeta}>
-                  Global Plays {compactNumber(topSong.playCount || 0)} · Global Listeners{" "}
-                  {compactNumber(topSong.uniqueListenerCount || 0)}
+                  Global Plays {compactNumber(topGlobalSong.playCount || 0)} · Global Listeners{" "}
+                  {compactNumber(topGlobalSong.uniqueListenerCount || 0)}
                 </div>
               </div>
             </div>
@@ -325,33 +384,33 @@ export default function StatsPageClient({
 
       <section className={`${styles.card} ${styles.fullCard}`}>
         <div className={styles.cardHeaderMini}>
-          <h3 className={styles.cardTitle}>Your Locations</h3>
+          <h3 className={styles.cardTitle}>Global Locations</h3>
           <span className={styles.chev}>›</span>
         </div>
 
         <div className={styles.locationGrid}>
           <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
-            <span className={styles.locationLabel}>Your Top City</span>
+            <span className={styles.locationLabel}>Top City</span>
             <strong>{topCity?.label || "—"}</strong>
-            <span>{compactNumber(topCity?.count || 0)} events</span>
+            <span>{compactNumber(topCity?.count || 0)} plays</span>
           </button>
 
           <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
-            <span className={styles.locationLabel}>Your Top State</span>
+            <span className={styles.locationLabel}>Top State</span>
             <strong>{topRegion?.label || "—"}</strong>
-            <span>{compactNumber(topRegion?.count || 0)} events</span>
+            <span>{compactNumber(topRegion?.count || 0)} plays</span>
           </button>
 
           <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
-            <span className={styles.locationLabel}>Your Top Country</span>
+            <span className={styles.locationLabel}>Top Country</span>
             <strong>{topCountry?.label || "—"}</strong>
-            <span>{compactNumber(topCountry?.count || 0)} events</span>
+            <span>{compactNumber(topCountry?.count || 0)} plays</span>
           </button>
 
-          <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
-            <span className={styles.locationLabel}>Your Saved Songs</span>
-            <strong>{compactNumber(totals.totalFavoriteSongs)}</strong>
-            <span>favorites</span>
+          <button className={styles.locationCell} onClick={() => setActiveTab("summary")}>
+            <span className={styles.locationLabel}>Your Top App</span>
+            <strong>{topUserApp?.label || "—"}</strong>
+            <span>{compactNumber(topUserApp?.count || 0)} plays</span>
           </button>
         </div>
       </section>
@@ -360,43 +419,95 @@ export default function StatsPageClient({
         <div className={styles.bottomContent}>
           {activeTab === "summary" && (
             <>
-              <div className={styles.bottomKicker}>Your Listening Overview</div>
-              <div className={styles.bottomTitle}>Your music world in motion</div>
+              <div className={styles.bottomKicker}>Your Listening Summary</div>
+              <div className={styles.bottomTitle}>Your stats, global stats, and rankings</div>
               <div className={styles.bottomSub}>
-                Your plays, your favorites, global listener reach, your recent listens, and your location signals all in one place.
+                Your listening activity, your favorites, top apps, top global songs, and global location rankings all organized in one place.
+              </div>
+
+              <div className={styles.listStack}>
+                <div className={styles.listRow}>
+                  <div className={styles.listRowText}>
+                    <strong>Your Top App</strong>
+                    <span>Most-played project</span>
+                  </div>
+                  <div className={styles.listRowValue}>{topUserApp?.label || "—"}</div>
+                </div>
+
+                <div className={styles.listRow}>
+                  <div className={styles.listRowText}>
+                    <strong>Global Top App</strong>
+                    <span>Most-played project overall</span>
+                  </div>
+                  <div className={styles.listRowValue}>{topGlobalApp?.label || "—"}</div>
+                </div>
+
+                {rankedSummaryRows.map((row) => (
+                  <div key={row.label} className={styles.listRow}>
+                    <div className={styles.listRowText}>
+                      <strong>{row.label}</strong>
+                      <span>{row.sub}</span>
+                    </div>
+                    <div className={styles.listRowValue}>{row.value}</div>
+                  </div>
+                ))}
               </div>
             </>
           )}
 
           {activeTab === "songs" && (
             <>
-              <div className={styles.bottomKicker}>Global Top Songs</div>
-              <div className={styles.listStack}>
-                {globalSongs.slice(0, 5).map((song) => (
-                  <button
-                    key={song.songSlug}
-                    className={styles.listRow}
-                    onClick={() => setSelectedSong(song)}
-                  >
-                    <div className={styles.listRowText}>
-                      <strong>{song.title}</strong>
-                      <span>{song.artistName || "Unknown artist"}</span>
+              <div className={styles.bottomKicker}>Global Songs + Apps</div>
+
+              <div className={styles.placesCols}>
+                <div className={styles.placesCol}>
+                  <strong>Top Songs</strong>
+                  {globalSongs.slice(0, 5).map((song) => (
+                    <button
+                      key={song.songSlug}
+                      className={styles.listRow}
+                      onClick={() => setSelectedSong(song)}
+                    >
+                      <div className={styles.listRowText}>
+                        <strong>{song.title}</strong>
+                        <span>{song.appSlug || "Unknown app"}</span>
+                      </div>
+                      <div className={styles.listRowValue}>
+                        {compactNumber(song.playCount || 0)}
+                      </div>
+                    </button>
+                  ))}
+                </div>
+
+                <div className={styles.placesCol}>
+                  <strong>Your Top Apps</strong>
+                  {userAppRows.slice(0, 5).map((row) => (
+                    <div key={row.label} className={styles.placeLine}>
+                      <span>{row.label}</span>
+                      <span>{compactNumber(row.count)}</span>
                     </div>
-                    <div className={styles.listRowValue}>
-                      Global {compactNumber(song.playCount || 0)}
+                  ))}
+                </div>
+
+                <div className={styles.placesCol}>
+                  <strong>Global Top Apps</strong>
+                  {globalAppRows.slice(0, 5).map((row) => (
+                    <div key={row.label} className={styles.placeLine}>
+                      <span>{row.label}</span>
+                      <span>{compactNumber(row.count)}</span>
                     </div>
-                  </button>
-                ))}
+                  ))}
+                </div>
               </div>
             </>
           )}
 
           {activeTab === "places" && (
             <>
-              <div className={styles.bottomKicker}>Your Places</div>
+              <div className={styles.bottomKicker}>Global Locations</div>
               <div className={styles.placesCols}>
                 <div className={styles.placesCol}>
-                  <strong>Your Cities</strong>
+                  <strong>Top Cities</strong>
                   {topCities.slice(0, 5).map((row) => (
                     <div key={row.label} className={styles.placeLine}>
                       <span>{row.label}</span>
@@ -406,7 +517,7 @@ export default function StatsPageClient({
                 </div>
 
                 <div className={styles.placesCol}>
-                  <strong>Your States</strong>
+                  <strong>Top States</strong>
                   {topRegions.slice(0, 5).map((row) => (
                     <div key={row.label} className={styles.placeLine}>
                       <span>{row.label}</span>
@@ -416,7 +527,7 @@ export default function StatsPageClient({
                 </div>
 
                 <div className={styles.placesCol}>
-                  <strong>Your Countries</strong>
+                  <strong>Top Countries</strong>
                   {topCountries.slice(0, 5).map((row) => (
                     <div key={row.label} className={styles.placeLine}>
                       <span>{row.label}</span>
