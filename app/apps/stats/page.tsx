@@ -36,6 +36,11 @@ type CountRow = {
   count: number;
 };
 
+type ListenerRow = {
+  label: string;
+  count: number;
+};
+
 function countByLabel(rows: { label: string }[]) {
   const map = new Map<string, number>();
 
@@ -51,6 +56,21 @@ function countByLabel(rows: { label: string }[]) {
     }
 
     map.set(label, (map.get(label) || 0) + 1);
+  }
+
+  return Array.from(map.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count);
+}
+
+function countAppsFromSongs(rows: Array<{ appSlug?: string; playCount?: number }>) {
+  const map = new Map<string, number>();
+
+  for (const row of rows) {
+    const label = String(row.appSlug || "").trim();
+    if (!label) continue;
+
+    map.set(label, (map.get(label) || 0) + (row.playCount || 0));
   }
 
   return Array.from(map.entries())
@@ -75,7 +95,10 @@ export default async function StatsPage() {
     userStatsRes,
     favoritesRes,
     songsRes,
-    eventLogsRes,
+    userEventLogsRes,
+    globalEventLogsRes,
+    allUserStatsRes,
+    allAppUsersRes,
   ] = await Promise.all([
     supabaseAdmin
       .from("app_users")
@@ -113,7 +136,21 @@ export default async function StatsPage() {
     supabaseAdmin
       .from("event_logs")
       .select("country, region, city")
-      .eq("user_email", userEmail),
+      .eq("user_email", userEmail)
+      .eq("event_type", "song_play"),
+
+    supabaseAdmin
+      .from("event_logs")
+      .select("country, region, city")
+      .eq("event_type", "song_play"),
+
+    supabaseAdmin
+      .from("user_song_stats")
+      .select("user_email, play_count"),
+
+    supabaseAdmin
+      .from("app_users")
+      .select("email, username"),
   ]);
 
   if (
@@ -121,7 +158,10 @@ export default async function StatsPage() {
     userStatsRes.error ||
     favoritesRes.error ||
     songsRes.error ||
-    eventLogsRes.error
+    userEventLogsRes.error ||
+    globalEventLogsRes.error ||
+    allUserStatsRes.error ||
+    allAppUsersRes.error
   ) {
     redirect("/home");
   }
@@ -201,11 +241,41 @@ export default async function StatsPage() {
   userSongs.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
   favoriteSongs.sort((a, b) => (b.favoritedAt || "").localeCompare(a.favoritedAt || ""));
 
-  const eventLogs = eventLogsRes.data || [];
+  const userEventLogs = userEventLogsRes.data || [];
+  const globalEventLogs = globalEventLogsRes.data || [];
 
-  const topCities = countByLabel(eventLogs.map((row) => ({ label: row.city || "" })));
-  const topRegions = countByLabel(eventLogs.map((row) => ({ label: row.region || "" })));
-  const topCountries = countByLabel(eventLogs.map((row) => ({ label: row.country || "" })));
+  const userTopCities = countByLabel(userEventLogs.map((row) => ({ label: row.city || "" })));
+  const userTopRegions = countByLabel(userEventLogs.map((row) => ({ label: row.region || "" })));
+  const userTopCountries = countByLabel(userEventLogs.map((row) => ({ label: row.country || "" })));
+
+  const globalTopCities = countByLabel(globalEventLogs.map((row) => ({ label: row.city || "" })));
+  const globalTopRegions = countByLabel(globalEventLogs.map((row) => ({ label: row.region || "" })));
+  const globalTopCountries = countByLabel(globalEventLogs.map((row) => ({ label: row.country || "" })));
+
+  const userAppRows = countAppsFromSongs(userSongs);
+  const globalAppRows = countAppsFromSongs(globalSongs);
+
+  const appUserMap = new Map(
+    (allAppUsersRes.data || []).map((row) => [
+      String(row.email || "").toLowerCase(),
+      row.username || "",
+    ])
+  );
+
+  const listenerMap = new Map<string, number>();
+  for (const row of allUserStatsRes.data || []) {
+    const email = String(row.user_email || "").toLowerCase();
+    if (!email) continue;
+    listenerMap.set(email, (listenerMap.get(email) || 0) + (row.play_count || 0));
+  }
+
+  const topListeners: ListenerRow[] = Array.from(listenerMap.entries())
+    .map(([email, count]) => ({
+      label: appUserMap.get(email) || email,
+      count,
+    }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
 
   return (
     <StatsPageClient
@@ -213,9 +283,15 @@ export default async function StatsPage() {
       globalSongs={globalSongs}
       userSongs={userSongs}
       favoriteSongs={favoriteSongs}
-      topCities={topCities}
-      topRegions={topRegions}
-      topCountries={topCountries}
+      userTopCities={userTopCities}
+      userTopRegions={userTopRegions}
+      userTopCountries={userTopCountries}
+      globalTopCities={globalTopCities}
+      globalTopRegions={globalTopRegions}
+      globalTopCountries={globalTopCountries}
+      userAppRows={userAppRows}
+      globalAppRows={globalAppRows}
+      topListeners={topListeners}
     />
   );
 }
