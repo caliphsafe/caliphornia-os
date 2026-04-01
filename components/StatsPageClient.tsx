@@ -79,6 +79,55 @@ function getRingPercents({
   return { listening, favorites, reach };
 }
 
+type TopCardProps = {
+  title: string;
+  subtitle: string;
+  value: string;
+  tone: "purple" | "blue" | "green";
+  onClick?: () => void;
+  coverImageUrl?: string | null;
+  fallback?: string;
+  footer?: string;
+};
+
+function TopCard({
+  title,
+  subtitle,
+  value,
+  tone,
+  onClick,
+  coverImageUrl,
+  fallback = "♪",
+  footer,
+}: TopCardProps) {
+  const valueClass =
+    tone === "purple"
+      ? styles.bigNumberPurple
+      : tone === "blue"
+      ? styles.bigNumberBlue
+      : styles.bigNumberGreen;
+
+  return (
+    <button className={`${styles.card} ${styles.tapCard}`} onClick={onClick}>
+      <div className={styles.cardHeaderMini}>
+        <h3 className={styles.cardTitle}>{title}</h3>
+        <span className={styles.chev}>›</span>
+      </div>
+
+      <p className={styles.miniLabel}>{subtitle}</p>
+
+      {coverImageUrl ? (
+        <img src={coverImageUrl} alt={title} className={styles.sessionCover} />
+      ) : fallback ? (
+        <div className={styles.sessionCoverFallback}>{fallback}</div>
+      ) : null}
+
+      <div className={valueClass}>{value}</div>
+      {footer ? <div className={styles.sessionDate}>{footer}</div> : null}
+    </button>
+  );
+}
+
 export default function StatsPageClient({
   username,
   globalSongs,
@@ -108,7 +157,8 @@ export default function StatsPageClient({
   globalAppRows: CountRow[];
   topListeners: ListenerRow[];
 }) {
-  const [activeTab, setActiveTab] = useState<"user" | "global">("user");
+  const [mode, setMode] = useState<"user" | "global">("user");
+  const [activeTab, setActiveTab] = useState<"summary" | "apps" | "places" | "rankings">("summary");
   const [selectedSong, setSelectedSong] = useState<SongRow | null>(null);
 
   const totals = useMemo(
@@ -137,6 +187,7 @@ export default function StatsPageClient({
 
   const topUserApp = userAppRows[0] || null;
   const topGlobalApp = globalAppRows[0] || null;
+  const topListener = topListeners[0] || null;
 
   const userRankingRows = useMemo(
     () => [
@@ -190,6 +241,17 @@ export default function StatsPageClient({
     [topGlobalSong, topGlobalApp, topGlobalCity, topGlobalCountry]
   );
 
+  const currentTopSong = mode === "user" ? topUserSong : topGlobalSong;
+  const currentTopApp = mode === "user" ? topUserApp : topGlobalApp;
+  const currentTopCity = mode === "user" ? topUserCity : topGlobalCity;
+  const currentTopRegion = mode === "user" ? topUserRegion : topGlobalRegion;
+  const currentTopCountry = mode === "user" ? topUserCountry : topGlobalCountry;
+  const currentAppRows = mode === "user" ? userAppRows : globalAppRows;
+  const currentCityRows = mode === "user" ? userTopCities : globalTopCities;
+  const currentRegionRows = mode === "user" ? userTopRegions : globalTopRegions;
+  const currentCountryRows = mode === "user" ? userTopCountries : globalTopCountries;
+  const currentRankingRows = mode === "user" ? userRankingRows : globalRankingRows;
+
   return (
     <main className={styles.page}>
       <div className={styles.topChrome}>
@@ -210,14 +272,39 @@ export default function StatsPageClient({
 
       <div className={styles.header}>
         <div>
-          <h1 className={styles.title}>{username ? `${username}'s Listening Summary` : "Your Listening Summary"}</h1>
+          <h1 className={styles.title}>
+            {username ? `${username}'s Listening Summary` : "Your Listening Summary"}
+          </h1>
           <p className={styles.date}>{formatHeaderDate()}</p>
         </div>
       </div>
 
+      <section className={styles.modeSwitch}>
+        <button
+          className={`${styles.modeSwitchBtn} ${mode === "user" ? styles.modeSwitchBtnActive : ""}`}
+          onClick={() => {
+            setMode("user");
+            setActiveTab("summary");
+          }}
+        >
+          {username || "User"}
+        </button>
+        <button
+          className={`${styles.modeSwitchBtn} ${mode === "global" ? styles.modeSwitchBtnActive : ""}`}
+          onClick={() => {
+            setMode("global");
+            setActiveTab("summary");
+          }}
+        >
+          Global
+        </button>
+      </section>
+
       <section className={`${styles.card} ${styles.ringsCard}`}>
         <div>
-          <h2 className={styles.cardTitle}>Listening Rings</h2>
+          <h2 className={styles.cardTitle}>
+            {mode === "user" ? "Your Listening Rings" : "Global Listening Rings"}
+          </h2>
 
           <div
             className={styles.rings}
@@ -237,355 +324,211 @@ export default function StatsPageClient({
         </div>
 
         <div className={styles.ringLegend}>
-          <div className={styles.legendRow}>
-            <span className={`${styles.legendDot} ${styles.listeningDot}`} />
-            <div>
-              <strong>{username ? `${username}'s Listening` : "Your Listening"}</strong>
-              <span>{compactNumber(totals.totalUserPlays)} total plays</span>
-            </div>
-          </div>
+          {mode === "user" ? (
+            <>
+              <div className={styles.legendRow}>
+                <span className={`${styles.legendDot} ${styles.listeningDot}`} />
+                <div>
+                  <strong>{username ? `${username}'s Listening` : "Your Listening"}</strong>
+                  <span>{compactNumber(totals.totalUserPlays)} total plays</span>
+                </div>
+              </div>
 
-          <div className={styles.legendRow}>
-            <span className={`${styles.legendDot} ${styles.favoritesDot}`} />
-            <div>
-              <strong>{username ? `${username}'s Favorites` : "Your Favorites"}</strong>
-              <span>{compactNumber(totals.totalFavoriteSongs)} songs saved</span>
-            </div>
-          </div>
+              <div className={styles.legendRow}>
+                <span className={`${styles.legendDot} ${styles.favoritesDot}`} />
+                <div>
+                  <strong>{username ? `${username}'s Favorites` : "Your Favorites"}</strong>
+                  <span>{compactNumber(totals.totalFavoriteSongs)} songs saved</span>
+                </div>
+              </div>
 
-          <div className={styles.legendRow}>
-            <span className={`${styles.legendDot} ${styles.reachDot}`} />
-            <div>
-              <strong>Global Reach</strong>
-              <span>{compactNumber(totals.totalGlobalReach)} listeners reached</span>
-            </div>
-          </div>
+              <div className={styles.legendRow}>
+                <span className={`${styles.legendDot} ${styles.reachDot}`} />
+                <div>
+                  <strong>Your Top App</strong>
+                  <span>{currentTopApp?.label || "—"}</span>
+                </div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div className={styles.legendRow}>
+                <span className={`${styles.legendDot} ${styles.listeningDot}`} />
+                <div>
+                  <strong>Global Plays</strong>
+                  <span>{compactNumber(totals.totalGlobalPlays)} total plays</span>
+                </div>
+              </div>
+
+              <div className={styles.legendRow}>
+                <span className={`${styles.legendDot} ${styles.favoritesDot}`} />
+                <div>
+                  <strong>Global Reach</strong>
+                  <span>{compactNumber(totals.totalGlobalReach)} listeners reached</span>
+                </div>
+              </div>
+
+              <div className={styles.legendRow}>
+                <span className={`${styles.legendDot} ${styles.reachDot}`} />
+                <div>
+                  <strong>Top Listener</strong>
+                  <span>{topListener?.label || "—"}</span>
+                </div>
+              </div>
+            </>
+          )}
         </div>
       </section>
 
-      {/* USER STATS */}
-      <section className={`${styles.card} ${styles.fullCard}`}>
-        <div className={styles.cardHeaderMini}>
-          <h3 className={styles.cardTitle}>{username ? `${username}'s Listening` : "Your Listening"}</h3>
-          <span className={styles.chev}>›</span>
-        </div>
+      <section className={styles.twoColGrid}>
+        {mode === "user" ? (
+          <>
+            <TopCard
+              title="Your Plays"
+              subtitle="Personal activity"
+              value={compactNumber(totals.totalUserPlays)}
+              tone="purple"
+              footer="Listening total"
+              onClick={() => setActiveTab("summary")}
+            />
 
-        <div className={styles.twoColGrid}>
-          <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("user")}>
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Total Plays</h3>
-              <span className={styles.chev}>›</span>
-            </div>
-            <p className={styles.miniLabel}>Personal activity</p>
-            <div className={styles.bigNumberPurple}>{compactNumber(totals.totalUserPlays)}</div>
-            <div className={styles.sparkWrap}>
-              {Array.from({ length: 24 }).map((_, i) => (
-                <span
-                  key={`user-plays-${i}`}
-                  className={styles.sparkBar}
-                  style={{ height: `${16 + ((i * 9 + totals.totalUserPlays) % 70)}px` }}
-                />
-              ))}
-            </div>
-            <div className={styles.sparkTimeline}>
-              <span>12 AM</span>
-              <span>6 AM</span>
-              <span>12 PM</span>
-              <span>6 PM</span>
-            </div>
-          </button>
+            <TopCard
+              title="Your Top Song"
+              subtitle="Most played"
+              value={compactNumber(topUserSong?.playCount || 0)}
+              tone="green"
+              coverImageUrl={topUserSong?.coverImageUrl || null}
+              footer={topUserSong?.title || "No listening yet"}
+              onClick={() => topUserSong && setSelectedSong(topUserSong)}
+            />
 
-          <button
-            className={`${styles.card} ${styles.tapCard}`}
-            onClick={() => topUserSong && setSelectedSong(topUserSong)}
-          >
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Top Song</h3>
-              <span className={styles.chev}>›</span>
-            </div>
+            <TopCard
+              title="Your Latest Favorite"
+              subtitle="Most recently saved"
+              value={compactNumber(totals.totalFavoriteSongs)}
+              tone="green"
+              coverImageUrl={latestFavorite?.coverImageUrl || null}
+              fallback="♥"
+              footer={latestFavorite?.title || "No favorites yet"}
+              onClick={() => latestFavorite && setSelectedSong(latestFavorite)}
+            />
 
-            {topUserSong?.coverImageUrl ? (
-              <img
-                src={topUserSong.coverImageUrl}
-                alt={topUserSong.title}
-                className={styles.sessionCover}
-              />
-            ) : (
-              <div className={styles.sessionCoverFallback}>♪</div>
-            )}
+            <TopCard
+              title="Your Top App"
+              subtitle="Most played project"
+              value={currentTopApp?.label || "—"}
+              tone="blue"
+              footer={`${compactNumber(currentTopApp?.count || 0)} plays`}
+              fallback=""
+              onClick={() => setActiveTab("apps")}
+            />
+          </>
+        ) : (
+          <>
+            <TopCard
+              title="Global Plays"
+              subtitle="Overall activity"
+              value={compactNumber(totals.totalGlobalPlays)}
+              tone="blue"
+              footer="All song plays"
+              onClick={() => setActiveTab("summary")}
+            />
 
-            <div className={styles.sessionTitle}>{topUserSong?.title || "No listening yet"}</div>
-            <div className={styles.bigNumberGreen}>
-              {compactNumber(topUserSong?.playCount || 0)} plays
-            </div>
-            <div className={styles.sessionDate}>
-              {topUserSong?.lastPlayedAt ? formatShortDate(topUserSong.lastPlayedAt) : "—"}
-            </div>
-          </button>
+            <TopCard
+              title="Global Top Song"
+              subtitle="Most played song"
+              value={compactNumber(topGlobalSong?.playCount || 0)}
+              tone="green"
+              coverImageUrl={topGlobalSong?.coverImageUrl || null}
+              footer={topGlobalSong?.title || "No global song yet"}
+              onClick={() => topGlobalSong && setSelectedSong(topGlobalSong)}
+            />
 
-          <button
-            className={`${styles.card} ${styles.tapCard}`}
-            onClick={() => latestFavorite && setSelectedSong(latestFavorite)}
-          >
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Latest Favorite</h3>
-              <span className={styles.chev}>›</span>
-            </div>
+            <TopCard
+              title="Top Listener"
+              subtitle="Ranked by plays"
+              value={topListener?.label || "—"}
+              tone="blue"
+              footer={`${compactNumber(topListener?.count || 0)} plays`}
+              fallback=""
+              onClick={() => setActiveTab("rankings")}
+            />
 
-            {latestFavorite?.coverImageUrl ? (
-              <img
-                src={latestFavorite.coverImageUrl}
-                alt={latestFavorite.title}
-                className={styles.sessionCover}
-              />
-            ) : (
-              <div className={styles.sessionCoverFallback}>♥</div>
-            )}
-
-            <div className={styles.sessionTitle}>{latestFavorite?.title || "No favorites yet"}</div>
-            <div className={styles.bigNumberGreen}>
-              {compactNumber(totals.totalFavoriteSongs)} saved
-            </div>
-            <div className={styles.sessionDate}>
-              {latestFavorite?.favoritedAt ? formatShortDate(latestFavorite.favoritedAt) : "—"}
-            </div>
-          </button>
-
-          <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("user")}>
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Top App</h3>
-              <span className={styles.chev}>›</span>
-            </div>
-            <p className={styles.miniLabel}>Most played project</p>
-            <div className={styles.bigNumberBlue}>{topUserApp?.label || "—"}</div>
-            <div className={styles.sessionDate}>
-              {compactNumber(topUserApp?.count || 0)} plays
-            </div>
-          </button>
-        </div>
+            <TopCard
+              title="Global Top App"
+              subtitle="Most played project"
+              value={currentTopApp?.label || "—"}
+              tone="blue"
+              footer={`${compactNumber(currentTopApp?.count || 0)} plays`}
+              fallback=""
+              onClick={() => setActiveTab("apps")}
+            />
+          </>
+        )}
       </section>
 
-      {/* GLOBAL STATS */}
       <section className={`${styles.card} ${styles.fullCard}`}>
         <div className={styles.cardHeaderMini}>
-          <h3 className={styles.cardTitle}>Global Stats</h3>
-          <span className={styles.chev}>›</span>
-        </div>
-
-        <div className={styles.twoColGrid}>
-          <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("global")}>
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Global Plays</h3>
-              <span className={styles.chev}>›</span>
-            </div>
-            <p className={styles.miniLabel}>Overall activity</p>
-            <div className={styles.bigNumberBlue}>{compactNumber(totals.totalGlobalPlays)}</div>
-            <div className={styles.sparkWrap}>
-              {Array.from({ length: 24 }).map((_, i) => (
-                <span
-                  key={`global-plays-${i}`}
-                  className={`${styles.sparkBar} ${styles.sparkBarBlue}`}
-                  style={{ height: `${18 + ((i * 7 + totals.totalGlobalPlays) % 68)}px` }}
-                />
-              ))}
-            </div>
-            <div className={styles.sparkTimeline}>
-              <span>12 AM</span>
-              <span>6 AM</span>
-              <span>12 PM</span>
-              <span>6 PM</span>
-            </div>
-          </button>
-
-          <button
-            className={`${styles.card} ${styles.tapCard}`}
-            onClick={() => topGlobalSong && setSelectedSong(topGlobalSong)}
-          >
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Top Song</h3>
-              <span className={styles.chev}>›</span>
-            </div>
-
-            {topGlobalSong?.coverImageUrl ? (
-              <img
-                src={topGlobalSong.coverImageUrl}
-                alt={topGlobalSong.title}
-                className={styles.sessionCover}
-              />
-            ) : (
-              <div className={styles.sessionCoverFallback}>♪</div>
-            )}
-
-            <div className={styles.sessionTitle}>{topGlobalSong?.title || "No global song yet"}</div>
-            <div className={styles.bigNumberGreen}>
-              {compactNumber(topGlobalSong?.playCount || 0)} plays
-            </div>
-            <div className={styles.sessionDate}>
-              {compactNumber(topGlobalSong?.uniqueListenerCount || 0)} listeners
-            </div>
-          </button>
-
-          <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("global")}>
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Top App</h3>
-              <span className={styles.chev}>›</span>
-            </div>
-            <p className={styles.miniLabel}>Most played project</p>
-            <div className={styles.bigNumberBlue}>{topGlobalApp?.label || "—"}</div>
-            <div className={styles.sessionDate}>
-              {compactNumber(topGlobalApp?.count || 0)} plays
-            </div>
-          </button>
-
-          <button className={`${styles.card} ${styles.tapCard}`} onClick={() => setActiveTab("global")}>
-            <div className={styles.cardHeaderMini}>
-              <h3 className={styles.cardTitle}>Top Listener</h3>
-              <span className={styles.chev}>›</span>
-            </div>
-            <p className={styles.miniLabel}>Ranked by plays</p>
-            <div className={styles.bigNumberBlue}>{topListeners[0]?.label || "—"}</div>
-            <div className={styles.sessionDate}>
-              {compactNumber(topListeners[0]?.count || 0)} plays
-            </div>
-          </button>
-        </div>
-      </section>
-
-      {/* GLOBAL LOCATION STATS */}
-      <section className={`${styles.card} ${styles.fullCard}`}>
-        <div className={styles.cardHeaderMini}>
-          <h3 className={styles.cardTitle}>Global Locations</h3>
+          <h3 className={styles.cardTitle}>
+            {mode === "user" ? `${username || "User"} Overview` : "Global Overview"}
+          </h3>
           <span className={styles.chev}>›</span>
         </div>
 
         <div className={styles.locationGrid}>
-          <button className={styles.locationCell} onClick={() => setActiveTab("global")}>
+          <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
             <span className={styles.locationLabel}>Top City</span>
-            <strong>{topGlobalCity?.label || "—"}</strong>
-            <span>{compactNumber(topGlobalCity?.count || 0)} plays</span>
+            <strong>{currentTopCity?.label || "—"}</strong>
+            <span>{compactNumber(currentTopCity?.count || 0)} plays</span>
           </button>
 
-          <button className={styles.locationCell} onClick={() => setActiveTab("global")}>
+          <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
             <span className={styles.locationLabel}>Top State</span>
-            <strong>{topGlobalRegion?.label || "—"}</strong>
-            <span>{compactNumber(topGlobalRegion?.count || 0)} plays</span>
+            <strong>{currentTopRegion?.label || "—"}</strong>
+            <span>{compactNumber(currentTopRegion?.count || 0)} plays</span>
           </button>
 
-          <button className={styles.locationCell} onClick={() => setActiveTab("global")}>
+          <button className={styles.locationCell} onClick={() => setActiveTab("places")}>
             <span className={styles.locationLabel}>Top Country</span>
-            <strong>{topGlobalCountry?.label || "—"}</strong>
-            <span>{compactNumber(topGlobalCountry?.count || 0)} plays</span>
+            <strong>{currentTopCountry?.label || "—"}</strong>
+            <span>{compactNumber(currentTopCountry?.count || 0)} plays</span>
           </button>
 
-          <button className={styles.locationCell} onClick={() => setActiveTab("user")}>
-            <span className={styles.locationLabel}>{username ? `${username}'s Top City` : "Your Top City"}</span>
-            <strong>{topUserCity?.label || "—"}</strong>
-            <span>{compactNumber(topUserCity?.count || 0)} plays</span>
+          <button className={styles.locationCell} onClick={() => setActiveTab("apps")}>
+            <span className={styles.locationLabel}>Top App</span>
+            <strong>{currentTopApp?.label || "—"}</strong>
+            <span>{compactNumber(currentTopApp?.count || 0)} plays</span>
           </button>
         </div>
       </section>
 
       <section className={styles.bottomPanel}>
         <div className={styles.bottomContent}>
-          {activeTab === "user" && (
+          {activeTab === "summary" && (
             <>
-              <div className={styles.bottomKicker}>{username ? `${username}'s Listening Summary` : "Your Listening Summary"}</div>
-              <div className={styles.bottomTitle}>Your habits, favorites, apps, and places</div>
+              <div className={styles.bottomKicker}>
+                {mode === "user"
+                  ? `${username || "User"} Summary`
+                  : "Global Summary"}
+              </div>
+              <div className={styles.bottomTitle}>
+                {mode === "user"
+                  ? "Your listening, favorites, apps, and places"
+                  : "Songs, listeners, apps, and locations"}
+              </div>
               <div className={styles.bottomSub}>
-                Everything personal is grouped together here so your listening behavior is easier to understand at a glance.
+                {mode === "user"
+                  ? "All of your listening behavior is grouped together here so your habits make sense in one place."
+                  : "This is the broader picture so you can compare your behavior with what is happening across the full listener base."}
               </div>
 
               <div className={styles.summaryStack}>
                 <div className={styles.summarySection}>
-                  <div className={styles.summarySectionTitle}>{username ? `${username}'s Listening` : "Your Listening"}</div>
-                  <div className={styles.listStack}>
-                    <div className={styles.listRow}>
-                      <div className={styles.listRowText}>
-                        <strong>Total Plays</strong>
-                        <span>Personal activity</span>
-                      </div>
-                      <div className={styles.listRowValue}>{compactNumber(totals.totalUserPlays)}</div>
-                    </div>
-
-                    <div className={styles.listRow}>
-                      <div className={styles.listRowText}>
-                        <strong>Top Song</strong>
-                        <span>Most played song</span>
-                      </div>
-                      <div className={styles.listRowValue}>{topUserSong?.title || "—"}</div>
-                    </div>
-
-                    <div className={styles.listRow}>
-                      <div className={styles.listRowText}>
-                        <strong>Top App</strong>
-                        <span>Most played project</span>
-                      </div>
-                      <div className={styles.listRowValue}>{topUserApp?.label || "—"}</div>
-                    </div>
+                  <div className={styles.summarySectionTitle}>
+                    {mode === "user" ? "Listening" : "Songs"}
                   </div>
-                </div>
-
-                <div className={styles.summarySection}>
-                  <div className={styles.summarySectionTitle}>{username ? `${username}'s Favorites` : "Your Favorites"}</div>
                   <div className={styles.listStack}>
-                    <div className={styles.listRow}>
-                      <div className={styles.listRowText}>
-                        <strong>Total Favorites</strong>
-                        <span>Saved songs</span>
-                      </div>
-                      <div className={styles.listRowValue}>{compactNumber(totals.totalFavoriteSongs)}</div>
-                    </div>
-
-                    <div className={styles.listRow}>
-                      <div className={styles.listRowText}>
-                        <strong>Latest Favorite</strong>
-                        <span>Most recently saved</span>
-                      </div>
-                      <div className={styles.listRowValue}>{latestFavorite?.title || "—"}</div>
-                    </div>
-                  </div>
-                </div>
-
-                <div className={styles.summarySection}>
-                  <div className={styles.summarySectionTitle}>{username ? `${username}'s Places` : "Your Places"}</div>
-                  <div className={styles.listStack}>
-                    {userTopCities.slice(0, 3).map((row) => (
-                      <div key={row.label} className={styles.listRow}>
-                        <div className={styles.listRowText}>
-                          <strong>{row.label}</strong>
-                          <span>City plays</span>
-                        </div>
-                        <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
-                      </div>
-                    ))}
-                    {userTopCities.length === 0 ? (
-                      <div className={styles.listRow}>
-                        <div className={styles.listRowText}>
-                          <strong>No place data yet</strong>
-                          <span>Start listening to build local habits</span>
-                        </div>
-                        <div className={styles.listRowValue}>—</div>
-                      </div>
-                    ) : null}
-                  </div>
-                </div>
-              </div>
-            </>
-          )}
-
-          {activeTab === "global" && (
-            <>
-              <div className={styles.bottomKicker}>Global Summary</div>
-              <div className={styles.bottomTitle}>Songs, listeners, apps, and places</div>
-              <div className={styles.bottomSub}>
-                This is the global side of the picture, including top listeners, top apps, and the places where the most listening activity is happening.
-              </div>
-
-              <div className={styles.summaryStack}>
-                <div className={styles.summarySection}>
-                  <div className={styles.summarySectionTitle}>Global Song Stats</div>
-                  <div className={styles.listStack}>
-                    {globalSongs.slice(0, 5).map((song) => (
+                    {(mode === "user" ? userSongs : globalSongs).slice(0, 5).map((song) => (
                       <button
                         key={song.songSlug}
                         className={styles.listRow}
@@ -595,35 +538,94 @@ export default function StatsPageClient({
                           <strong>{song.title}</strong>
                           <span>{song.appSlug || "Unknown app"}</span>
                         </div>
-                        <div className={styles.listRowValue}>{compactNumber(song.playCount || 0)}</div>
+                        <div className={styles.listRowValue}>
+                          {compactNumber(song.playCount || 0)}
+                        </div>
                       </button>
                     ))}
                   </div>
                 </div>
 
-                <div className={styles.summarySection}>
-                  <div className={styles.summarySectionTitle}>Top Listeners</div>
-                  <div className={styles.listStack}>
-                    {topListeners.slice(0, 5).map((row, index) => (
-                      <div key={`${row.label}-${index}`} className={styles.listRow}>
-                        <div className={styles.listRowText}>
-                          <strong>{index + 1}. {row.label}</strong>
-                          <span>Listener rank</span>
-                        </div>
-                        <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
-                      </div>
-                    ))}
+                {mode === "user" ? (
+                  <div className={styles.summarySection}>
+                    <div className={styles.summarySectionTitle}>Favorites</div>
+                    <div className={styles.listStack}>
+                      {favoriteSongs.slice(0, 5).map((song) => (
+                        <button
+                          key={song.songSlug}
+                          className={styles.listRow}
+                          onClick={() => setSelectedSong(song)}
+                        >
+                          <div className={styles.listRowText}>
+                            <strong>{song.title}</strong>
+                            <span>{song.appSlug || "Unknown app"}</span>
+                          </div>
+                          <div className={styles.listRowValue}>
+                            {formatShortDate(song.favoritedAt)}
+                          </div>
+                        </button>
+                      ))}
+                    </div>
                   </div>
-                </div>
+                ) : (
+                  <div className={styles.summarySection}>
+                    <div className={styles.summarySectionTitle}>Top Listeners</div>
+                    <div className={styles.listStack}>
+                      {topListeners.slice(0, 5).map((row, index) => (
+                        <div key={`${row.label}-${index}`} className={styles.listRow}>
+                          <div className={styles.listRowText}>
+                            <strong>{index + 1}. {row.label}</strong>
+                            <span>Listener rank</span>
+                          </div>
+                          <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            </>
+          )}
 
+          {activeTab === "apps" && (
+            <>
+              <div className={styles.bottomKicker}>
+                {mode === "user" ? `${username || "User"} App Stats` : "Global App Stats"}
+              </div>
+              <div className={styles.summaryStack}>
                 <div className={styles.summarySection}>
-                  <div className={styles.summarySectionTitle}>Global App Stats</div>
+                  <div className={styles.summarySectionTitle}>Top Apps</div>
                   <div className={styles.listStack}>
-                    {globalAppRows.slice(0, 5).map((row) => (
+                    {currentAppRows.slice(0, 8).map((row) => (
                       <div key={row.label} className={styles.listRow}>
                         <div className={styles.listRowText}>
                           <strong>{row.label}</strong>
-                          <span>Project plays</span>
+                          <span>{mode === "user" ? "Your project plays" : "Global project plays"}</span>
+                        </div>
+                        <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === "places" && (
+            <>
+              <div className={styles.bottomKicker}>
+                {mode === "user" ? `${username || "User"} Places` : "Global Places"}
+              </div>
+
+              <div className={styles.summaryStack}>
+                <div className={styles.summarySection}>
+                  <div className={styles.summarySectionTitle}>Top Cities</div>
+                  <div className={styles.listStack}>
+                    {currentCityRows.slice(0, 8).map((row) => (
+                      <div key={row.label} className={styles.listRow}>
+                        <div className={styles.listRowText}>
+                          <strong>{row.label}</strong>
+                          <span>City plays</span>
                         </div>
                         <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
                       </div>
@@ -632,9 +634,49 @@ export default function StatsPageClient({
                 </div>
 
                 <div className={styles.summarySection}>
-                  <div className={styles.summarySectionTitle}>Global Places</div>
+                  <div className={styles.summarySectionTitle}>Top States</div>
+                  <div className={styles.listStack}>
+                    {currentRegionRows.slice(0, 8).map((row) => (
+                      <div key={row.label} className={styles.listRow}>
+                        <div className={styles.listRowText}>
+                          <strong>{row.label}</strong>
+                          <span>State plays</span>
+                        </div>
+                        <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className={styles.summarySection}>
+                  <div className={styles.summarySectionTitle}>Top Countries</div>
+                  <div className={styles.listStack}>
+                    {currentCountryRows.slice(0, 8).map((row) => (
+                      <div key={row.label} className={styles.listRow}>
+                        <div className={styles.listRowText}>
+                          <strong>{row.label}</strong>
+                          <span>Country plays</span>
+                        </div>
+                        <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </>
+          )}
+
+          {activeTab === "rankings" && (
+            <>
+              <div className={styles.bottomKicker}>
+                {mode === "user" ? `${username || "User"} Rankings` : "Global Rankings"}
+              </div>
+
+              <div className={styles.summaryStack}>
+                <div className={styles.summarySection}>
+                  <div className={styles.summarySectionTitle}>Key Rankings</div>
                   <div className={styles.rankingsGrid}>
-                    {globalRankingRows.map((row) => (
+                    {currentRankingRows.map((row) => (
                       <div key={row.label} className={styles.rankingCell}>
                         <div className={styles.rankingLabel}>{row.label}</div>
                         <div className={styles.rankingValue}>{row.value}</div>
@@ -643,6 +685,23 @@ export default function StatsPageClient({
                     ))}
                   </div>
                 </div>
+
+                {mode === "global" ? (
+                  <div className={styles.summarySection}>
+                    <div className={styles.summarySectionTitle}>Top Listeners</div>
+                    <div className={styles.listStack}>
+                      {topListeners.slice(0, 10).map((row, index) => (
+                        <div key={`${row.label}-${index}`} className={styles.listRow}>
+                          <div className={styles.listRowText}>
+                            <strong>{index + 1}. {row.label}</strong>
+                            <span>Ranked by total plays</span>
+                          </div>
+                          <div className={styles.listRowValue}>{compactNumber(row.count)}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ) : null}
               </div>
             </>
           )}
@@ -650,16 +709,28 @@ export default function StatsPageClient({
 
         <div className={styles.bottomTabs}>
           <button
-            className={`${styles.bottomTab} ${activeTab === "user" ? styles.bottomTabActive : ""}`}
-            onClick={() => setActiveTab("user")}
+            className={`${styles.bottomTab} ${activeTab === "summary" ? styles.bottomTabActive : ""}`}
+            onClick={() => setActiveTab("summary")}
           >
-            {username || "User"}
+            Summary
           </button>
           <button
-            className={`${styles.bottomTab} ${activeTab === "global" ? styles.bottomTabActive : ""}`}
-            onClick={() => setActiveTab("global")}
+            className={`${styles.bottomTab} ${activeTab === "apps" ? styles.bottomTabActive : ""}`}
+            onClick={() => setActiveTab("apps")}
           >
-            Global
+            Apps
+          </button>
+          <button
+            className={`${styles.bottomTab} ${activeTab === "places" ? styles.bottomTabActive : ""}`}
+            onClick={() => setActiveTab("places")}
+          >
+            Places
+          </button>
+          <button
+            className={`${styles.bottomTab} ${activeTab === "rankings" ? styles.bottomTabActive : ""}`}
+            onClick={() => setActiveTab("rankings")}
+          >
+            Rankings
           </button>
         </div>
       </section>
