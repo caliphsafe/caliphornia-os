@@ -14,6 +14,26 @@ async function createSignedCoverUrl(storagePath: string | null | undefined) {
   return data.signedUrl;
 }
 
+function buildTopCounts(
+  rows: Array<Record<string, any>>,
+  key: "city" | "region" | "country"
+) {
+  const counts = new Map<string, number>();
+
+  rows.forEach((row) => {
+    const raw = row?.[key];
+    const label = typeof raw === "string" ? raw.trim() : "";
+    if (!label) return;
+
+    counts.set(label, (counts.get(label) || 0) + 1);
+  });
+
+  return Array.from(counts.entries())
+    .map(([label, count]) => ({ label, count }))
+    .sort((a, b) => b.count - a.count)
+    .slice(0, 10);
+}
+
 export async function GET() {
   try {
     const cookieStore = await cookies();
@@ -29,7 +49,13 @@ export async function GET() {
 
     const userEmail = session.email;
 
-    const [globalStatsRes, userStatsRes, favoritesRes, songsRes] = await Promise.all([
+    const [
+      globalStatsRes,
+      userStatsRes,
+      favoritesRes,
+      songsRes,
+      eventLogsRes,
+    ] = await Promise.all([
       supabaseAdmin
         .from("global_song_stats")
         .select("song_id, song_slug, play_count, unique_listener_count"),
@@ -55,7 +81,12 @@ export async function GET() {
           cover_image_path,
           source_app_slug,
           duration_label
-        `)
+        `),
+
+      supabaseAdmin
+        .from("event_logs")
+        .select("city, region, country")
+        .eq("event_type", "song_play"),
     ]);
 
     if (globalStatsRes.error) {
@@ -86,19 +117,31 @@ export async function GET() {
       );
     }
 
+    if (eventLogsRes.error) {
+      return NextResponse.json(
+        { ok: false, error: eventLogsRes.error.message },
+        { status: 500 }
+      );
+    }
+
     const songs = songsRes.data || [];
+    const globalStats = globalStatsRes.data || [];
+    const userStats = userStatsRes.data || [];
+    const favorites = favoritesRes.data || [];
+    const eventLogs = eventLogsRes.data || [];
+
     const songMap = new Map(songs.map((song) => [song.slug, song]));
 
     const favoriteSlugSet = new Set(
-      (favoritesRes.data || []).map((row) => row.song_slug).filter(Boolean)
+      favorites.map((row) => row.song_slug).filter(Boolean)
     );
 
     const favoriteCreatedAtMap = new Map(
-      (favoritesRes.data || []).map((row) => [row.song_slug, row.created_at])
+      favorites.map((row) => [row.song_slug, row.created_at])
     );
 
     const mergedGlobal = await Promise.all(
-      (globalStatsRes.data || []).map(async (row) => {
+      globalStats.map(async (row) => {
         const song = songMap.get(row.song_slug);
         const coverUrl = await createSignedCoverUrl(song?.cover_image_path);
 
@@ -113,13 +156,13 @@ export async function GET() {
           coverImageUrl: coverUrl,
           playCount: row.play_count || 0,
           uniqueListenerCount: row.unique_listener_count || 0,
-          isFavorite: favoriteSlugSet.has(row.song_slug)
+          isFavorite: favoriteSlugSet.has(row.song_slug),
         };
       })
     );
 
     const mergedUser = await Promise.all(
-      (userStatsRes.data || []).map(async (row) => {
+      userStats.map(async (row) => {
         const song = songMap.get(row.song_slug);
         const coverUrl = await createSignedCoverUrl(song?.cover_image_path);
 
@@ -134,7 +177,7 @@ export async function GET() {
           coverImageUrl: coverUrl,
           playCount: row.play_count || 0,
           lastPlayedAt: row.last_played_at || null,
-          isFavorite: favoriteSlugSet.has(row.song_slug)
+          isFavorite: favoriteSlugSet.has(row.song_slug),
         };
       })
     );
@@ -142,8 +185,8 @@ export async function GET() {
     const mergedFavorites = await Promise.all(
       Array.from(favoriteSlugSet).map(async (songSlug) => {
         const song = songMap.get(songSlug);
-        const userStat = (userStatsRes.data || []).find((row) => row.song_slug === songSlug);
-        const globalStat = (globalStatsRes.data || []).find((row) => row.song_slug === songSlug);
+        const userStat = userStats.find((row) => row.song_slug === songSlug);
+        const globalStat = globalStats.find((row) => row.song_slug === songSlug);
         const coverUrl = await createSignedCoverUrl(song?.cover_image_path);
 
         return {
@@ -156,27 +199,44 @@ export async function GET() {
           coverImageUrl: coverUrl,
           favoritedAt: favoriteCreatedAtMap.get(songSlug) || null,
           userPlayCount: userStat?.play_count || 0,
-          globalPlayCount: globalStat?.play_count || 0
+          globalPlayCount: globalStat?.play_count || 0,
         };
       })
     );
 
-    mergedGlobal.sort((a, b) => b.playCount - a.playCount);
-    mergedUser.sort((a, b) => (b.lastPlayedAt || "").localeCompare(a.lastPlayedAt || ""));
-    mergedFavorites.sort((a, b) => (b.favoritedAt || "").localeCompare(a.favoritedAt || ""));
+    mergedGlobal.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
+    mergedUser.sort((a, b) =>
+      (b.lastPlayedAt || "").localeCompare(a.lastPlayedAt || "")
+    );
+    mergedFavorites.sort((a, b) =>
+      (b.favoritedAt || "").localeCompare(a.favoritedAt || "")
+    );
 
     const totals = {
       totalUserPlayedSongs: mergedUser.length,
       totalFavoriteSongs: mergedFavorites.length,
-      totalUserPlays: mergedUser.reduce((sum, row) => sum + (row.playCount || 0), 0)
+      totalUserPlays: mergedUser.reduce((sum, row) => sum + (row.playCount || 0), 0),
+      totalGlobalPlays: mergedGlobal.reduce((sum, row) => sum + (row.playCount || 0), 0),
+      totalGlobalReach: mergedGlobal.reduce(
+        (sum, row) => sum + (row.uniqueListenerCount || 0),
+        0
+      ),
     };
+
+    const topCities = buildTopCounts(eventLogs, "city");
+    const topRegions = buildTopCounts(eventLogs, "region");
+    const topCountries = buildTopCounts(eventLogs, "country");
 
     return NextResponse.json({
       ok: true,
       totals,
       globalSongs: mergedGlobal,
       userSongs: mergedUser,
-      favoriteSongs: mergedFavorites
+      favoriteSongs: mergedFavorites,
+      topCities,
+      topRegions,
+      topCountries,
+      topPlatforms: [],
     });
   } catch (error: any) {
     return NextResponse.json(
