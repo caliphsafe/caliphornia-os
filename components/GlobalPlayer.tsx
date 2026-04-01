@@ -516,7 +516,7 @@ export default function GlobalPlayer({ email }: Props) {
     };
   }, [currentTrack, currentIndex, queue, friendsFinalQueue]);
 
-   useEffect(() => {
+useEffect(() => {
   if (!currentSongSlug) {
     setResolvedCoverUrl(null);
     return;
@@ -552,44 +552,6 @@ export default function GlobalPlayer({ email }: Props) {
     isCancelled = true;
   };
 }, [currentSongSlug]);
-
-        const data = await res.json();
-
-        if (!isCancelled) {
-          setResolvedCoverUrl(data?.ok ? data.song?.coverUrl || null : null);
-        }
-      } catch {
-        if (!isCancelled) {
-          setResolvedCoverUrl(null);
-        }
-      }
-    }
-
-    fetchCover();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [currentSongSlug]);
-
-        const data = await res.json();
-
-        if (!isCancelled) {
-          setResolvedCoverUrl(data?.ok ? data.song?.coverUrl || null : null);
-        }
-      } catch {
-        if (!isCancelled) {
-          setResolvedCoverUrl(null);
-        }
-      }
-    }
-
-    fetchCover();
-
-    return () => {
-      isCancelled = true;
-    };
-  }, [currentSongSlug]);
 
   useEffect(() => {
     const shouldOffset = Boolean(isVisible && currentTrack);
