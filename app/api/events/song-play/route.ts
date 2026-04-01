@@ -72,20 +72,6 @@ export async function POST(request: Request) {
       );
     }
 
-    const { error: rpcError } = await supabaseAdmin.rpc("increment_song_play_stats", {
-      p_user_email: userEmail,
-      p_song_id: song.id,
-      p_completed: false
-    });
-
-    if (rpcError) {
-      console.error("increment_song_play_stats failed:", rpcError);
-      return NextResponse.json(
-        { ok: false, error: rpcError.message },
-        { status: 500 }
-      );
-    }
-
     return NextResponse.json({ ok: true });
   } catch (error: any) {
     console.error("song-play route error:", error);
