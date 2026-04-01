@@ -2,7 +2,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import StatsClient from "@/components/StatsClient";
+import StatsPageClient from "@/components/StatsClient";
 
 async function createSignedCoverUrl(storagePath: string | null | undefined) {
   if (!storagePath) return null;
@@ -36,11 +36,6 @@ type CountRow = {
   count: number;
 };
 
-type PlatformRow = {
-  label: string;
-  count: number;
-};
-
 function countByLabel(rows: { label: string }[]) {
   const map = new Map<string, number>();
 
@@ -56,21 +51,6 @@ function countByLabel(rows: { label: string }[]) {
     }
 
     map.set(label, (map.get(label) || 0) + 1);
-  }
-
-  return Array.from(map.entries())
-    .map(([label, count]) => ({ label, count }))
-    .sort((a, b) => b.count - a.count);
-}
-
-function countAppsFromSongs(rows: Array<{ appSlug?: string; playCount?: number }>): PlatformRow[] {
-  const map = new Map<string, number>();
-
-  for (const row of rows) {
-    const label = String(row.appSlug || "").trim();
-    if (!label) continue;
-
-    map.set(label, (map.get(label) || 0) + (row.playCount || 0));
   }
 
   return Array.from(map.entries())
@@ -227,26 +207,15 @@ export default async function StatsPage() {
   const topRegions = countByLabel(eventLogs.map((row) => ({ label: row.region || "" })));
   const topCountries = countByLabel(eventLogs.map((row) => ({ label: row.country || "" })));
 
-  const topPlatforms = countAppsFromSongs(globalSongs);
-
-  const totals = {
-    totalUserPlays: userSongs.reduce((sum, row) => sum + (row.playCount || 0), 0),
-    totalFavoriteSongs: favoriteSongs.length,
-    totalGlobalPlays: globalSongs.reduce((sum, row) => sum + (row.playCount || 0), 0),
-    totalGlobalReach: globalSongs.reduce((sum, row) => sum + (row.uniqueListenerCount || 0), 0),
-  };
-
   return (
-    <StatsClient
+    <StatsPageClient
       username={appUserRes.data?.username || ""}
-      totals={totals}
       globalSongs={globalSongs}
       userSongs={userSongs}
       favoriteSongs={favoriteSongs}
       topCities={topCities}
       topRegions={topRegions}
       topCountries={topCountries}
-      topPlatforms={topPlatforms}
     />
   );
 }
