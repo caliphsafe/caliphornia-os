@@ -198,7 +198,7 @@ export default async function StatsPage() {
   );
 
   globalSongs.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
-  userSongs.sort((a, b) => (b.lastPlayedAt || "").localeCompare(a.lastPlayedAt || ""));
+  userSongs.sort((a, b) => (b.playCount || 0) - (a.playCount || 0));
   favoriteSongs.sort((a, b) => (b.favoritedAt || "").localeCompare(a.favoritedAt || ""));
 
   const eventLogs = eventLogsRes.data || [];
