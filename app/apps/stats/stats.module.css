@@ -255,6 +255,8 @@
   line-height:.95;
   letter-spacing:-0.05em;
   font-weight:300;
+  min-height:56px;
+  overflow-wrap:anywhere;
 }
 
 .bigNumberPurple{ color:#b38cff; }
@@ -379,6 +381,10 @@
   grid-template-columns:90px 1fr;
   gap:16px;
   align-items:center;
+}
+
+.highlightBody{
+  min-width:0;
 }
 
 .highlightMedia{
@@ -513,7 +519,7 @@
 
 .bottomTabs{
   display:grid;
-  grid-template-columns:repeat(3, minmax(0, 1fr));
+  grid-template-columns:repeat(2, minmax(0, 1fr));
   gap:8px;
   padding:8px;
   border-radius:999px;
@@ -574,6 +580,8 @@
 .listRowText{
   display:grid;
   gap:4px;
+  min-width:0;
+  flex:1;
 }
 
 .listRowText strong{
@@ -588,6 +596,8 @@
   font-size:18px;
   font-weight:700;
   text-align:right;
+  max-width:46%;
+  overflow-wrap:anywhere;
 }
 
 .awardRow{
@@ -676,6 +686,7 @@
   font-size:20px;
   line-height:1.1;
   font-weight:700;
+  overflow-wrap:anywhere;
 }
 
 .rankingMeta{
@@ -861,7 +872,7 @@
   }
 
   .bottomTabs{
-    grid-template-columns:repeat(3, minmax(0, 1fr));
+    grid-template-columns:repeat(2, minmax(0, 1fr));
     border-radius:999px;
     gap:8px;
     padding:8px;
