@@ -55,7 +55,7 @@ function compactNumber(value: number) {
 }
 
 function formatHeaderDate(date = new Date()) {
-  return new Intl.NumberFormat("en-US", {
+  return new Intl.DateTimeFormat("en-US", {
     month: "long",
     day: "numeric",
   }).format(date);
