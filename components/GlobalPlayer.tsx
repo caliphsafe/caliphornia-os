@@ -181,6 +181,11 @@ function MarqueeText({
   );
 }
 
+function getResolvedSongSlug(track: GlobalTrack | null) {
+  if (!track) return null;
+  return track.analyticsSongSlug || track.playlistSongSlug || track.slug || null;
+}
+
 export default function GlobalPlayer({ email }: Props) {
   const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
@@ -197,6 +202,10 @@ export default function GlobalPlayer({ email }: Props) {
     if (currentIndex < 0 || currentIndex >= queue.length) return null;
     return queue[currentIndex];
   }, [queue, currentIndex]);
+
+  const currentSongSlug = useMemo(() => {
+    return getResolvedSongSlug(currentTrack);
+  }, [currentTrack]);
 
   const trackParts = useMemo(() => {
     return getTrackParts(
@@ -226,15 +235,10 @@ export default function GlobalPlayer({ email }: Props) {
     }
   }
 
-  function getPlaylistTargetSlug(track: GlobalTrack | null) {
-    if (!track) return null;
-    return track.playlistSongSlug || track.slug || null;
-  }
-
   async function refreshFavoriteState(track: GlobalTrack | null) {
-    const targetSlug = getPlaylistTargetSlug(track);
+    const targetSongSlug = getResolvedSongSlug(track);
 
-    if (!email || !targetSlug) {
+    if (!email || !targetSongSlug) {
       setIsSaved(false);
       return;
     }
@@ -242,7 +246,7 @@ export default function GlobalPlayer({ email }: Props) {
     try {
       const params = new URLSearchParams({
         userEmail: email,
-        songSlug: targetSlug
+        songSlug: targetSongSlug
       });
 
       const res = await fetch(`/api/playlists/is-favorite?${params.toString()}`, {
@@ -275,8 +279,10 @@ export default function GlobalPlayer({ email }: Props) {
     const payload = {
       type: "CALIPH_PLAYER_STATE",
       slug: currentTrack?.slug || null,
+      songSlug: currentSongSlug,
       clipId: currentTrack?.clipId || null,
       playlistSongSlug: currentTrack?.playlistSongSlug || null,
+      analyticsSongSlug: currentTrack?.analyticsSongSlug || null,
       isPlaying: audio ? !audio.paused : false,
       currentTime: current,
       duration: audio?.duration || 0,
@@ -342,10 +348,7 @@ export default function GlobalPlayer({ email }: Props) {
     setCurrentIndex(nextIndex);
     setIsVisible(true);
   }
-function getCurrentTrackSongSlug(track: GlobalTrack | null) {
-  if (!track) return null;
-  return track.playlistSongSlug || track.analyticsSongSlug || track.slug || null;
-}
+
   useEffect(() => {
     function onMessage(event: MessageEvent) {
       const data = event.data;
@@ -409,7 +412,7 @@ function getCurrentTrackSongSlug(track: GlobalTrack | null) {
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [currentTrack]);
+  }, [currentTrack, currentSongSlug]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -438,45 +441,37 @@ function getCurrentTrackSongSlug(track: GlobalTrack | null) {
 
     audio.addEventListener("canplay", onCanPlay, { once: true });
 
-// 🔥 analytics (THIS is what you were missing)
-const analyticsSlug =
-  currentTrack?.analyticsSongSlug ||
-  currentTrack?.playlistSongSlug ||
-  currentTrack?.slug;
+    if (currentSongSlug && currentTrack.file) {
+      void fetch("/api/events/song-play", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({
+          userEmail: email,
+          songSlug: currentSongSlug,
+          sourcePath: window.location.pathname,
+          sourceApp: currentTrack?.sourceApp || null
+        })
+      }).catch(() => {});
+    }
 
-if (analyticsSlug && currentTrack?.file) {
-  void fetch("/api/events/song-play", {
-    method: "POST",
-    headers: {
-      "Content-Type": "application/json"
-    },
-    body: JSON.stringify({
-      userEmail: email,
-      songSlug: analyticsSlug,
-      sourcePath: window.location.pathname,
-      sourceApp: currentTrack?.sourceApp || null
-    })
-  }).catch(() => {});
-}
+    void refreshFavoriteState(currentTrack);
 
-// keep this
-void refreshFavoriteState(currentTrack);
+    if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
+      const path = window.location.pathname;
+      const isOnFriendsConversationPage =
+        path.startsWith("/apps/friends/") && path !== "/apps/friends";
 
-// keep this
-if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
-  const path = window.location.pathname;
-  const isOnFriendsConversationPage =
-    path.startsWith("/apps/friends/") && path !== "/apps/friends";
-
-  if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) {
-    router.push(currentTrack.conversationRoute);
-  }
-}
+      if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) {
+        router.push(currentTrack.conversationRoute);
+      }
+    }
 
     return () => {
       audio.removeEventListener("canplay", onCanPlay);
     };
-  }, [currentTrack, email, router]);
+  }, [currentTrack, currentSongSlug, email, router]);
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -520,45 +515,43 @@ if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
       audio.removeEventListener("ended", onEnded);
     };
   }, [currentTrack, currentIndex, queue, friendsFinalQueue]);
-useEffect(() => {
-  const rawSongSlug = getCurrentTrackSongSlug(currentTrack);
 
-  if (!rawSongSlug) {
-    setResolvedCoverUrl(null);
-    return;
-  }
+  useEffect(() => {
+    if (!currentSongSlug) {
+      setResolvedCoverUrl(null);
+      return;
+    }
 
-  const songSlug = rawSongSlug;
+    let isCancelled = false;
 
-  let isCancelled = false;
+    async function fetchCover() {
+      try {
+        const res = await fetch(
+          `/api/songs/by-slug/${encodeURIComponent(currentSongSlug)}`,
+          {
+            cache: "no-store"
+          }
+        );
 
-  async function fetchCover() {
-    try {
-      const res = await fetch(
-        `/api/songs/by-slug/${encodeURIComponent(songSlug)}`,
-        {
-          cache: "no-store"
+        const data = await res.json();
+
+        if (!isCancelled) {
+          setResolvedCoverUrl(data?.ok ? data.song?.coverUrl || null : null);
         }
-      );
-
-      const data = await res.json();
-
-      if (!isCancelled) {
-        setResolvedCoverUrl(data?.ok ? data.song?.coverUrl || null : null);
-      }
-    } catch {
-      if (!isCancelled) {
-        setResolvedCoverUrl(null);
+      } catch {
+        if (!isCancelled) {
+          setResolvedCoverUrl(null);
+        }
       }
     }
-  }
 
-  fetchCover();
+    fetchCover();
 
-  return () => {
-    isCancelled = true;
-  };
-}, [currentTrack]);
+    return () => {
+      isCancelled = true;
+    };
+  }, [currentSongSlug]);
+
   useEffect(() => {
     const shouldOffset = Boolean(isVisible && currentTrack);
 
@@ -578,8 +571,8 @@ useEffect(() => {
   }
 
   async function togglePlaylistSave() {
-    const targetSlug = getPlaylistTargetSlug(currentTrack);
-    if (!targetSlug) return;
+    const targetSongSlug = getResolvedSongSlug(currentTrack);
+    if (!targetSongSlug) return;
 
     const res = await fetch("/api/playlists/toggle-favorite", {
       method: "POST",
@@ -588,7 +581,7 @@ useEffect(() => {
       },
       body: JSON.stringify({
         userEmail: email,
-        songSlug: targetSlug
+        songSlug: targetSongSlug
       })
     });
 
@@ -606,14 +599,14 @@ useEffect(() => {
         <div className="music-inline-player">
           <div className="music-inline-player-left">
             <div className="music-inline-cover">
-  {resolvedCoverUrl ? (
-    <img src={resolvedCoverUrl} alt={trackParts.song} />
-  ) : (
-    <div className="music-inline-cover-fallback">
-      {trackParts.song?.[0] || "♪"}
-    </div>
-  )}
-</div>
+              {resolvedCoverUrl ? (
+                <img src={resolvedCoverUrl} alt={trackParts.song} />
+              ) : (
+                <div className="music-inline-cover-fallback">
+                  {trackParts.song?.[0] || "♪"}
+                </div>
+              )}
+            </div>
 
             <div className="music-inline-copy">
               <div className="music-inline-title">
