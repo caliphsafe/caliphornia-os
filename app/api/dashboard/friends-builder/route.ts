@@ -347,7 +347,8 @@ export async function POST(request: NextRequest) {
 
       if (!cleanSlug) continue;
 
-      let storagePath: string | null = String(asset.existingStoragePath || "").trim() || null;
+     let storagePath: string | null =
+  String(asset.existingStoragePath || "").trim() || null;
 
 const uploadedMetaRaw = formData.get(`assetUpload__${asset.clientId}`);
 if (typeof uploadedMetaRaw === "string" && uploadedMetaRaw) {
@@ -358,23 +359,42 @@ if (typeof uploadedMetaRaw === "string" && uploadedMetaRaw) {
     }
   } catch {}
 }
-      const { data: savedAsset, error: assetError } = await supabaseAdmin
-        .from("audio_assets")
-        .upsert(
-          {
-            conversation_id: savedConversation.id,
-            slug: cleanSlug,
-            title: cleanTitle || cleanSlug,
-            storage_path: storagePath,
-            version_label: null,
-            is_final_version: false,
-            is_playlistable: false,
-            linked_song_id: null
-          },
-          { onConflict: "conversation_id,slug" }
-        )
-        .select("id, slug")
-        .single();
+
+if (!storagePath) {
+  const { data: existingAsset } = await supabaseAdmin
+    .from("audio_assets")
+    .select("storage_path")
+    .eq("conversation_id", savedConversation.id)
+    .eq("slug", cleanSlug)
+    .maybeSingle();
+
+  storagePath = existingAsset?.storage_path || null;
+}
+
+if (!storagePath) {
+  return NextResponse.json(
+    { ok: false, error: `Missing storage path for asset "${cleanSlug}".` },
+    { status: 400 }
+  );
+}
+
+const { data: savedAsset, error: assetError } = await supabaseAdmin
+  .from("audio_assets")
+  .upsert(
+    {
+      conversation_id: savedConversation.id,
+      slug: cleanSlug,
+      title: cleanTitle || cleanSlug,
+      storage_path: storagePath,
+      version_label: null,
+      is_final_version: false,
+      is_playlistable: false,
+      linked_song_id: null
+    },
+    { onConflict: "conversation_id,slug" }
+  )
+  .select("id, slug")
+  .single();
 
       if (assetError || !savedAsset) {
         return NextResponse.json(
