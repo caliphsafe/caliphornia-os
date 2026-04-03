@@ -124,12 +124,13 @@ export async function GET(request: NextRequest) {
       .order("created_at", { ascending: true });
 
     const assetsWithUrls = await Promise.all(
-      (assets || []).map(async (a: any) => ({
-        slug: a.slug,
-        title: a.title,
-        audio_url: await createSignedAudioUrl(a.storage_path)
-      }))
-    );
+  (assets || []).map(async (a: any) => ({
+    slug: a.slug,
+    title: a.title,
+    storage_path: a.storage_path,
+    audio_url: await createSignedAudioUrl(a.storage_path)
+  }))
+);
 
     const { data: messages } = await supabaseAdmin
       .from("conversation_messages")
@@ -346,18 +347,17 @@ export async function POST(request: NextRequest) {
 
       if (!cleanSlug) continue;
 
-      let storagePath: string | null = null;
+      let storagePath: string | null = String(asset.existingStoragePath || "").trim() || null;
 
-      const uploadedMetaRaw = formData.get(`assetUpload__${asset.clientId}`);
-      if (typeof uploadedMetaRaw === "string" && uploadedMetaRaw) {
-        try {
-          const uploadedMeta = JSON.parse(uploadedMetaRaw);
-          if (uploadedMeta?.slug === cleanSlug && uploadedMeta?.storagePath) {
-            storagePath = String(uploadedMeta.storagePath);
-          }
-        } catch {}
-      }
-
+const uploadedMetaRaw = formData.get(`assetUpload__${asset.clientId}`);
+if (typeof uploadedMetaRaw === "string" && uploadedMetaRaw) {
+  try {
+    const uploadedMeta = JSON.parse(uploadedMetaRaw);
+    if (uploadedMeta?.slug === cleanSlug && uploadedMeta?.storagePath) {
+      storagePath = String(uploadedMeta.storagePath);
+    }
+  } catch {}
+}
       const { data: savedAsset, error: assetError } = await supabaseAdmin
         .from("audio_assets")
         .upsert(
