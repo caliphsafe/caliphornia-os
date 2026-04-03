@@ -95,7 +95,8 @@ const EMPTY_ASSET = (): AssetRow => ({
   slug: "",
   title: "",
   file: null,
-  existingAudioUrl: null
+  existingAudioUrl: null,
+  existingStoragePath: null
 });
 
 function AudioClipEditor({
@@ -740,9 +741,12 @@ const conversationPeopleLabel = useMemo(() => {
         return;
       }
 
-      setResult(`Saved conversation "${data.conversation?.title}".`);
-      await loadBoot();
-      setSelectedConversationSlug(data.conversation?.slug || slugify(conversationSlug));
+     const savedSlug = data.conversation?.slug || slugify(conversationSlug);
+
+setResult(`Saved conversation "${data.conversation?.title}".`);
+await loadBoot();
+setSelectedConversationSlug(savedSlug);
+await loadConversation(savedSlug);
     } catch {
       setResult("Server error while saving conversation.");
     } finally {
