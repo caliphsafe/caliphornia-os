@@ -25,6 +25,7 @@ type AssetRow = {
   title: string;
   file: File | null;
   existingAudioUrl?: string | null;
+  existingStoragePath?: string | null;
 };
 
 type MessageRow = {
@@ -519,12 +520,13 @@ const conversationPeopleLabel = useMemo(() => {
       );
 
       const loadedAssets = (detail.assets || []).map((a: any) => ({
-        clientId: uid(),
-        slug: a.slug || "",
-        title: a.title || "",
-        file: null,
-        existingAudioUrl: a.audio_url || null
-      }));
+  clientId: uid(),
+  slug: a.slug || "",
+  title: a.title || "",
+  file: null,
+  existingAudioUrl: a.audio_url || null,
+  existingStoragePath: a.storage_path || null
+}));
 
       setAssets(loadedAssets);
       setAssetsOpen(loadedAssets.length > 0);
@@ -661,18 +663,19 @@ const conversationPeopleLabel = useMemo(() => {
       payload.append("sortOrder", sortOrder);
 
       payload.append(
-        "assets",
-        JSON.stringify(
-          assets.map((a) => ({
-            clientId: a.clientId,
-            slug: a.slug,
-            title: a.title,
-            versionLabel: "",
-            isPlaylistable: false,
-            linkedSongSlug: ""
-          }))
-        )
-      );
+  "assets",
+  JSON.stringify(
+    assets.map((a) => ({
+      clientId: a.clientId,
+      slug: a.slug,
+      title: a.title,
+      existingStoragePath: a.existingStoragePath || null,
+      versionLabel: "",
+      isPlaylistable: false,
+      linkedSongSlug: ""
+    }))
+  )
+);
 
       payload.append(
         "messages",
