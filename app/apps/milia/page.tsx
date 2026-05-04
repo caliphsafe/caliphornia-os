@@ -26,6 +26,7 @@ type SongRow = {
   is_locked: boolean | null;
   requires_project_access: boolean | null;
   requires_all_access: boolean | null;
+  is_free_full_play: boolean | null;
   duration_label: string | null;
   description: string | null;
   weather_location_name: string | null;
@@ -172,6 +173,7 @@ export default async function MiliaPage() {
       is_locked,
       requires_project_access,
       requires_all_access,
+      is_free_full_play,
       duration_label,
       description,
       weather_location_name,
