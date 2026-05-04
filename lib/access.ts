@@ -117,23 +117,35 @@ export async function getSongPlaybackAccess({
   userEmail: string;
   projectSlug?: string | null;
   song: {
-    slug?: string | null;
-    audio_path?: string | null;
-    preview_audio_path?: string | null;
-    preview_starts_at?: number | null;
-    preview_duration?: number | null;
-    release_at?: string | null;
-    early_access_at?: string | null;
-    is_locked?: boolean | null;
-    requires_project_access?: boolean | null;
-    requires_all_access?: boolean | null;
-  };
+  slug?: string | null;
+  audio_path?: string | null;
+  preview_audio_path?: string | null;
+  preview_starts_at?: number | null;
+  preview_duration?: number | null;
+  release_at?: string | null;
+  early_access_at?: string | null;
+  is_locked?: boolean | null;
+  requires_project_access?: boolean | null;
+  requires_all_access?: boolean | null;
+  is_free_full_play?: boolean | null;
+};
 }) {
-  const canPlayFull = await userCanAccessSong({
-    userEmail,
-    projectSlug,
-    song,
-  });
+  if (song.is_free_full_play) {
+  return {
+    canPlayFull: true,
+    isPreview: false,
+    playbackPath: song.audio_path || null,
+    clipStartSeconds: null,
+    clipEndSeconds: null,
+    lockedReason: null,
+  };
+}
+
+const canPlayFull = await userCanAccessSong({
+  userEmail,
+  projectSlug,
+  song,
+});
 
   if (canPlayFull) {
     return {
