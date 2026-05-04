@@ -1,5 +1,9 @@
 import Link from "next/link";
+import { cookies } from "next/headers";
+import { redirect } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { verifySession } from "@/lib/session";
+import { getSongPlaybackAccess } from "@/lib/access";
 import MiliaSongCard from "@/components/MiliaSongCard";
 import type { GlobalTrack } from "@/components/GlobalPlayer";
 import styles from "./milia.module.css";
@@ -14,6 +18,14 @@ type SongRow = {
   producer_names: string | null;
   cover_image_path: string | null;
   audio_path: string | null;
+  preview_audio_path: string | null;
+  preview_starts_at: number | null;
+  preview_duration: number | null;
+  release_at: string | null;
+  early_access_at: string | null;
+  is_locked: boolean | null;
+  requires_project_access: boolean | null;
+  requires_all_access: boolean | null;
   duration_label: string | null;
   description: string | null;
   weather_location_name: string | null;
@@ -72,6 +84,7 @@ function getWeatherTheme(label?: string | null) {
   if (value.includes("rain") || value.includes("drizzle") || value.includes("showers")) return "cardRain";
   if (value.includes("cloud") || value.includes("fog")) return "cardCloud";
   if (value.includes("clear") || value.includes("sun")) return "cardSun";
+
   return "cardBlue";
 }
 
@@ -83,6 +96,7 @@ async function createSignedAudioUrl(storagePath: string | null | undefined) {
     .createSignedUrl(storagePath, 60 * 60);
 
   if (error || !data?.signedUrl) return null;
+
   return data.signedUrl;
 }
 
@@ -94,13 +108,12 @@ async function createSignedCoverUrl(storagePath: string | null | undefined) {
     .createSignedUrl(storagePath, 60 * 60);
 
   if (error || !data?.signedUrl) return null;
+
   return data.signedUrl;
 }
 
 async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
-  if (song.weather_lat == null || song.weather_lng == null) {
-    return null;
-  }
+  if (song.weather_lat == null || song.weather_lng == null) return null;
 
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(song.weather_lat));
@@ -134,6 +147,14 @@ async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
 }
 
 export default async function MiliaPage() {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("caliph_os_session")?.value ?? null;
+  const session = verifySession(token);
+
+  if (!session?.email) {
+    redirect("/");
+  }
+
   const { data, error } = await supabaseAdmin
     .from("songs")
     .select(`
@@ -143,6 +164,14 @@ export default async function MiliaPage() {
       producer_names,
       cover_image_path,
       audio_path,
+      preview_audio_path,
+      preview_starts_at,
+      preview_duration,
+      release_at,
+      early_access_at,
+      is_locked,
+      requires_project_access,
+      requires_all_access,
       duration_label,
       description,
       weather_location_name,
@@ -181,9 +210,15 @@ export default async function MiliaPage() {
         "Unknown location";
 
       try {
+        const playbackAccess = await getSongPlaybackAccess({
+          userEmail: session.email,
+          projectSlug: "milia",
+          song,
+        });
+
         const [weather, audioUrl, coverUrl] = await Promise.all([
           getWeatherForSong(song),
-          createSignedAudioUrl(song.audio_path),
+          createSignedAudioUrl(playbackAccess.playbackPath),
           createSignedCoverUrl(song.cover_image_path),
         ]);
 
@@ -193,6 +228,7 @@ export default async function MiliaPage() {
           audioUrl,
           coverUrl,
           placeLabel,
+          playbackAccess,
         };
       } catch {
         return {
@@ -201,6 +237,14 @@ export default async function MiliaPage() {
           audioUrl: null,
           coverUrl: null,
           placeLabel,
+          playbackAccess: {
+            canPlayFull: false,
+            isPreview: true,
+            playbackPath: null,
+            clipStartSeconds: 0,
+            clipEndSeconds: 30,
+            lockedReason: "Unlock this project to hear the full song.",
+          },
         };
       }
     })
@@ -208,19 +252,24 @@ export default async function MiliaPage() {
 
   const projectQueue: GlobalTrack[] = songsWithMeta
     .filter(({ audioUrl }) => Boolean(audioUrl))
-    .map(({ song, audioUrl, coverUrl }) => ({
+    .map(({ song, audioUrl, coverUrl, playbackAccess }) => ({
       id: song.slug,
       slug: song.slug,
       title: song.title,
       artist: song.artist_name || "Unknown artist",
-      displayTitle: song.title,
+      displayTitle: playbackAccess.isPreview ? `${song.title} Preview` : song.title,
       duration: song.duration_label || undefined,
-      description: song.description || undefined,
+      description:
+        playbackAccess.lockedReason ||
+        song.description ||
+        undefined,
       file: audioUrl as string,
       playlistSongSlug: song.slug,
       analyticsSongSlug: song.slug,
       sourceApp: "milia",
       coverUrl: coverUrl || undefined,
+      clipStartSeconds: playbackAccess.clipStartSeconds,
+      clipEndSeconds: playbackAccess.clipEndSeconds,
     }));
 
   return (
@@ -244,19 +293,19 @@ export default async function MiliaPage() {
           {songsWithMeta.length === 0 ? (
             <div className={styles.empty}>No Milia songs yet.</div>
           ) : (
-            songsWithMeta.map(({ song, weather, audioUrl, placeLabel }) => (
-             <MiliaSongCard
-  key={song.slug}
-  href={`/apps/milia/${song.slug}`}
-  slug={song.slug}
-  title={song.title}
-  artistName={song.artist_name || "Unknown artist"}
-  placeLabel={placeLabel}
-  weather={weather}
-  themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
-  queue={projectQueue}
-  startIndex={projectQueue.findIndex((track) => track.slug === song.slug)}
-/>
+            songsWithMeta.map(({ song, weather, placeLabel }) => (
+              <MiliaSongCard
+                key={song.slug}
+                href={`/apps/milia/${song.slug}`}
+                slug={song.slug}
+                title={song.title}
+                artistName={song.artist_name || "Unknown artist"}
+                placeLabel={placeLabel}
+                weather={weather}
+                themeClassName={getWeatherTheme(weather?.today?.label || weather?.current?.label)}
+                queue={projectQueue}
+                startIndex={projectQueue.findIndex((track) => track.slug === song.slug)}
+              />
             ))
           )}
         </section>
