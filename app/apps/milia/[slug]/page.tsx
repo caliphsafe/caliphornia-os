@@ -1,6 +1,9 @@
 import Link from "next/link";
-import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
+import { redirect, notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { verifySession } from "@/lib/session";
+import { getSongPlaybackAccess } from "@/lib/access";
 import MiliaDetailPlayer from "@/components/MiliaDetailPlayer";
 import MiliaTrackSync from "@/components/MiliaTrackSync";
 import type { GlobalTrack } from "@/components/GlobalPlayer";
@@ -16,6 +19,14 @@ type SongRow = {
   producer_names: string | null;
   cover_image_path: string | null;
   audio_path: string | null;
+  preview_audio_path: string | null;
+  preview_starts_at: number | null;
+  preview_duration: number | null;
+  release_at: string | null;
+  early_access_at: string | null;
+  is_locked: boolean | null;
+  requires_project_access: boolean | null;
+  requires_all_access: boolean | null;
   duration_label: string | null;
   description: string | null;
   weather_location_name: string | null;
@@ -150,9 +161,7 @@ function formatDayLabel(value: string) {
 }
 
 async function getWeatherForSong(song: SongRow): Promise<WeatherData | null> {
-  if (song.weather_lat == null || song.weather_lng == null) {
-    return null;
-  }
+  if (song.weather_lat == null || song.weather_lng == null) return null;
 
   const url = new URL("https://api.open-meteo.com/v1/forecast");
   url.searchParams.set("latitude", String(song.weather_lat));
@@ -217,9 +226,7 @@ function getTempBarRange(daily: WeatherData["daily"]) {
   const mins = daily.map((day) => day.tempMin).filter((v): v is number => v != null);
   const maxes = daily.map((day) => day.tempMax).filter((v): v is number => v != null);
 
-  if (!mins.length || !maxes.length) {
-    return { min: 0, max: 100 };
-  }
+  if (!mins.length || !maxes.length) return { min: 0, max: 100 };
 
   return {
     min: Math.min(...mins),
@@ -252,6 +259,14 @@ export default async function MiliaSongDetailPage({
 }: {
   params: Promise<{ slug: string }>;
 }) {
+  const cookieStore = await cookies();
+  const token = cookieStore.get("caliph_os_session")?.value ?? null;
+  const session = verifySession(token);
+
+  if (!session?.email) {
+    redirect("/");
+  }
+
   const { slug } = await params;
 
   const { data, error } = await supabaseAdmin
@@ -263,6 +278,14 @@ export default async function MiliaSongDetailPage({
       producer_names,
       cover_image_path,
       audio_path,
+      preview_audio_path,
+      preview_starts_at,
+      preview_duration,
+      release_at,
+      early_access_at,
+      is_locked,
+      requires_project_access,
+      requires_all_access,
       duration_label,
       description,
       weather_location_name,
@@ -294,9 +317,14 @@ export default async function MiliaSongDetailPage({
     song.weather_search_label ||
     "Unknown location";
 
-  const [coverUrl, audioUrl, weather, queueRows] = await Promise.all([
+  const playbackAccess = await getSongPlaybackAccess({
+    userEmail: session.email,
+    projectSlug: "milia",
+    song,
+  });
+
+  const [coverUrl, weather, queueRows] = await Promise.all([
     createSignedCoverUrl(song.cover_image_path),
-    createSignedAudioUrl(song.audio_path),
     getWeatherForSong(song),
     supabaseAdmin
       .from("songs")
@@ -305,6 +333,16 @@ export default async function MiliaSongDetailPage({
         title,
         artist_name,
         audio_path,
+        preview_audio_path,
+        preview_starts_at,
+        preview_duration,
+        release_at,
+        early_access_at,
+        is_locked,
+        requires_project_access,
+        requires_all_access,
+        duration_label,
+        description,
         cover_image_path,
         weather_location_name,
         weather_city,
@@ -317,13 +355,19 @@ export default async function MiliaSongDetailPage({
       .order("weather_sort_order", { ascending: true, nullsFirst: false }),
   ]);
 
-  const queueData = queueRows.data || [];
+  const queueData = (queueRows.data || []) as SongRow[];
 
   const projectQueue: GlobalTrack[] = (
     await Promise.all(
       queueData.map(async (row) => {
+        const rowAccess = await getSongPlaybackAccess({
+          userEmail: session.email,
+          projectSlug: "milia",
+          song: row,
+        });
+
         const [rowAudioUrl, rowCoverUrl] = await Promise.all([
-          createSignedAudioUrl(row.audio_path),
+          createSignedAudioUrl(rowAccess.playbackPath),
           createSignedCoverUrl(row.cover_image_path),
         ]);
 
@@ -334,12 +378,16 @@ export default async function MiliaSongDetailPage({
           slug: row.slug,
           title: row.title,
           artist: row.artist_name || "Unknown artist",
-          displayTitle: row.title,
+          displayTitle: rowAccess.isPreview ? `${row.title} Preview` : row.title,
+          duration: row.duration_label || undefined,
+          description: rowAccess.lockedReason || row.description || undefined,
           file: rowAudioUrl,
           playlistSongSlug: row.slug,
           analyticsSongSlug: row.slug,
           sourceApp: "milia",
           coverUrl: rowCoverUrl || undefined,
+          clipStartSeconds: rowAccess.clipStartSeconds,
+          clipEndSeconds: rowAccess.clipEndSeconds,
         } satisfies GlobalTrack;
       })
     )
@@ -386,6 +434,14 @@ export default async function MiliaSongDetailPage({
             </div>
           </div>
         </section>
+
+        {!playbackAccess.canPlayFull ? (
+          <section className={styles.panel}>
+            <p className={styles.detailIntro}>
+              Preview mode is active. Unlock Milia to hear the full version of this song.
+            </p>
+          </section>
+        ) : null}
 
         <div className={styles.detailGrid}>
           <section className={styles.panel}>
@@ -441,7 +497,7 @@ export default async function MiliaSongDetailPage({
 
           <MiliaDetailPlayer
             slug={song.slug}
-            title={song.title}
+            title={playbackAccess.isPreview ? `${song.title} Preview` : song.title}
             artistName={song.artist_name || "Unknown artist"}
             placeLabel={placeLabel}
             coverUrl={coverUrl}
