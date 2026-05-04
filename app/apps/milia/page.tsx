@@ -257,7 +257,8 @@ export default async function MiliaPage() {
       slug: song.slug,
       title: song.title,
       artist: song.artist_name || "Unknown artist",
-      displayTitle: playbackAccess.isPreview ? `${song.title} Preview` : song.title,
+      displayTitle: song.title,
+      isPreview: playbackAccess.isPreview,
       duration: song.duration_label || undefined,
       description:
         playbackAccess.lockedReason ||
