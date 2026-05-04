@@ -378,7 +378,8 @@ export default async function MiliaSongDetailPage({
           slug: row.slug,
           title: row.title,
           artist: row.artist_name || "Unknown artist",
-          displayTitle: rowAccess.isPreview ? `${row.title} Preview` : row.title,
+          displayTitle: row.title,
+          isPreview: rowAccess.isPreview,
           duration: row.duration_label || undefined,
           description: rowAccess.lockedReason || row.description || undefined,
           file: rowAudioUrl,
@@ -497,7 +498,7 @@ export default async function MiliaSongDetailPage({
 
           <MiliaDetailPlayer
             slug={song.slug}
-            title={playbackAccess.isPreview ? `${song.title} Preview` : song.title}
+            title={song.title}
             artistName={song.artist_name || "Unknown artist"}
             placeLabel={placeLabel}
             coverUrl={coverUrl}
