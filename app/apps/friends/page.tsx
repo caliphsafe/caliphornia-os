@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
 import Link from "next/link";
 
-async function getConversations() {
+async function getConversations(sessionToken: string) {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
@@ -14,7 +14,12 @@ async function getConversations() {
 
   const res = await fetch(
     `${normalizedBase}/api/apps/friends/conversations`,
-    { cache: "no-store" }
+    {
+      cache: "no-store",
+      headers: {
+        Cookie: `caliph_os_session=${sessionToken}`,
+      },
+    }
   );
 
   if (!res.ok) return [];
