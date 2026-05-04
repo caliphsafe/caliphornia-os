@@ -68,7 +68,14 @@ function getTrackParts(title: string, artist?: string) {
     song: raw
   };
 }
+function formatTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
 
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
 function IconPrev() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon">
@@ -193,6 +200,11 @@ export default function GlobalPlayer({ email }: Props) {
   const [isSaved, setIsSaved] = useState(false);
   const [friendsFinalQueue, setFriendsFinalQueue] = useState<GlobalTrack[]>([]);
   const [resolvedCoverUrl, setResolvedCoverUrl] = useState<string | null>(null);
+  const [playerTime, setPlayerTime] = useState({
+  current: 0,
+  duration: 0,
+  progress: 0
+});
 
   const currentTrack = useMemo(() => {
     if (currentIndex < 0 || currentIndex >= queue.length) return null;
@@ -488,7 +500,27 @@ if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
       if (!currentAudio) return;
 
       setIsPlaying(!currentAudio.paused);
+      const start =
+  currentTrack?.resumeSeconds ??
+  currentTrack?.clipStartSeconds ??
+  0;
 
+const end = currentTrack?.clipEndSeconds ?? null;
+
+const rawDuration =
+  end != null
+    ? Math.max(0, end - start)
+    : currentAudio.duration && Number.isFinite(currentAudio.duration)
+      ? Math.max(0, currentAudio.duration - start)
+      : 0;
+
+const rawCurrent = Math.max(0, (currentAudio.currentTime || 0) - start);
+
+setPlayerTime({
+  current: rawCurrent,
+  duration: rawDuration,
+  progress: rawDuration > 0 ? Math.min(1, rawCurrent / rawDuration) : 0
+});
       if (
         currentTrack?.clipEndSeconds != null &&
         currentAudio.currentTime >= currentTrack.clipEndSeconds
@@ -617,14 +649,27 @@ useEffect(() => {
 </div>
 
             <div className="music-inline-copy">
-              <div className="music-inline-title">
-                <MarqueeText text={trackParts.song} active={true} />
-              </div>
+  <div className="music-inline-title">
+    <MarqueeText text={trackParts.song} active={true} />
+  </div>
 
-              <div className="music-inline-artist music-ellipsis">
-                {trackParts.artist}
-              </div>
-            </div>
+  <div className="music-inline-artist music-ellipsis">
+    {trackParts.artist}
+  </div>
+
+  <div className="music-inline-progress">
+    <span>{formatTime(playerTime.current)}</span>
+
+    <div className="music-inline-progress-track">
+      <span
+        className="music-inline-progress-fill"
+        style={{ width: `${playerTime.progress * 100}%` }}
+      />
+    </div>
+
+    <span>{formatTime(playerTime.duration)}</span>
+  </div>
+</div>
           </div>
 
           <div className="music-inline-controls">
