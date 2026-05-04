@@ -74,39 +74,71 @@ export default async function FriendsPage() {
             className="friends-original-thread-list"
             aria-label="Track list"
           >
-            {conversations.map((thread: any) => (
-              <Link
-                key={thread.id}
-                href={`/apps/friends/${thread.slug}`}
-                className="friends-original-thread-row"
-                aria-label={`Open conversation with ${thread.title}`}
-                prefetch
-              >
-                {thread.sort_order === 1 ? (
-                  <span className="friends-original-thread-unread-dot"></span>
-                ) : null}
+            {conversations.map((thread: any) => {
+              const href = thread.can_open_conversation
+                ? `/apps/friends/${thread.slug}`
+                : `/apps/friends?preview=${thread.slug}`;
 
-                <div className="friends-original-thread-avatar group">
-                  {thread.avatar_letter || thread.title?.[0] || "F"}
-                </div>
+              return (
+                <Link
+                  key={thread.id}
+                  href={href}
+                  className={`friends-original-thread-row ${
+                    thread.can_open_conversation ? "" : "is-preview-only"
+                  }`}
+                  aria-label={
+                    thread.can_open_conversation
+                      ? `Open conversation with ${thread.title}`
+                      : `Play preview for ${thread.title}`
+                  }
+                  prefetch={thread.can_open_conversation}
+                  data-preview-only={thread.can_open_conversation ? "false" : "true"}
+                  data-preview-slug={thread.slug}
+                  data-preview-track={
+                    !thread.can_open_conversation && thread.final_track
+                      ? JSON.stringify(thread.final_track)
+                      : ""
+                  }
+                  data-preview-conversations={
+                    !thread.can_open_conversation
+                      ? JSON.stringify(conversations)
+                      : ""
+                  }
+                >
+                  {thread.sort_order === 1 ? (
+                    <span className="friends-original-thread-unread-dot"></span>
+                  ) : null}
 
-                <div className="friends-original-thread-main">
-                  <div className="friends-original-thread-topline">
-                    <div className="friends-original-thread-title">
-                      {thread.title}
+                  <div className="friends-original-thread-avatar group">
+                    {thread.avatar_letter || thread.title?.[0] || "F"}
+                  </div>
+
+                  <div className="friends-original-thread-main">
+                    <div className="friends-original-thread-topline">
+                      <div className="friends-original-thread-title">
+                        {thread.title}
+                      </div>
+
+                      {!thread.can_open_conversation ? (
+                        <span className="friends-preview-badge">Preview</span>
+                      ) : null}
+                    </div>
+
+                    <div className="friends-original-thread-preview">
+                      {thread.can_open_conversation
+                        ? thread.list_preview || ""
+                        : thread.locked_reason || "Unlock Fri.ends to view the full conversation."}
                     </div>
                   </div>
 
-                  <div className="friends-original-thread-preview">
-                    {thread.list_preview || ""}
+                  <div className="friends-original-thread-time">
+                    {thread.can_open_conversation
+                      ? thread.last_activity_label || ""
+                      : "30s"}
                   </div>
-                </div>
-
-                <div className="friends-original-thread-time">
-                  {thread.last_activity_label || ""}
-                </div>
-              </Link>
-            ))}
+                </Link>
+              );
+            })}
           </main>
 
           <div className="friends-original-bottombar bottom-safe">
@@ -134,6 +166,69 @@ export default async function FriendsPage() {
           </div>
         </section>
       </div>
+
+      <script
+        dangerouslySetInnerHTML={{
+          __html: `
+            document.addEventListener("click", function(event) {
+              var row = event.target.closest("[data-preview-only='true']");
+              if (!row) return;
+
+              event.preventDefault();
+
+              try {
+                var rawConversations = row.getAttribute("data-preview-conversations") || "[]";
+                var conversations = JSON.parse(rawConversations);
+
+                var tracks = conversations
+                  .map(function(convo) {
+                    var track = convo.final_track;
+                    if (!track || !track.file) return null;
+
+                    return {
+                      id: track.slug,
+                      slug: track.slug,
+                      title: track.title,
+                      artist: track.artist || "Caliph",
+                      displayTitle: track.title,
+                      file: track.file,
+                      playlistSongSlug: track.playlist_song_slug || track.slug,
+                      analyticsSongSlug: track.analytics_song_slug || track.slug,
+                      sourceApp: "friends",
+                      conversationSlug: convo.slug,
+                      conversationRoute: "/apps/friends/" + convo.slug,
+                      isPreview: Boolean(track.is_preview),
+                      clipStartSeconds: track.clip_start_seconds,
+                      clipEndSeconds: track.clip_end_seconds
+                    };
+                  })
+                  .filter(Boolean);
+
+                var previewSlug = row.getAttribute("data-preview-slug");
+                var startIndex = Math.max(
+                  0,
+                  tracks.findIndex(function(track) {
+                    return track.conversationSlug === previewSlug;
+                  })
+                );
+
+                if (!tracks.length) return;
+
+                window.postMessage(
+                  {
+                    type: "CALIPH_PLAYER_TOGGLE_TRACK",
+                    tracks: tracks,
+                    startIndex: startIndex
+                  },
+                  "*"
+                );
+              } catch (error) {
+                console.error("Failed to play Friends preview", error);
+              }
+            });
+          `,
+        }}
+      />
     </main>
   );
 }
