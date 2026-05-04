@@ -965,6 +965,32 @@ img {
   background: #000;
   padding: 0;
 }
+.music-inline-progress {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  margin-top: 6px;
+  font-size: 11px;
+  line-height: 1;
+  color: rgba(255,255,255,0.58);
+}
+
+.music-inline-progress-track {
+  position: relative;
+  height: 4px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: rgba(255,255,255,0.16);
+}
+
+.music-inline-progress-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: 0%;
+  border-radius: inherit;
+  background: rgba(255,255,255,0.86);
+}
 
 @media (max-width: 640px) {
   .global-player-shell {
