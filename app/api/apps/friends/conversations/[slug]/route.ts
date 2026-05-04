@@ -6,7 +6,7 @@ import { getSongPlaybackAccess } from "@/lib/access";
 
 export async function GET(
   req: Request,
-  { params }: { params: { slug: string } }
+  { params }: { params: Promise<{ slug: string }> }
 ) {
   try {
     const cookieStore = await cookies();
@@ -20,7 +20,7 @@ export async function GET(
       );
     }
 
-    const { slug } = params;
+    const { slug } = await params;
 
     const { data: appRow } = await supabaseAdmin
       .from("apps")
