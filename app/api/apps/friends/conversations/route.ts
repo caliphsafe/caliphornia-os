@@ -1,8 +1,22 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { verifySession } from "@/lib/session";
+import { getSongPlaybackAccess } from "@/lib/access";
 
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("caliph_os_session")?.value ?? null;
+    const session = verifySession(token);
+
+    if (!session?.email) {
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized." },
+        { status: 401 }
+      );
+    }
+
     const { data: appRow, error: appError } = await supabaseAdmin
       .from("apps")
       .select("id")
@@ -41,12 +55,12 @@ export async function GET() {
       );
     }
 
-    const conversationIds = (conversations || []).map((c) => c.id);
+    const conversationIds = (conversations || []).map((conversation) => conversation.id);
 
     if (!conversationIds.length) {
       return NextResponse.json({
         ok: true,
-        conversations: []
+        conversations: [],
       });
     }
 
@@ -81,12 +95,29 @@ export async function GET() {
       )
     );
 
-    const songMap = new Map<string, { slug: string; title: string; artist_name: string | null }>();
+    const songMap = new Map<string, any>();
 
     if (linkedSongIds.length) {
       const { data: songs } = await supabaseAdmin
         .from("songs")
-        .select("id, slug, title, artist_name")
+        .select(`
+          id,
+          slug,
+          title,
+          artist_name,
+          audio_path,
+          preview_audio_path,
+          preview_starts_at,
+          preview_duration,
+          release_at,
+          early_access_at,
+          is_locked,
+          requires_project_access,
+          requires_all_access,
+          is_free_full_play,
+          duration_label,
+          description
+        `)
         .in("id", linkedSongIds);
 
       for (const song of songs || []) {
@@ -99,19 +130,41 @@ export async function GET() {
     for (const asset of finalAssets || []) {
       if (!asset?.conversation_id || !asset?.storage_path) continue;
 
-      let signedUrl: string | null = null;
-
-      const { data: signed, error: signedError } = await supabaseAdmin.storage
-        .from("songs")
-        .createSignedUrl(asset.storage_path, 60 * 60);
-
-      if (!signedError) {
-        signedUrl = signed?.signedUrl || null;
-      }
-
       const linkedSong = asset.linked_song_id
         ? songMap.get(asset.linked_song_id)
         : null;
+
+      const songForAccess = {
+        slug: linkedSong?.slug || asset.slug,
+        audio_path: linkedSong?.audio_path || asset.storage_path,
+        preview_audio_path: linkedSong?.preview_audio_path || null,
+        preview_starts_at: linkedSong?.preview_starts_at ?? 0,
+        preview_duration: linkedSong?.preview_duration ?? 30,
+        release_at: linkedSong?.release_at || null,
+        early_access_at: linkedSong?.early_access_at || null,
+        is_locked: linkedSong?.is_locked ?? true,
+        requires_project_access: linkedSong?.requires_project_access ?? true,
+        requires_all_access: linkedSong?.requires_all_access ?? false,
+        is_free_full_play: linkedSong?.is_free_full_play ?? false,
+      };
+
+      const playbackAccess = await getSongPlaybackAccess({
+        userEmail: session.email,
+        projectSlug: "friends",
+        song: songForAccess,
+      });
+
+      let signedUrl: string | null = null;
+
+      if (playbackAccess.playbackPath) {
+        const { data: signed, error: signedError } = await supabaseAdmin.storage
+          .from("songs")
+          .createSignedUrl(playbackAccess.playbackPath, 60 * 60);
+
+        if (!signedError) {
+          signedUrl = signed?.signedUrl || null;
+        }
+      }
 
       finalTrackMap.set(asset.conversation_id, {
         slug: linkedSong?.slug || asset.slug,
@@ -119,24 +172,37 @@ export async function GET() {
         artist: linkedSong?.artist_name || null,
         file: signedUrl,
         playlist_song_slug: linkedSong?.slug || asset.slug,
-        analytics_song_slug: linkedSong?.slug || asset.slug
+        analytics_song_slug: linkedSong?.slug || asset.slug,
+        is_preview: playbackAccess.isPreview,
+        can_play_full: playbackAccess.canPlayFull,
+        can_open_conversation: playbackAccess.canPlayFull,
+        locked_reason: playbackAccess.lockedReason,
+        clip_start_seconds: playbackAccess.clipStartSeconds,
+        clip_end_seconds: playbackAccess.clipEndSeconds,
       });
     }
 
-    const normalizedConversations = (conversations || []).map((conversation) => ({
-      ...conversation,
-      final_track: finalTrackMap.has(conversation.id)
+    const normalizedConversations = (conversations || []).map((conversation) => {
+      const finalTrack = finalTrackMap.has(conversation.id)
         ? finalTrackMap.get(conversation.id)
-        : null
-    }));
+        : null;
+
+      return {
+        ...conversation,
+        can_open_conversation: Boolean(finalTrack?.can_open_conversation),
+        is_preview: Boolean(finalTrack?.is_preview),
+        locked_reason: finalTrack?.locked_reason || null,
+        final_track: finalTrack,
+      };
+    });
 
     return NextResponse.json({
       ok: true,
-      conversations: normalizedConversations
+      conversations: normalizedConversations,
     });
-  } catch {
+  } catch (error: any) {
     return NextResponse.json(
-      { ok: false, error: "Server error." },
+      { ok: false, error: error?.message || "Server error." },
       { status: 500 }
     );
   }
