@@ -29,13 +29,14 @@ async function getConversations(sessionToken: string) {
 
 export default async function FriendsPage() {
   const cookieStore = await cookies();
-  const session = verifySession(cookieStore.get("caliph_os_session")?.value);
+  const sessionToken = cookieStore.get("caliph_os_session")?.value ?? "";
+const session = verifySession(sessionToken);
 
   if (!session) {
     redirect("/");
   }
 
-  const conversations = await getConversations();
+  const conversations = await getConversations(sessionToken);
 
   return (
     <main className="friends-original-app">
