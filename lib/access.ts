@@ -108,3 +108,53 @@ export async function userCanAccessSong({
 
   return true;
 }
+
+export async function getSongPlaybackAccess({
+  userEmail,
+  projectSlug,
+  song,
+}: {
+  userEmail: string;
+  projectSlug?: string | null;
+  song: {
+    slug?: string | null;
+    audio_path?: string | null;
+    preview_audio_path?: string | null;
+    preview_starts_at?: number | null;
+    preview_duration?: number | null;
+    release_at?: string | null;
+    early_access_at?: string | null;
+    is_locked?: boolean | null;
+    requires_project_access?: boolean | null;
+    requires_all_access?: boolean | null;
+  };
+}) {
+  const canPlayFull = await userCanAccessSong({
+    userEmail,
+    projectSlug,
+    song,
+  });
+
+  if (canPlayFull) {
+    return {
+      canPlayFull: true,
+      isPreview: false,
+      playbackPath: song.audio_path || null,
+      clipStartSeconds: null,
+      clipEndSeconds: null,
+      lockedReason: null,
+    };
+  }
+
+  const previewStart = song.preview_starts_at ?? 0;
+  const previewDuration = song.preview_duration ?? 30;
+
+  return {
+    canPlayFull: false,
+    isPreview: true,
+    playbackPath: song.preview_audio_path || song.audio_path || null,
+    clipStartSeconds: previewStart,
+    clipEndSeconds: previewStart + previewDuration,
+    lockedReason: "Unlock this project to hear the full song.",
+  };
+}
