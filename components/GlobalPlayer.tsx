@@ -21,6 +21,7 @@ export type GlobalTrack = {
   playlistSongSlug?: string | null;
   analyticsSongSlug?: string | null;
   sourceApp?: string | null;
+  isPreview?: boolean | null;
   conversationSlug?: string | null;
   conversationRoute?: string | null;
   isFriendsFinal?: boolean;
@@ -67,6 +68,17 @@ function getTrackParts(title: string, artist?: string) {
     artist: "Caliph",
     song: raw
   };
+}
+function getDisplaySongTitle(track: GlobalTrack | null) {
+  if (!track) return "";
+
+  const title = track.displayTitle || track.title || "";
+
+  if (track.isPreview && !title.toLowerCase().includes("(preview)")) {
+    return `${title} (Preview)`;
+  }
+
+  return title;
 }
 function formatTime(seconds: number) {
   if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
@@ -212,11 +224,11 @@ export default function GlobalPlayer({ email }: Props) {
   }, [queue, currentIndex]);
 
   const trackParts = useMemo(() => {
-    return getTrackParts(
-      currentTrack?.displayTitle || currentTrack?.title || "",
-      currentTrack?.artist
-    );
-  }, [currentTrack]);
+  return getTrackParts(
+    getDisplaySongTitle(currentTrack),
+    currentTrack?.artist
+  );
+}, [currentTrack]);
 
   async function loadFriendsFinalQueue() {
     try {
