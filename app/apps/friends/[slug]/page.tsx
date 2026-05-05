@@ -4,7 +4,7 @@ import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
 import FriendsThreadClient from "@/components/FriendsThreadClient";
 
-async function getConversation(slug: string) {
+async function getConversation(slug: string, sessionToken: string) {
   const base =
     process.env.NEXT_PUBLIC_SITE_URL ||
     process.env.VERCEL_PROJECT_PRODUCTION_URL ||
@@ -13,9 +13,14 @@ async function getConversation(slug: string) {
   const normalizedBase = base.startsWith("http") ? base : `https://${base}`;
 
   const res = await fetch(
-    `${normalizedBase}/api/apps/friends/conversations/${slug}`,
-    { cache: "no-store" }
-  );
+  `${normalizedBase}/api/apps/friends/conversations/${slug}`,
+  {
+    cache: "no-store",
+    headers: {
+      Cookie: `caliph_os_session=${sessionToken}`,
+    },
+  }
+);
 
   if (!res.ok) return null;
   return res.json();
@@ -29,13 +34,14 @@ export default async function FriendsConversationPage({
   const { slug } = await params;
 
   const cookieStore = await cookies();
-  const session = verifySession(cookieStore.get("caliph_os_session")?.value);
+  const sessionToken = cookieStore.get("caliph_os_session")?.value ?? "";
+const session = verifySession(sessionToken);
 
   if (!session) {
     redirect("/");
   }
 
-  const data = await getConversation(slug);
+  const data = await getConversation(slug, sessionToken);
 
   if (!data?.ok) {
     redirect("/apps/friends");
