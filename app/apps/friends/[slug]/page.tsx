@@ -13,29 +13,29 @@ async function getConversation(slug: string, sessionToken: string) {
   const normalizedBase = base.startsWith("http") ? base : `https://${base}`;
 
   const res = await fetch(
-  `${normalizedBase}/api/apps/friends/conversations/${slug}`,
-  {
-    cache: "no-store",
-    headers: {
-      Cookie: `caliph_os_session=${sessionToken}`,
-    },
-  }
-);
+    `${normalizedBase}/api/apps/friends/conversations/${slug}`,
+    {
+      cache: "no-store",
+      headers: {
+        Cookie: `caliph_os_session=${sessionToken}`,
+      },
+    }
+  );
 
   if (!res.ok) return null;
   return res.json();
 }
 
 export default async function FriendsConversationPage({
-  params
+  params,
 }: {
-  params: Promise<{ slug: string }>
+  params: Promise<{ slug: string }>;
 }) {
   const { slug } = await params;
 
   const cookieStore = await cookies();
   const sessionToken = cookieStore.get("caliph_os_session")?.value ?? "";
-const session = verifySession(sessionToken);
+  const session = verifySession(sessionToken);
 
   if (!session) {
     redirect("/");
