@@ -1,5 +1,8 @@
 import { NextResponse } from "next/server";
+import { cookies } from "next/headers";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import { verifySession } from "@/lib/session";
+import { getSongPlaybackAccess } from "@/lib/access";
 
 function getLyricsBody(lyrics: any): string {
   if (!lyrics) return "";
@@ -16,8 +19,30 @@ function getLyricsBody(lyrics: any): string {
   return "";
 }
 
+async function createSignedSongUrl(storagePath: string | null | undefined) {
+  if (!storagePath) return null;
+
+  const { data, error } = await supabaseAdmin.storage
+    .from("songs")
+    .createSignedUrl(storagePath, 60 * 60);
+
+  if (error || !data?.signedUrl) return null;
+  return data.signedUrl;
+}
+
 export async function GET() {
   try {
+    const cookieStore = await cookies();
+    const token = cookieStore.get("caliph_os_session")?.value ?? "";
+    const session = verifySession(token);
+
+    if (!session?.email) {
+      return NextResponse.json(
+        { ok: false, error: "Unauthorized." },
+        { status: 401 }
+      );
+    }
+
     const { data: appRow, error: appError } = await supabaseAdmin
       .from("apps")
       .select("id")
@@ -45,6 +70,15 @@ export async function GET() {
           duration_label,
           description,
           audio_path,
+          preview_audio_path,
+          preview_starts_at,
+          preview_duration,
+          release_at,
+          early_access_at,
+          is_locked,
+          requires_project_access,
+          requires_all_access,
+          is_free_full_play,
           lyrics (
             body,
             is_primary
@@ -64,13 +98,18 @@ export async function GET() {
     const normalized = await Promise.all(
       (appSongs || []).map(async (row: any) => {
         const song = Array.isArray(row.songs) ? row.songs[0] : row.songs;
-        if (!song?.audio_path) return null;
+        if (!song) return null;
 
-        const { data: signed, error: signedError } = await supabaseAdmin.storage
-          .from("songs")
-          .createSignedUrl(song.audio_path, 60 * 60);
+        const playbackAccess = await getSongPlaybackAccess({
+          userEmail: session.email,
+          projectSlug: "fartherhood",
+          song,
+        });
 
-        if (signedError || !signed?.signedUrl) return null;
+        if (!playbackAccess.playbackPath) return null;
+
+        const signedUrl = await createSignedSongUrl(playbackAccess.playbackPath);
+        if (!signedUrl) return null;
 
         return {
           id: song.id,
@@ -80,20 +119,25 @@ export async function GET() {
           producerNames: song.producer_names || "",
           date: song.display_date || "",
           duration: song.duration_label || "02:00",
-          file: signed.signedUrl,
+          file: signedUrl,
           transcript: getLyricsBody(song.lyrics),
-          description: song.description || ""
+          description: playbackAccess.lockedReason || song.description || "",
+          isPreview: playbackAccess.isPreview,
+          canPlayFull: playbackAccess.canPlayFull,
+          lockedReason: playbackAccess.lockedReason,
+          clipStartSeconds: playbackAccess.clipStartSeconds,
+          clipEndSeconds: playbackAccess.clipEndSeconds,
         };
       })
     );
 
     return NextResponse.json({
       ok: true,
-      tracks: normalized.filter(Boolean)
+      tracks: normalized.filter(Boolean),
     });
-  } catch {
+  } catch (error: any) {
     return NextResponse.json(
-      { ok: false, error: "Server error." },
+      { ok: false, error: error?.message || "Server error." },
       { status: 500 }
     );
   }
