@@ -913,3 +913,19 @@ body.has-global-player .compose-fab{
     padding: 5px 9px;
   }
 }
+.preview-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  color: rgba(20, 20, 20, 0.78);
+  background: rgba(255, 214, 64, 0.85);
+  border: 1px solid rgba(0, 0, 0, 0.12);
+  vertical-align: middle;
+}
