@@ -17,38 +17,6 @@ async function createSignedSongUrl(storagePath: string | null | undefined) {
   return data.signedUrl;
 }
 
-function getMessageClipId(message: AnyRow) {
-  return (
-    message.audio_clip_id ||
-    message.clip_id ||
-    message.audioClipId ||
-    null
-  );
-}
-
-function getClipAssetId(clip: AnyRow) {
-  return (
-    clip.audio_asset_id ||
-    clip.asset_id ||
-    clip.audioAssetId ||
-    null
-  );
-}
-
-function getClipStartSeconds(clip: AnyRow) {
-  const value = clip.start_seconds ?? clip.start ?? clip.clip_start_seconds ?? 0;
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : 0;
-}
-
-function getClipEndSeconds(clip: AnyRow) {
-  const value = clip.end_seconds ?? clip.end ?? clip.clip_end_seconds ?? null;
-  if (value == null) return null;
-
-  const numberValue = Number(value);
-  return Number.isFinite(numberValue) ? numberValue : null;
-}
-
 function makeSongForAccess({
   asset,
   linkedSong,
@@ -57,7 +25,7 @@ function makeSongForAccess({
   linkedSong: AnyRow | null;
 }) {
   return {
-    slug: linkedSong?.slug || asset?.slug || null,
+    slug: linkedSong?.slug || asset?.song_slug || asset?.slug || null,
     audio_path: linkedSong?.audio_path || asset?.storage_path || null,
     preview_audio_path: linkedSong?.preview_audio_path || null,
     preview_starts_at: linkedSong?.preview_starts_at ?? 0,
@@ -71,15 +39,23 @@ function makeSongForAccess({
   };
 }
 
-async function getSongsForAssets(assets: AnyRow[]) {
+async function getSongsForAssets({
+  assets,
+  primarySongId,
+}: {
+  assets: AnyRow[];
+  primarySongId?: string | null;
+}) {
   const songMapById = new Map<string, AnyRow>();
   const songMapBySlug = new Map<string, AnyRow>();
 
   const linkedSongIds = Array.from(
     new Set(
-      assets
-        .map((asset) => asset?.linked_song_id)
-        .filter(Boolean)
+      [
+        primarySongId,
+        ...assets.map((asset) => asset?.linked_song_id),
+        ...assets.map((asset) => asset?.song_id),
+      ].filter(Boolean)
     )
   );
 
@@ -114,9 +90,10 @@ async function getSongsForAssets(assets: AnyRow[]) {
 
   const assetSlugs = Array.from(
     new Set(
-      assets
-        .map((asset) => asset?.slug)
-        .filter(Boolean)
+      [
+        ...assets.map((asset) => asset?.song_slug),
+        ...assets.map((asset) => asset?.slug),
+      ].filter(Boolean)
     )
   );
 
@@ -156,24 +133,91 @@ async function getSongsForAssets(assets: AnyRow[]) {
 
 function getLinkedSongForAsset({
   asset,
+  primarySongId,
   songMapById,
   songMapBySlug,
 }: {
   asset: AnyRow | null;
+  primarySongId?: string | null;
   songMapById: Map<string, AnyRow>;
   songMapBySlug: Map<string, AnyRow>;
 }) {
-  if (!asset) return null;
-
-  if (asset.linked_song_id && songMapById.has(asset.linked_song_id)) {
+  if (asset?.linked_song_id && songMapById.has(asset.linked_song_id)) {
     return songMapById.get(asset.linked_song_id) || null;
   }
 
-  if (asset.slug && songMapBySlug.has(asset.slug)) {
+  if (asset?.song_id && songMapById.has(asset.song_id)) {
+    return songMapById.get(asset.song_id) || null;
+  }
+
+  if (asset?.song_slug && songMapBySlug.has(asset.song_slug)) {
+    return songMapBySlug.get(asset.song_slug) || null;
+  }
+
+  if (asset?.slug && songMapBySlug.has(asset.slug)) {
     return songMapBySlug.get(asset.slug) || null;
   }
 
+  if (primarySongId && songMapById.has(primarySongId)) {
+    return songMapById.get(primarySongId) || null;
+  }
+
   return null;
+}
+
+function pickAssetForAudioMessage({
+  message,
+  audioIndex,
+  audioMessageCount,
+  assets,
+  nonFinalAssets,
+  finalAsset,
+}: {
+  message: AnyRow;
+  audioIndex: number;
+  audioMessageCount: number;
+  assets: AnyRow[];
+  nonFinalAssets: AnyRow[];
+  finalAsset: AnyRow | null;
+}) {
+  const label = String(
+    message.audio_label || message.audio_kind || message.body || ""
+  ).toLowerCase();
+
+  if (label.includes("final")) {
+    return finalAsset || assets[assets.length - 1] || null;
+  }
+
+  const exactTitleMatch = assets.find((asset) => {
+    const title = String(asset.title || "").toLowerCase();
+    const slug = String(asset.slug || "").toLowerCase();
+    return title && label && (label.includes(title) || title.includes(label) || label.includes(slug));
+  });
+
+  if (exactTitleMatch) {
+    return exactTitleMatch;
+  }
+
+  if (label.includes("open")) {
+    return (
+      nonFinalAssets.find((asset) =>
+        String(asset.title || asset.slug || "").toLowerCase().includes("open")
+      ) ||
+      nonFinalAssets[audioIndex] ||
+      finalAsset ||
+      null
+    );
+  }
+
+  if (label.includes("verse") && audioIndex < nonFinalAssets.length) {
+    return nonFinalAssets[audioIndex] || null;
+  }
+
+  if (audioIndex === audioMessageCount - 1) {
+    return finalAsset || assets[assets.length - 1] || null;
+  }
+
+  return nonFinalAssets[audioIndex] || finalAsset || assets[audioIndex] || assets[0] || null;
 }
 
 export async function GET(
@@ -194,117 +238,81 @@ export async function GET(
 
     const { slug } = await params;
 
-    const { data: appRow } = await supabaseAdmin
+    const { data: appRow, error: appError } = await supabaseAdmin
       .from("apps")
       .select("id")
       .eq("slug", "friends")
       .single();
 
-    if (!appRow) {
+    if (appError || !appRow) {
       return NextResponse.json(
-        { ok: false, error: "Friends app not found." },
+        { ok: false, error: appError?.message || "Friends app not found." },
         { status: 404 }
       );
     }
 
-    const { data: conversation } = await supabaseAdmin
+    const { data: conversation, error: conversationError } = await supabaseAdmin
       .from("conversations")
       .select("*")
       .eq("slug", slug)
       .eq("app_id", appRow.id)
       .maybeSingle();
 
-    if (!conversation) {
+    if (conversationError || !conversation) {
       return NextResponse.json(
-        { ok: false, error: "Conversation not found." },
+        { ok: false, error: conversationError?.message || "Conversation not found." },
         { status: 404 }
       );
     }
 
-    const { data: messages } = await supabaseAdmin
-      .from("conversation_messages")
-      .select("*")
-      .eq("conversation_id", conversation.id)
-      .order("created_at", { ascending: true });
-
-    const { data: clips } = await supabaseAdmin
-      .from("audio_clips")
-      .select("*")
-      .eq("conversation_id", conversation.id);
-
-    const clipsList = clips || [];
-    const clipMap = new Map<string, AnyRow>();
-
-    for (const clip of clipsList) {
-      clipMap.set(clip.id, clip);
-    }
-
-    const assetIds = Array.from(
-      new Set(
-        clipsList
-          .map((clip) => getClipAssetId(clip))
-          .filter(Boolean)
-      )
-    );
-
-    const { data: finalAsset } = await supabaseAdmin
+    const { data: assets, error: assetsError } = await supabaseAdmin
       .from("audio_assets")
       .select(`
         id,
+        conversation_id,
         slug,
         title,
         storage_path,
         version_label,
         is_final_version,
         is_playlistable,
-        linked_song_id
+        linked_song_id,
+        song_id,
+        song_slug,
+        created_at
       `)
       .eq("conversation_id", conversation.id)
-      .eq("is_final_version", true)
-      .eq("is_playlistable", true)
-      .maybeSingle();
+      .order("created_at", { ascending: true });
 
-    if (finalAsset?.id && !assetIds.includes(finalAsset.id)) {
-      assetIds.push(finalAsset.id);
+    if (assetsError) {
+      return NextResponse.json(
+        { ok: false, error: assetsError.message },
+        { status: 500 }
+      );
     }
 
-    const assetMap = new Map<string, AnyRow>();
-    const assetsForSongLookup: AnyRow[] = [];
+    const assetsList = assets || [];
 
-    if (assetIds.length) {
-      const { data: assets } = await supabaseAdmin
-        .from("audio_assets")
-        .select(`
-          id,
-          slug,
-          title,
-          storage_path,
-          version_label,
-          is_final_version,
-          is_playlistable,
-          linked_song_id
-        `)
-        .in("id", assetIds);
+    const finalAsset =
+      assetsList.find(
+        (asset) => Boolean(asset.is_final_version) && Boolean(asset.is_playlistable)
+      ) ||
+      assetsList.find((asset) => Boolean(asset.is_final_version)) ||
+      assetsList[assetsList.length - 1] ||
+      null;
 
-      for (const asset of assets || []) {
-        assetMap.set(asset.id, asset);
-        assetsForSongLookup.push(asset);
-      }
-    }
+    const nonFinalAssets = assetsList.filter(
+      (asset) => !Boolean(asset.is_final_version)
+    );
 
-    if (finalAsset && !assetMap.has(finalAsset.id)) {
-      assetMap.set(finalAsset.id, finalAsset);
-      assetsForSongLookup.push(finalAsset);
-    }
-
-    const { songMapById, songMapBySlug } = await getSongsForAssets(assetsForSongLookup);
-
-    const resolvedFinalAsset = finalAsset
-      ? assetMap.get(finalAsset.id) || finalAsset
-      : null;
+    const { songMapById, songMapBySlug } = await getSongsForAssets({
+      assets: assetsList,
+      primarySongId: conversation.primary_song_id || null,
+    });
 
     const linkedFinalSong = getLinkedSongForAsset({
-      asset: resolvedFinalAsset,
+      asset: finalAsset,
+      primarySongId: conversation.primary_song_id || null,
       songMapById,
       songMapBySlug,
     });
@@ -312,9 +320,9 @@ export async function GET(
     let finalTrack = null;
     let canOpenConversation = false;
 
-    if (resolvedFinalAsset?.storage_path) {
+    if (finalAsset?.storage_path) {
       const songForAccess = makeSongForAccess({
-        asset: resolvedFinalAsset,
+        asset: finalAsset,
         linkedSong: linkedFinalSong,
       });
 
@@ -327,17 +335,20 @@ export async function GET(
       canOpenConversation =
         playbackAccess.canPlayFull || Boolean(songForAccess.is_free_full_play);
 
-      const signedUrl = playbackAccess.playbackPath
-        ? await createSignedSongUrl(playbackAccess.playbackPath)
+      const finalPlaybackPath =
+        playbackAccess.playbackPath || finalAsset.storage_path || null;
+
+      const signedUrl = finalPlaybackPath
+        ? await createSignedSongUrl(finalPlaybackPath)
         : null;
 
       finalTrack = {
-        slug: linkedFinalSong?.slug || resolvedFinalAsset.slug,
-        title: linkedFinalSong?.title || resolvedFinalAsset.title,
-        artist: linkedFinalSong?.artist_name || null,
+        slug: linkedFinalSong?.slug || finalAsset.song_slug || finalAsset.slug,
+        title: linkedFinalSong?.title || finalAsset.title,
+        artist: linkedFinalSong?.artist_name || conversation.subtitle || null,
         file: signedUrl,
-        playlist_song_slug: linkedFinalSong?.slug || resolvedFinalAsset.slug,
-        analytics_song_slug: linkedFinalSong?.slug || resolvedFinalAsset.slug,
+        playlist_song_slug: linkedFinalSong?.slug || finalAsset.song_slug || finalAsset.slug,
+        analytics_song_slug: linkedFinalSong?.slug || finalAsset.song_slug || finalAsset.slug,
         is_preview: playbackAccess.isPreview,
         can_play_full: playbackAccess.canPlayFull,
         clip_start_seconds: playbackAccess.clipStartSeconds,
@@ -353,76 +364,98 @@ export async function GET(
       });
     }
 
+    const { data: messages, error: messagesError } = await supabaseAdmin
+      .from("conversation_messages")
+      .select("*")
+      .eq("conversation_id", conversation.id)
+      .eq("is_published", true)
+      .order("position", { ascending: true });
+
+    if (messagesError) {
+      return NextResponse.json(
+        { ok: false, error: messagesError.message },
+        { status: 500 }
+      );
+    }
+
+    const audioMessages = (messages || []).filter(
+      (message) => message.message_type === "audio"
+    );
+
+    let audioIndex = 0;
+
     const hydratedMessages = await Promise.all(
       (messages || []).map(async (message) => {
         if (message.message_type !== "audio") {
           return message;
         }
 
-        const clipId = getMessageClipId(message);
-        const clip = clipId ? clipMap.get(clipId) : null;
+        const currentAudioIndex = audioIndex;
+        audioIndex += 1;
 
-        if (!clip) {
+        const asset = pickAssetForAudioMessage({
+          message,
+          audioIndex: currentAudioIndex,
+          audioMessageCount: audioMessages.length,
+          assets: assetsList,
+          nonFinalAssets,
+          finalAsset,
+        });
+
+        if (!asset?.storage_path) {
           return {
             ...message,
             clip: null,
           };
         }
 
-        const assetId = getClipAssetId(clip);
-        const asset = assetId ? assetMap.get(assetId) || null : null;
         const linkedSong = getLinkedSongForAsset({
           asset,
+          primarySongId: conversation.primary_song_id || null,
           songMapById,
           songMapBySlug,
         });
 
-        const storagePath =
-          asset?.storage_path ||
-          clip.storage_path ||
-          null;
-
-        const signedClipUrl = await createSignedSongUrl(storagePath);
+        const signedClipUrl = await createSignedSongUrl(asset.storage_path);
 
         return {
           ...message,
           clip: {
-            id: clip.id,
+            id: message.id,
             clip_title:
-              clip.clip_title ||
-              clip.title ||
-              asset?.title ||
               message.audio_label ||
+              asset.version_label ||
+              asset.title ||
               "Audio",
-            start_seconds: getClipStartSeconds(clip),
-            end_seconds: getClipEndSeconds(clip),
-            display_duration: clip.display_duration || null,
+            start_seconds: 0,
+            end_seconds: null,
+            display_duration: null,
             file: signedClipUrl,
             signing_error: signedClipUrl ? null : "Could not sign audio file.",
             playlist_song_slug:
               linkedSong?.slug ||
-              asset?.slug ||
+              asset.song_slug ||
+              asset.slug ||
               null,
             playlist_song_title:
               linkedSong?.title ||
-              asset?.title ||
+              asset.title ||
+              message.audio_label ||
               null,
             playlist_song_artist:
               linkedSong?.artist_name ||
               conversation.subtitle ||
               null,
-            asset: asset
-              ? {
-                  id: asset.id,
-                  slug: asset.slug,
-                  title: asset.title,
-                  storage_path: asset.storage_path,
-                  version_label: asset.version_label || null,
-                  is_final_version: Boolean(asset.is_final_version),
-                  is_playlistable: Boolean(asset.is_playlistable),
-                  linked_song_id: asset.linked_song_id || null,
-                }
-              : null,
+            asset: {
+              id: asset.id,
+              slug: asset.slug,
+              title: asset.title,
+              storage_path: asset.storage_path,
+              version_label: asset.version_label || null,
+              is_final_version: Boolean(asset.is_final_version),
+              is_playlistable: Boolean(asset.is_playlistable),
+              linked_song_id: asset.linked_song_id || null,
+            },
           },
         };
       })
