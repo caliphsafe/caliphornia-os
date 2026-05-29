@@ -14,6 +14,11 @@ type Track = {
   description: string;
   artistName?: string;
   producerNames?: string;
+  isPreview?: boolean | null;
+  canPlayFull?: boolean | null;
+  lockedReason?: string | null;
+  clipStartSeconds?: number | null;
+  clipEndSeconds?: number | null;
 };
 
 type NoteItem = {
@@ -194,7 +199,7 @@ export default function FartherhoodClient() {
           return;
         }
 
-        const normalized = data.tracks.map((track: Partial<Track>, i: number) => ({
+       const normalized = data.tracks.map((track: Partial<Track>, i: number) => ({
   id: track.id || null,
   slug: track.slug || defaultTracks[i]?.slug || `track-${i}`,
   title: track.title || defaultTracks[i]?.title || "",
@@ -204,7 +209,12 @@ export default function FartherhoodClient() {
   duration: track.duration || defaultTracks[i]?.duration || "02:00",
   file: normalizeTrackFile(track.file || defaultTracks[i]?.file || ""),
   transcript: track.transcript || defaultTracks[i]?.transcript || "",
-  description: track.description || defaultTracks[i]?.description || ""
+  description: track.description || defaultTracks[i]?.description || "",
+  isPreview: Boolean(track.isPreview),
+  canPlayFull: Boolean(track.canPlayFull),
+  lockedReason: track.lockedReason || null,
+  clipStartSeconds: track.clipStartSeconds ?? null,
+  clipEndSeconds: track.clipEndSeconds ?? null,
 }));
 
         setTracks(normalized);
@@ -286,16 +296,20 @@ export default function FartherhoodClient() {
         type: toggle ? "CALIPH_PLAYER_TOGGLE_TRACK" : "CALIPH_PLAYER_LOAD_QUEUE",
         startIndex,
         tracks: tracks.map((track) => ({
-          id: track.id || null,
-          slug: track.slug,
-          title: track.title,
-          date: track.date,
-          duration: track.duration,
-          file: track.file,
-          transcript: track.transcript,
-          description: track.description,
-          sourceApp: "fartherhood"
-        }))
+  id: track.id || null,
+  slug: track.slug,
+  title: track.title,
+  displayTitle: track.title,
+  date: track.date,
+  duration: track.duration,
+  file: track.file,
+  transcript: track.transcript,
+  description: track.description,
+  sourceApp: "fartherhood",
+  isPreview: Boolean(track.isPreview),
+  clipStartSeconds: track.clipStartSeconds ?? null,
+  clipEndSeconds: track.clipEndSeconds ?? null,
+}))
       },
       "*"
     );
@@ -490,9 +504,14 @@ export default function FartherhoodClient() {
                   <section className="audio-card" data-index={i}>
                     <div className="card-head">
                       <div className="card-left">
-                        <div className="card-title">{track.title}</div>
-                        <div className="card-sub">{track.date}</div>
-                        <div className="card-sub">Audio · 2m</div>
+                        <div className="card-title">
+  {track.title}
+  {track.isPreview ? <span className="preview-chip">Preview</span> : null}
+</div>
+<div className="card-sub">{track.date}</div>
+<div className="card-sub">
+  {track.isPreview ? "Audio · 30s preview" : "Audio · 2m"}
+</div>
                       </div>
 
                       <button
