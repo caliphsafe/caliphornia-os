@@ -31,15 +31,29 @@ const PROJECTS: Record<
   },
 };
 
+function normalizeSiteUrl(value: string) {
+  const trimmed = value.trim().replace(/\/$/, "");
+
+  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+    return trimmed;
+  }
+
+  return `https://${trimmed}`;
+}
+
 function getSiteUrl() {
   const explicit = process.env.NEXT_PUBLIC_SITE_URL;
 
   if (explicit) {
-    return explicit.replace(/\/$/, "");
+    return normalizeSiteUrl(explicit);
+  }
+
+  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
+    return normalizeSiteUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL);
   }
 
   if (process.env.VERCEL_URL) {
-    return `https://${process.env.VERCEL_URL}`;
+    return normalizeSiteUrl(process.env.VERCEL_URL);
   }
 
   return "http://localhost:3000";
