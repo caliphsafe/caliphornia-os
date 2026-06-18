@@ -3,140 +3,135 @@
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
-type AccessProjectSlug = "fartherhood" | "friends" | "milia" | "music";
+type AccessPlan = "project" | "kiiku_pass_30d" | "supporter_subscription";
+
+type ProjectCopy = {
+  name: string;
+  icon: string;
+  creditCost: number;
+  price: string;
+  unlockLine: string;
+  details: string;
+};
 
 type AccessWindowProps = {
-  projectSlug: AccessProjectSlug;
+  projectSlug?: string;
   projectName?: string;
-  triggerClassName?: string;
-  triggerImgClassName?: string;
+  children?: React.ReactNode;
+  className?: string;
   triggerLabel?: string;
 };
 
-const PROJECT_COPY: Record<
-  AccessProjectSlug,
-  {
-    name: string;
-    shortName: string;
-    icon: string;
-    accent: string;
-    description: string;
-    ownLine: string;
-    unlocks: string[];
-  }
-> = {
-  fartherhood: {
-    name: "FarTHErHOOD",
-    shortName: "FarTHErHOOD",
-    icon: "/icons/fatherhood.png",
-    accent: "Warm Notes",
-    description:
-      "Unlock the full notes, full songs, lyrics, and the complete fatherhood experience.",
-    ownLine: "Own the full FarTHErHOOD experience forever.",
-    unlocks: [
-      "Full songs from the project",
-      "Lyrics and transcripts",
-      "Full note and story experience",
-      "Connected games and future extras",
-    ],
-  },
+const PROJECT_COPY: Record<string, ProjectCopy> = {
   friends: {
     name: "Fri.ends",
-    shortName: "Fri.ends",
     icon: "/icons/friends.png",
-    accent: "Conversation Pass",
-    description:
-      "Unlock the full conversation experience, all audio bubbles, final songs, and connected music moments.",
-    ownLine: "Own the full Fri.ends experience forever.",
-    unlocks: [
-      "Full conversation threads",
-      "All song versions and audio bubbles",
-      "Final songs from the project",
-      "Connected games and future extras",
-    ],
+    creditCost: 5,
+    price: "$4.99",
+    unlockLine: "Unlock the full album experience.",
+    details:
+      "Full conversations, final songs, audio bubbles, lyrics, games, and project extras.",
+  },
+  fartherhood: {
+    name: "FarTHErHOOD",
+    icon: "/icons/fatherhood.png",
+    creditCost: 5,
+    price: "$4.99",
+    unlockLine: "Unlock the full album experience.",
+    details:
+      "Full songs, full notes, lyrics, voice entries, story layers, and project extras.",
+  },
+  fatherhood: {
+    name: "FarTHErHOOD",
+    icon: "/icons/fatherhood.png",
+    creditCost: 5,
+    price: "$4.99",
+    unlockLine: "Unlock the full album experience.",
+    details:
+      "Full songs, full notes, lyrics, voice entries, story layers, and project extras.",
   },
   milia: {
     name: "Milia",
-    shortName: "Milia",
     icon: "/icons/milia.png",
-    accent: "Weather Music",
-    description:
-      "Unlock the full weather-based music experience, full songs, and project-connected features.",
-    ownLine: "Own the full Milia experience forever.",
-    unlocks: [
-      "Full songs inside Milia",
-      "Full weather and music experience",
-      "Project-connected song access",
-      "Connected games and future extras",
-    ],
+    creditCost: 5,
+    price: "$4.99",
+    unlockLine: "Unlock the full album experience.",
+    details:
+      "Full songs, lyrics, weather-linked memories, project scenes, and extras.",
   },
   music: {
     name: "Music",
-    shortName: "Music",
     icon: "/icons/access.png",
-    accent: "Full Library",
-    description:
-      "Unlock the full listening library, playlists, favorites, and connected platform features.",
-    ownLine: "Unlock the full music library experience.",
-    unlocks: [
-      "Full eligible songs",
-      "Playlists and favorites",
-      "Library access across projects",
-      "Future connected listening tools",
-    ],
+    creditCost: 5,
+    price: "$4.99",
+    unlockLine: "Unlock the full music experience.",
+    details:
+      "Full listening, playlist access, lyrics, project extras, and bonus music surfaces.",
   },
 };
 
-export default function AccessWindow({
-  projectSlug,
-  projectName,
-  triggerClassName = "",
-  triggerImgClassName = "",
-  triggerLabel,
-}: AccessWindowProps) {
-  const [open, setOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
-  const [notice, setNotice] = useState("");
-  const [isCheckingOut, setIsCheckingOut] = useState(false);
+const FALLBACK_PROJECT: ProjectCopy = {
+  name: "This Project",
+  icon: "/icons/access.png",
+  creditCost: 5,
+  price: "$4.99",
+  unlockLine: "Unlock the full experience.",
+  details: "Full songs, lyrics, project features, and extras inside Caliphornia OS.",
+};
 
-  const copy = useMemo(() => {
-    const base = PROJECT_COPY[projectSlug] || PROJECT_COPY.music;
-    return projectName ? { ...base, name: projectName, shortName: projectName } : base;
-  }, [projectSlug, projectName]);
+export default function AccessWindow({
+  projectSlug = "music",
+  projectName,
+  children,
+  className = "",
+  triggerLabel = "Open access window",
+}: AccessWindowProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
+  const [autoRenew, setAutoRenew] = useState(false);
+  const [error, setError] = useState("");
+
+  const normalizedProjectSlug = projectSlug.trim().toLowerCase();
+
+  const project = useMemo(() => {
+    const copy = PROJECT_COPY[normalizedProjectSlug] || FALLBACK_PROJECT;
+
+    return {
+      ...copy,
+      name: projectName || copy.name,
+    };
+  }, [normalizedProjectSlug, projectName]);
 
   useEffect(() => {
     setMounted(true);
   }, []);
 
   useEffect(() => {
-    if (!open) return;
+    if (!isOpen) return;
 
     function onKeyDown(event: KeyboardEvent) {
       if (event.key === "Escape") {
-        setOpen(false);
+        setIsOpen(false);
       }
     }
 
-    document.body.classList.add("access-window-lock");
-    window.addEventListener("keydown", onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
+    document.body.classList.add("access-window-open");
 
     return () => {
-      document.body.classList.remove("access-window-lock");
-      window.removeEventListener("keydown", onKeyDown);
+      document.removeEventListener("keydown", onKeyDown);
+      document.body.classList.remove("access-window-open");
     };
-  }, [open]);
+  }, [isOpen]);
 
-  function closeWindow() {
+  async function startCheckout(plan: AccessPlan) {
     if (isCheckingOut) return;
-    setOpen(false);
-    setNotice("");
-  }
 
-  async function startCheckout(plan: "project" | "supporter") {
+    setError("");
+    setIsCheckingOut(true);
+
     try {
-      setIsCheckingOut(true);
-      setNotice(plan === "project" ? "Opening project checkout..." : "Opening supporter checkout...");
-
       const res = await fetch("/api/checkout/access", {
         method: "POST",
         headers: {
@@ -144,206 +139,177 @@ export default function AccessWindow({
         },
         body: JSON.stringify({
           plan,
-          projectSlug,
+          projectSlug: normalizedProjectSlug,
         }),
       });
 
       const data = await res.json();
 
-      if (!res.ok || !data.ok || !data.url) {
-        setNotice(data.error || "Could not start checkout.");
-        setIsCheckingOut(false);
-        return;
+      if (!res.ok || !data?.ok || !data?.url) {
+        throw new Error(data?.error || "Checkout could not be started.");
       }
 
       window.location.href = data.url;
-    } catch {
-      setNotice("Could not start checkout.");
+    } catch (err) {
+      const message =
+        err instanceof Error ? err.message : "Checkout could not be started.";
+      setError(message);
       setIsCheckingOut(false);
     }
   }
 
-  const modal = open ? (
-    <div className="access-window-overlay" role="presentation">
-      <button
-        type="button"
-        className="access-window-backdrop"
-        aria-label="Close access window"
-        onClick={closeWindow}
-      />
+  const passPlan: AccessPlan = autoRenew
+    ? "supporter_subscription"
+    : "kiiku_pass_30d";
 
+  const modal = (
+    <div
+      className="access-window-overlay"
+      role="presentation"
+      onMouseDown={(event) => {
+        if (event.target === event.currentTarget) {
+          setIsOpen(false);
+        }
+      }}
+    >
       <section
-        className="access-wallet-sheet"
+        className="access-window-card"
         role="dialog"
         aria-modal="true"
-        aria-label={`Unlock ${copy.name}`}
+        aria-label="Kiiku Credits access window"
       >
-        <div className="access-wallet-handle" />
-
-        <div className="access-wallet-topbar">
-          <button
-            type="button"
-            className="access-wallet-cancel"
-            onClick={closeWindow}
-            disabled={isCheckingOut}
-          >
-            Cancel
-          </button>
-
-          <div className="access-wallet-title">Access Pass</div>
+        <div className="access-window-topbar">
+          <div>
+            <p className="access-window-kicker">Kiiku Engine</p>
+            <h2>Kiiku Credits</h2>
+          </div>
 
           <button
             type="button"
-            className="access-wallet-done"
-            onClick={closeWindow}
-            aria-label="Close"
-            disabled={isCheckingOut}
+            className="access-window-close"
+            aria-label="Close access window"
+            onClick={() => setIsOpen(false)}
           >
-            Done
+            ×
           </button>
         </div>
 
-        <div className="access-wallet-card">
-          <div className="access-wallet-card-shine" />
-
-          <div className="access-wallet-card-top">
-            <div className="access-wallet-app-icon">
-              <img src={copy.icon} alt="" aria-hidden="true" />
+        <div className="kiiku-album-card">
+          <div className="kiiku-album-main">
+            <div className="kiiku-app-icon-wrap">
+              <img src={project.icon} alt="" className="kiiku-app-icon" />
             </div>
 
-            <div className="access-wallet-card-copy">
-              <p>{copy.accent}</p>
-              <h2>{copy.name}</h2>
+            <div className="kiiku-album-copy">
+              <p className="kiiku-label">Album unlock</p>
+              <h3>{project.name}</h3>
+              <p>{project.unlockLine}</p>
+            </div>
+
+            <div className="kiiku-credit-pill">
+              <strong>{project.creditCost}</strong>
+              <span>Kiiku Credits</span>
             </div>
           </div>
 
-          <div className="access-wallet-card-bottom">
+          <p className="kiiku-album-details">{project.details}</p>
+
+          <button
+            type="button"
+            className="kiiku-primary-btn"
+            disabled={isCheckingOut}
+            onClick={() => startCheckout("project")}
+          >
+            {isCheckingOut
+              ? "Opening Checkout..."
+              : `Unlock with ${project.creditCost} Kiiku Credits`}
+            <span>{project.price}</span>
+          </button>
+        </div>
+
+        <div className="kiiku-pass-card">
+          <div className="kiiku-pass-header">
             <div>
-              <span>Free Preview</span>
-              <strong>Upgrade available</strong>
+              <p className="kiiku-label">Full OS access</p>
+              <h3>Kiiku Pass</h3>
+              <p>
+                Listening credits for the full Caliphornia OS experience across
+                every current project.
+              </p>
             </div>
 
-            <img
-              src="/icons/access.png"
-              alt=""
-              aria-hidden="true"
-              className="access-wallet-mark"
-            />
+            <div className="kiiku-pass-price">
+              <strong>4</strong>
+              <span>Kiiku Credits</span>
+            </div>
           </div>
-        </div>
 
-        <p className="access-wallet-intro">{copy.description}</p>
-
-        <div className="access-wallet-plan-list">
-          <article className="access-wallet-plan is-primary">
-            <div className="access-wallet-plan-head">
-              <div>
-                <p>Own this experience</p>
-                <h3>{copy.shortName}</h3>
-              </div>
-
-              <div className="access-wallet-price">$4.99</div>
-            </div>
-
-            <p className="access-wallet-plan-copy">{copy.ownLine}</p>
-
-            <div className="access-wallet-unlocks">
-              {copy.unlocks.map((item) => (
-                <div key={item} className="access-wallet-unlock-row">
-                  <span>✓</span>
-                  <p>{item}</p>
-                </div>
-              ))}
+          <div className="kiiku-pass-panel">
+            <div>
+              <p className="kiiku-pass-mode">
+                {autoRenew ? "Monthly auto-renew" : "30-day access"}
+              </p>
+              <p className="kiiku-pass-small">
+                {autoRenew
+                  ? "Keeps full access active every month until canceled."
+                  : "Unlocks full access for 30 days. No monthly charge unless you turn on auto-renew."}
+              </p>
             </div>
 
             <button
               type="button"
-              className="access-wallet-pay-btn"
-              onClick={() => startCheckout("project")}
-              disabled={isCheckingOut}
+              className={`kiiku-toggle ${autoRenew ? "is-on" : ""}`}
+              aria-pressed={autoRenew}
+              onClick={() => setAutoRenew((value) => !value)}
             >
-              {isCheckingOut ? "Opening..." : `Own ${copy.shortName}`}
+              <span />
             </button>
+          </div>
 
-            <div className="access-wallet-mini-note">
-              Subscriber discount later: $2.99 project unlock.
-            </div>
-          </article>
+          <ul className="kiiku-benefits">
+            <li>Full songs across current Caliphornia OS projects</li>
+            <li>Lyrics, notes, messages, games, and hidden project layers</li>
+            <li>Early access language we can expand into email reminders later</li>
+          </ul>
 
-          <article className="access-wallet-plan">
-            <div className="access-wallet-plan-head">
-              <div>
-                <p>Unlock everything</p>
-                <h3>Supporter Pass</h3>
-              </div>
-
-              <div className="access-wallet-price">$3.99/mo</div>
-            </div>
-
-            <p className="access-wallet-plan-copy">
-              Unlock all current projects while subscribed, including Milia,
-              Fri.ends, FarTHErHOOD, Music, playlists, games, and future app experiences.
-            </p>
-
-            <div className="access-wallet-unlocks">
-              <div className="access-wallet-unlock-row">
-                <span>✓</span>
-                <p>All current project experiences</p>
-              </div>
-              <div className="access-wallet-unlock-row">
-                <span>✓</span>
-                <p>Full songs while subscribed</p>
-              </div>
-              <div className="access-wallet-unlock-row">
-                <span>✓</span>
-                <p>Lyrics, conversations, notes, playlists, and games</p>
-              </div>
-            </div>
-
-            <button
-              type="button"
-              className="access-wallet-pay-btn secondary"
-              onClick={() => startCheckout("supporter")}
-              disabled={isCheckingOut}
-            >
-              {isCheckingOut ? "Opening..." : "Join Supporter Pass"}
-            </button>
-          </article>
+          <button
+            type="button"
+            className="kiiku-pass-btn"
+            disabled={isCheckingOut}
+            onClick={() => startCheckout(passPlan)}
+          >
+            {isCheckingOut
+              ? "Opening Checkout..."
+              : autoRenew
+                ? "Start Monthly Kiiku Pass"
+                : "Start 30-Day Kiiku Pass"}
+            <span>{autoRenew ? "$3.99/mo" : "$3.99"}</span>
+          </button>
         </div>
 
-        {notice ? <p className="access-wallet-notice">{notice}</p> : null}
+        {error ? <p className="access-window-error">{error}</p> : null}
+
+        <p className="kiiku-legal">
+          Kiiku means listen. Kiiku Credits are listening credits used only
+          inside Caliphornia OS. They are not cash, not crypto, not transferable,
+          and not redeemable for money.
+        </p>
       </section>
     </div>
-  ) : null;
+  );
 
   return (
     <>
       <button
         type="button"
-        className={["access-window-trigger", triggerClassName].filter(Boolean).join(" ")}
-        aria-label={`Open access options for ${copy.name}`}
-        onClick={(event) => {
-          event.preventDefault();
-          event.stopPropagation();
-          setNotice("");
-          setOpen(true);
-        }}
+        className={`access-window-trigger ${className}`}
+        aria-label={triggerLabel}
+        onClick={() => setIsOpen(true)}
       >
-        {triggerLabel ? (
-          <span>{triggerLabel}</span>
-        ) : (
-          <img
-            src="/icons/access.png"
-            alt=""
-            aria-hidden="true"
-            className={["access-window-trigger-icon", triggerImgClassName]
-              .filter(Boolean)
-              .join(" ")}
-          />
-        )}
+        {children || <img src={project.icon} alt="" />}
       </button>
 
-      {mounted && modal ? createPortal(modal, document.body) : null}
+      {mounted && isOpen ? createPortal(modal, document.body) : null}
     </>
   );
 }
