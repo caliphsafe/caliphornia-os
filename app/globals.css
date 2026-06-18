@@ -1480,13 +1480,21 @@ img {
   object-fit: cover;
 }
 
-/* ACCESS WINDOW */
+/* ACCESS WINDOW - APPLE WALLET STYLE */
 
 .access-window-lock {
   overflow: hidden;
 }
 
 .access-window-trigger {
+  appearance: none;
+  -webkit-appearance: none;
+  border: 0;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
   cursor: pointer;
 }
 
@@ -1500,255 +1508,367 @@ img {
 .access-window-overlay {
   position: fixed;
   inset: 0;
-  z-index: 9000;
-  display: grid;
-  place-items: end center;
-  padding: 18px;
+  z-index: 12000;
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+
+  /*
+    This keeps the access sheet above the GlobalPlayer.
+    If the player is open, the sheet sits above it.
+    If the player is closed, it still feels like a native wallet sheet.
+  */
+  padding:
+    calc(14px + env(safe-area-inset-top, 0px))
+    14px
+    calc(118px + env(safe-area-inset-bottom, 0px));
+
   color: #fff;
+  pointer-events: auto;
 }
 
 .access-window-backdrop {
-  position: absolute;
+  position: fixed;
   inset: 0;
   border: 0;
-  background: rgba(0, 0, 0, 0.56);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
+  background:
+    radial-gradient(circle at 50% 10%, rgba(255,255,255,0.12), transparent 26%),
+    rgba(0, 0, 0, 0.62);
+  backdrop-filter: blur(22px) saturate(130%);
+  -webkit-backdrop-filter: blur(22px) saturate(130%);
+  cursor: pointer;
 }
 
-.access-window-panel {
+.access-wallet-sheet {
   position: relative;
   z-index: 1;
-  width: min(520px, 100%);
-  max-height: min(86vh, 780px);
+  width: min(430px, 100%);
+  max-height: calc(100dvh - 176px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
   overflow-y: auto;
+  overscroll-behavior: contain;
+
   border-radius: 34px;
-  padding: 14px 16px 18px;
-  border: 1px solid rgba(255,255,255,0.14);
+  padding: 10px 12px 14px;
+
+  border: 1px solid rgba(255,255,255,0.16);
   background:
-    radial-gradient(circle at 20% 0%, rgba(120, 170, 255, 0.18), transparent 34%),
-    linear-gradient(180deg, rgba(30, 36, 49, 0.94), rgba(8, 12, 20, 0.94));
+    linear-gradient(180deg, rgba(42, 44, 52, 0.96), rgba(12, 13, 18, 0.96));
   box-shadow:
-    0 30px 90px rgba(0,0,0,0.52),
-    inset 0 1px 0 rgba(255,255,255,0.14);
-  backdrop-filter: blur(30px) saturate(150%);
-  -webkit-backdrop-filter: blur(30px) saturate(150%);
+    0 32px 90px rgba(0,0,0,0.62),
+    inset 0 1px 0 rgba(255,255,255,0.18);
+
+  backdrop-filter: blur(34px) saturate(160%);
+  -webkit-backdrop-filter: blur(34px) saturate(160%);
 }
 
-.access-window-handle {
+.access-wallet-handle {
   width: 42px;
   height: 5px;
-  margin: 0 auto 14px;
+  margin: 2px auto 10px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.28);
+  background: rgba(255,255,255,0.26);
 }
 
-.access-window-topline {
+.access-wallet-topbar {
+  display: grid;
+  grid-template-columns: 72px 1fr 72px;
+  align-items: center;
+  gap: 8px;
+  padding: 0 4px 12px;
+}
+
+.access-wallet-title {
+  text-align: center;
+  font-size: 14px;
+  font-weight: 800;
+  color: rgba(255,255,255,0.88);
+}
+
+.access-wallet-cancel,
+.access-wallet-done {
+  border: 0;
+  background: transparent;
+  color: rgba(94, 174, 255, 0.98);
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.access-wallet-cancel {
+  text-align: left;
+}
+
+.access-wallet-done {
+  text-align: right;
+}
+
+.access-wallet-card {
+  position: relative;
+  overflow: hidden;
+  min-height: 184px;
+  border-radius: 30px;
+  padding: 18px;
+  margin-bottom: 14px;
+
+  background:
+    radial-gradient(circle at 16% 0%, rgba(255,255,255,0.36), transparent 28%),
+    radial-gradient(circle at 100% 0%, rgba(122,172,255,0.35), transparent 26%),
+    linear-gradient(145deg, rgba(248,248,250,0.22), rgba(255,255,255,0.06) 42%, rgba(255,255,255,0.12)),
+    rgba(255,255,255,0.10);
+
+  border: 1px solid rgba(255,255,255,0.20);
+  box-shadow:
+    0 24px 60px rgba(0,0,0,0.36),
+    inset 0 1px 0 rgba(255,255,255,0.26);
+}
+
+.access-wallet-card-shine {
+  position: absolute;
+  inset: -40% -20% auto -20%;
+  height: 120px;
+  transform: rotate(-8deg);
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.22), transparent);
+  pointer-events: none;
+}
+
+.access-wallet-card-top {
+  position: relative;
+  z-index: 1;
   display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
+  align-items: center;
   gap: 14px;
-  padding: 0 2px;
 }
 
-.access-window-kicker {
-  margin: 0 0 6px;
-  color: rgba(255,255,255,0.58);
+.access-wallet-app-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 18px;
+  overflow: hidden;
+  background: rgba(0,0,0,0.26);
+  border: 1px solid rgba(255,255,255,0.22);
+  box-shadow: 0 12px 30px rgba(0,0,0,0.26);
+}
+
+.access-wallet-app-icon img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.access-wallet-card-copy p {
+  margin: 0 0 5px;
+  color: rgba(255,255,255,0.62);
   font-size: 12px;
-  line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.14em;
+  letter-spacing: 0.12em;
 }
 
-.access-window-topline h2 {
+.access-wallet-card-copy h2 {
   margin: 0;
-  font-size: 34px;
+  font-size: 30px;
   line-height: 0.95;
   letter-spacing: -0.06em;
   color: rgba(255,255,255,0.98);
 }
 
-.access-window-close {
-  width: 34px;
-  height: 34px;
-  flex: 0 0 auto;
-  border: 1px solid rgba(255,255,255,0.12);
-  border-radius: 999px;
-  background: rgba(255,255,255,0.08);
-  color: rgba(255,255,255,0.9);
-  font-size: 25px;
-  line-height: 1;
-  cursor: pointer;
+.access-wallet-card-bottom {
+  position: absolute;
+  z-index: 1;
+  left: 18px;
+  right: 18px;
+  bottom: 18px;
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 16px;
 }
 
-.access-window-intro {
-  margin: 14px 2px 16px;
-  color: rgba(255,255,255,0.72);
-  font-size: 15px;
-  line-height: 1.45;
-}
-
-.access-window-current {
-  display: grid;
-  gap: 8px;
-  margin-bottom: 14px;
-  padding: 14px;
-  border-radius: 22px;
-  border: 1px solid rgba(255,255,255,0.10);
-  background: rgba(255,255,255,0.06);
-}
-
-.access-window-current p {
-  margin: 0;
-  color: rgba(255,255,255,0.68);
-  font-size: 13px;
-  line-height: 1.45;
-}
-
-.access-window-current-pill {
-  width: fit-content;
-  padding: 6px 10px;
-  border-radius: 999px;
-  background: rgba(255,255,255,0.12);
-  color: rgba(255,255,255,0.88);
+.access-wallet-card-bottom span {
+  display: block;
+  margin-bottom: 5px;
+  color: rgba(255,255,255,0.56);
   font-size: 12px;
   font-weight: 700;
 }
 
-.access-window-plans {
-  display: grid;
-  gap: 12px;
+.access-wallet-card-bottom strong {
+  display: block;
+  color: rgba(255,255,255,0.96);
+  font-size: 18px;
+  letter-spacing: -0.03em;
 }
 
-.access-plan-card {
-  padding: 16px;
-  border-radius: 26px;
+.access-wallet-mark {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  opacity: 0.92;
+}
+
+.access-wallet-intro {
+  margin: 0 4px 12px;
+  color: rgba(255,255,255,0.72);
+  font-size: 14px;
+  line-height: 1.42;
+}
+
+.access-wallet-plan-list {
+  display: grid;
+  gap: 10px;
+}
+
+.access-wallet-plan {
+  padding: 14px;
+  border-radius: 24px;
+  background: rgba(255,255,255,0.075);
   border: 1px solid rgba(255,255,255,0.11);
-  background:
-    linear-gradient(180deg, rgba(255,255,255,0.10), rgba(255,255,255,0.045)),
-    rgba(255,255,255,0.04);
   box-shadow: inset 0 1px 0 rgba(255,255,255,0.08);
 }
 
-.access-plan-featured {
-  border-color: rgba(255,255,255,0.18);
+.access-wallet-plan.is-primary {
   background:
-    radial-gradient(circle at 100% 0%, rgba(255,255,255,0.16), transparent 32%),
-    linear-gradient(180deg, rgba(255,255,255,0.14), rgba(255,255,255,0.055)),
-    rgba(255,255,255,0.06);
+    linear-gradient(180deg, rgba(255,255,255,0.13), rgba(255,255,255,0.07)),
+    rgba(255,255,255,0.075);
+  border-color: rgba(255,255,255,0.18);
 }
 
-.access-plan-head {
+.access-wallet-plan-head {
   display: flex;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  align-items: flex-start;
 }
 
-.access-plan-label {
-  margin: 0 0 6px;
+.access-wallet-plan-head p {
+  margin: 0 0 5px;
   color: rgba(255,255,255,0.52);
   font-size: 11px;
-  line-height: 1;
   text-transform: uppercase;
-  letter-spacing: 0.13em;
+  letter-spacing: 0.12em;
 }
 
-.access-plan-card h3 {
+.access-wallet-plan-head h3 {
   margin: 0;
-  font-size: 24px;
+  color: rgba(255,255,255,0.97);
+  font-size: 22px;
   line-height: 1;
   letter-spacing: -0.04em;
 }
 
-.access-plan-price {
+.access-wallet-price {
   flex: 0 0 auto;
   padding: 8px 10px;
   border-radius: 999px;
-  background: rgba(255,255,255,0.94);
-  color: #08111d;
+  background: rgba(255,255,255,0.96);
+  color: #070a12;
   font-size: 13px;
   font-weight: 900;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
+  box-shadow: 0 10px 24px rgba(0,0,0,0.16);
 }
 
-.access-plan-copy {
-  margin: 12px 0 0;
+.access-wallet-plan-copy {
+  margin: 10px 0 12px;
   color: rgba(255,255,255,0.72);
-  font-size: 14px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.42;
 }
 
-.access-plan-list {
+.access-wallet-unlocks {
   display: grid;
   gap: 8px;
-  margin: 14px 0;
-  padding: 0;
-  list-style: none;
+  margin-bottom: 12px;
 }
 
-.access-plan-list li {
-  position: relative;
-  padding-left: 18px;
-  color: rgba(255,255,255,0.76);
-  font-size: 13px;
-  line-height: 1.35;
+.access-wallet-unlock-row {
+  display: grid;
+  grid-template-columns: 18px 1fr;
+  gap: 8px;
+  align-items: start;
 }
 
-.access-plan-list li::before {
-  content: "";
-  position: absolute;
-  left: 0;
-  top: 0.45em;
-  width: 7px;
-  height: 7px;
+.access-wallet-unlock-row span {
+  width: 18px;
+  height: 18px;
+  display: grid;
+  place-items: center;
   border-radius: 999px;
-  background: rgba(255,255,255,0.78);
+  background: rgba(52, 199, 89, 0.92);
+  color: #06100a;
+  font-size: 11px;
+  font-weight: 900;
 }
 
-.access-plan-btn {
+.access-wallet-unlock-row p {
+  margin: 1px 0 0;
+  color: rgba(255,255,255,0.75);
+  font-size: 13px;
+  line-height: 1.32;
+}
+
+.access-wallet-pay-btn {
   width: 100%;
   min-height: 48px;
   border: 0;
   border-radius: 999px;
-  background: rgba(255,255,255,0.95);
-  color: #08111d;
+  background: rgba(255,255,255,0.96);
+  color: #070a12;
+  font-size: 15px;
   font-weight: 900;
-  letter-spacing: -0.02em;
+  letter-spacing: -0.03em;
   cursor: pointer;
 }
 
-.access-plan-btn.secondary {
-  background: rgba(255,255,255,0.12);
+.access-wallet-pay-btn.secondary {
   color: rgba(255,255,255,0.94);
-  border: 1px solid rgba(255,255,255,0.12);
+  background: rgba(255,255,255,0.13);
+  border: 1px solid rgba(255,255,255,0.13);
 }
 
-.access-plan-footnote {
-  margin: 10px 0 0;
+.access-wallet-mini-note {
+  margin-top: 9px;
+  text-align: center;
   color: rgba(255,255,255,0.48);
   font-size: 12px;
   line-height: 1.35;
-  text-align: center;
 }
 
-.access-window-notice {
-  margin: 14px 0 0;
-  padding: 12px 14px;
+.access-wallet-notice {
+  margin: 12px 0 0;
+  padding: 12px 13px;
   border-radius: 18px;
-  background: rgba(255,255,255,0.08);
-  border: 1px solid rgba(255,255,255,0.10);
-  color: rgba(255,255,255,0.76);
+  background: rgba(94, 174, 255, 0.12);
+  border: 1px solid rgba(94, 174, 255, 0.18);
+  color: rgba(235,245,255,0.84);
   font-size: 13px;
-  line-height: 1.4;
+  line-height: 1.38;
+}
+
+@media (max-height: 760px) {
+  .access-window-overlay {
+    padding-bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .access-wallet-sheet {
+    max-height: calc(100dvh - 132px - env(safe-area-inset-top, 0px) - env(safe-area-inset-bottom, 0px));
+  }
+
+  .access-wallet-card {
+    min-height: 150px;
+  }
+
+  .access-wallet-card-copy h2 {
+    font-size: 26px;
+  }
 }
 
 @media (min-width: 720px) {
   .access-window-overlay {
-    place-items: center;
+    align-items: center;
+    padding-bottom: 14px;
   }
 
-  .access-window-panel {
-    border-radius: 36px;
+  .access-wallet-sheet {
+    max-height: min(760px, calc(100dvh - 40px));
   }
 }
