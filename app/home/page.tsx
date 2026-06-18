@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import HomeScreen from "@/components/HomeScreen";
 import { verifySession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-admin";
+import Link from "next/link";
 
 export default async function HomePage() {
   const cookieStore = await cookies();
