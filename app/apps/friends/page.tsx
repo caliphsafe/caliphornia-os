@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { verifySession } from "@/lib/session";
 import Link from "next/link";
 import FriendsInboxClient from "@/components/FriendsInboxClient";
+import AccessWindow from "@/components/AccessWindow";
 
 async function getConversations(sessionToken: string) {
   const base =
@@ -60,17 +61,12 @@ export default async function FriendsPage() {
               />
             </Link>
 
-            <button
-              className="friends-original-icon-btn ghost-btn"
-              type="button"
-              aria-label="More"
-            >
-              <img
-                src="/apps/friends/more.png"
-                alt="More"
-                className="friends-topbar-icon"
-              />
-            </button>
+            <AccessWindow
+              projectSlug="friends"
+              projectName="Fri.ends"
+              triggerClassName="friends-original-icon-btn ghost-btn"
+              triggerImgClassName="friends-topbar-icon"
+            />
           </div>
 
           <header className="friends-original-inbox-header">
