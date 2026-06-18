@@ -7,6 +7,7 @@ import { getSongPlaybackAccess } from "@/lib/access";
 import MiliaSongCard from "@/components/MiliaSongCard";
 import type { GlobalTrack } from "@/components/GlobalPlayer";
 import styles from "./milia.module.css";
+import AccessWindow from "@/components/AccessWindow";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -282,9 +283,11 @@ export default async function MiliaPage() {
           ‹
         </Link>
 
-        <button type="button" className={styles.morePill} aria-label="More options">
-          •••
-        </button>
+        <AccessWindow
+  projectSlug="milia"
+  projectName="Milia"
+  triggerClassName={styles.morePill}
+/>
       </div>
 
       <div className={styles.container}>
