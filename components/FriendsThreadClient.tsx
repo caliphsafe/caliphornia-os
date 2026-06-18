@@ -2,6 +2,7 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import AccessWindow from "@/components/AccessWindow";
 
 type Clip = {
   id: string;
@@ -340,17 +341,12 @@ export default function FriendsThreadClient({
     </div>
   </button>
 
-  <button
-    type="button"
-    className="friends-original-thread-face-btn"
-    aria-label="FaceTime"
-  >
-    <img
-      src="/apps/friends/face.png"
-      alt="FaceTime"
-      className="friends-topbar-icon"
-    />
-  </button>
+  <AccessWindow
+  projectSlug="friends"
+  projectName="Fri.ends"
+  triggerClassName="friends-original-thread-face-btn"
+  triggerImgClassName="friends-topbar-icon"
+/>
 </div>
 
         <main className="friends-original-messages-wrap">
