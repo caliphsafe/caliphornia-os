@@ -97,6 +97,7 @@ export default function AccessWindow({
   const [open, setOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [notice, setNotice] = useState("");
+  const [isCheckingOut, setIsCheckingOut] = useState(false);
 
   const copy = useMemo(() => {
     const base = PROJECT_COPY[projectSlug] || PROJECT_COPY.music;
@@ -126,21 +127,40 @@ export default function AccessWindow({
   }, [open]);
 
   function closeWindow() {
+    if (isCheckingOut) return;
     setOpen(false);
     setNotice("");
   }
 
-  function showStripeNotice(plan: "project" | "supporter") {
-    if (plan === "project") {
-      setNotice(
-        `Stripe checkout will connect here next: own ${copy.shortName} for $4.99.`
-      );
-      return;
-    }
+  async function startCheckout(plan: "project" | "supporter") {
+    try {
+      setIsCheckingOut(true);
+      setNotice(plan === "project" ? "Opening project checkout..." : "Opening supporter checkout...");
 
-    setNotice(
-      "Stripe checkout will connect here next: subscribe for $3.99/month and unlock all current projects."
-    );
+      const res = await fetch("/api/checkout/access", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          plan,
+          projectSlug,
+        }),
+      });
+
+      const data = await res.json();
+
+      if (!res.ok || !data.ok || !data.url) {
+        setNotice(data.error || "Could not start checkout.");
+        setIsCheckingOut(false);
+        return;
+      }
+
+      window.location.href = data.url;
+    } catch {
+      setNotice("Could not start checkout.");
+      setIsCheckingOut(false);
+    }
   }
 
   const modal = open ? (
@@ -165,6 +185,7 @@ export default function AccessWindow({
             type="button"
             className="access-wallet-cancel"
             onClick={closeWindow}
+            disabled={isCheckingOut}
           >
             Cancel
           </button>
@@ -176,6 +197,7 @@ export default function AccessWindow({
             className="access-wallet-done"
             onClick={closeWindow}
             aria-label="Close"
+            disabled={isCheckingOut}
           >
             Done
           </button>
@@ -237,9 +259,10 @@ export default function AccessWindow({
             <button
               type="button"
               className="access-wallet-pay-btn"
-              onClick={() => showStripeNotice("project")}
+              onClick={() => startCheckout("project")}
+              disabled={isCheckingOut}
             >
-              Own {copy.shortName}
+              {isCheckingOut ? "Opening..." : `Own ${copy.shortName}`}
             </button>
 
             <div className="access-wallet-mini-note">
@@ -280,9 +303,10 @@ export default function AccessWindow({
             <button
               type="button"
               className="access-wallet-pay-btn secondary"
-              onClick={() => showStripeNotice("supporter")}
+              onClick={() => startCheckout("supporter")}
+              disabled={isCheckingOut}
             >
-              Join Supporter Pass
+              {isCheckingOut ? "Opening..." : "Join Supporter Pass"}
             </button>
           </article>
         </div>
