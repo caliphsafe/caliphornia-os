@@ -7,8 +7,12 @@ export type AccessCheckResult = {
   projectAccess: string[];
 };
 
+function normalizeValue(value: string | null | undefined) {
+  return String(value || "").trim().toLowerCase();
+}
+
 export async function getUserAccess(userEmail: string): Promise<AccessCheckResult> {
-  const email = userEmail.trim().toLowerCase();
+  const email = normalizeValue(userEmail);
 
   const [passesRes, projectsRes] = await Promise.all([
     supabaseAdmin
@@ -26,11 +30,11 @@ export async function getUserAccess(userEmail: string): Promise<AccessCheckResul
 
   const activePasses = (passesRes.data || [])
     .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
-    .map((row) => row.access_key);
+    .map((row) => normalizeValue(row.access_key));
 
   const activeProjects = (projectsRes.data || [])
     .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
-    .map((row) => row.project_slug);
+    .map((row) => normalizeValue(row.project_slug));
 
   const hasAllAccess = activePasses.includes("all_access");
   const hasMusicFull = hasAllAccess || activePasses.includes("music_full");
@@ -46,9 +50,10 @@ export async function getUserAccess(userEmail: string): Promise<AccessCheckResul
 
 export async function userCanAccessProject(userEmail: string, projectSlug: string) {
   const access = await getUserAccess(userEmail);
+  const normalizedProjectSlug = normalizeValue(projectSlug);
 
   if (access.hasAllAccess || access.isFounder) return true;
-  return access.projectAccess.includes(projectSlug);
+  return access.projectAccess.includes(normalizedProjectSlug);
 }
 
 export async function userCanAccessMusicFull(userEmail: string) {
@@ -69,8 +74,13 @@ export async function userCanAccessSong({
     is_locked?: boolean | null;
     requires_project_access?: boolean | null;
     requires_all_access?: boolean | null;
+    is_free_full_play?: boolean | null;
   };
 }) {
+  if (song.is_free_full_play) {
+    return true;
+  }
+
   const access = await getUserAccess(userEmail);
   const now = Date.now();
 
@@ -82,10 +92,23 @@ export async function userCanAccessSong({
     return false;
   }
 
+  const normalizedProjectSlug = normalizeValue(projectSlug);
   const hasProjectAccess =
-    Boolean(projectSlug) && access.projectAccess.includes(projectSlug as string);
+    Boolean(normalizedProjectSlug) &&
+    access.projectAccess.includes(normalizedProjectSlug);
 
-  if (song.requires_project_access && !hasProjectAccess) {
+  /*
+    Project purchase fix:
+
+    If a user owns a project, project songs should unlock fully even if
+    is_locked is still true. That is how Fri.ends, Milia, and FarTHErHOOD
+    ownership should work.
+  */
+  if (hasProjectAccess) {
+    return true;
+  }
+
+  if (song.requires_project_access) {
     return false;
   }
 
@@ -117,35 +140,35 @@ export async function getSongPlaybackAccess({
   userEmail: string;
   projectSlug?: string | null;
   song: {
-  slug?: string | null;
-  audio_path?: string | null;
-  preview_audio_path?: string | null;
-  preview_starts_at?: number | null;
-  preview_duration?: number | null;
-  release_at?: string | null;
-  early_access_at?: string | null;
-  is_locked?: boolean | null;
-  requires_project_access?: boolean | null;
-  requires_all_access?: boolean | null;
-  is_free_full_play?: boolean | null;
-};
+    slug?: string | null;
+    audio_path?: string | null;
+    preview_audio_path?: string | null;
+    preview_starts_at?: number | null;
+    preview_duration?: number | null;
+    release_at?: string | null;
+    early_access_at?: string | null;
+    is_locked?: boolean | null;
+    requires_project_access?: boolean | null;
+    requires_all_access?: boolean | null;
+    is_free_full_play?: boolean | null;
+  };
 }) {
   if (song.is_free_full_play) {
-  return {
-    canPlayFull: true,
-    isPreview: false,
-    playbackPath: song.audio_path || null,
-    clipStartSeconds: null,
-    clipEndSeconds: null,
-    lockedReason: null,
-  };
-}
+    return {
+      canPlayFull: true,
+      isPreview: false,
+      playbackPath: song.audio_path || null,
+      clipStartSeconds: null,
+      clipEndSeconds: null,
+      lockedReason: null,
+    };
+  }
 
-const canPlayFull = await userCanAccessSong({
-  userEmail,
-  projectSlug,
-  song,
-});
+  const canPlayFull = await userCanAccessSong({
+    userEmail,
+    projectSlug,
+    song,
+  });
 
   if (canPlayFull) {
     return {
