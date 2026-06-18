@@ -19,6 +19,8 @@ type AccessWindowProps = {
   projectName?: string;
   children?: React.ReactNode;
   className?: string;
+  triggerClassName?: string;
+  triggerImgClassName?: string;
   triggerLabel?: string;
 };
 
@@ -79,11 +81,17 @@ const FALLBACK_PROJECT: ProjectCopy = {
   details: "Full songs, lyrics, project features, and extras inside Caliphornia OS.",
 };
 
+function joinClasses(...classes: Array<string | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
+
 export default function AccessWindow({
   projectSlug = "music",
   projectName,
   children,
   className = "",
+  triggerClassName = "",
+  triggerImgClassName = "",
   triggerLabel = "Open access window",
 }: AccessWindowProps) {
   const [isOpen, setIsOpen] = useState(false);
@@ -302,11 +310,17 @@ export default function AccessWindow({
     <>
       <button
         type="button"
-        className={`access-window-trigger ${className}`}
+        className={joinClasses(
+          "access-window-trigger",
+          className,
+          triggerClassName
+        )}
         aria-label={triggerLabel}
         onClick={() => setIsOpen(true)}
       >
-        {children || <img src={project.icon} alt="" />}
+        {children || (
+          <img src={project.icon} alt="" className={triggerImgClassName} />
+        )}
       </button>
 
       {mounted && isOpen ? createPortal(modal, document.body) : null}
