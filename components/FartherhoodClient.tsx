@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import AccessWindow from "@/components/AccessWindow";
 
 type Track = {
   id?: string | null;
@@ -470,9 +471,12 @@ export default function FartherhoodClient() {
             <img src="/apps/fartherhood/share.png" alt="Share" className="ico-img" />
           </a>
 
-          <a href="#" className="nav-capsule-btn" aria-label="More">
-            <img src="/apps/fartherhood/more.png" alt="More" className="ico-img" />
-          </a>
+          <AccessWindow
+            projectSlug="fartherhood"
+            projectName="FarTHErHOOD"
+            triggerClassName="nav-capsule-btn"
+            triggerImgClassName="ico-img"
+          />
         </div>
       </div>
 
