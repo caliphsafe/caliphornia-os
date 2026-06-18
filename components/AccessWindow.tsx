@@ -84,6 +84,9 @@ const FALLBACK_PROJECT: ProjectCopy = {
 function joinClasses(...classes: Array<string | undefined>) {
   return classes.filter(Boolean).join(" ");
 }
+function joinClasses(...classes: Array<string | undefined>) {
+  return classes.filter(Boolean).join(" ");
+}
 
 export default function AccessWindow({
   projectSlug = "music",
@@ -309,19 +312,19 @@ export default function AccessWindow({
   return (
     <>
       <button
-        type="button"
-        className={joinClasses(
-          "access-window-trigger",
-          className,
-          triggerClassName
-        )}
-        aria-label={triggerLabel}
-        onClick={() => setIsOpen(true)}
-      >
-        {children || (
-          <img src={project.icon} alt="" className={triggerImgClassName} />
-        )}
-      </button>
+  type="button"
+  className={joinClasses(
+    "access-window-trigger",
+    className,
+    triggerClassName
+  )}
+  aria-label={triggerLabel}
+  onClick={() => setIsOpen(true)}
+>
+  {children || (
+    <img src={project.icon} alt="" className={triggerImgClassName} />
+  )}
+</button>
 
       {mounted && isOpen ? createPortal(modal, document.body) : null}
     </>
