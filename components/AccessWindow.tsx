@@ -28,7 +28,7 @@ const PROJECT_COPY: Record<
   fartherhood: {
     name: "FarTHErHOOD",
     shortName: "FarTHErHOOD",
-    icon: "/apps/fartherhood/icon.png",
+    icon: "/icons/fatherhood.png",
     accent: "Warm Notes",
     description:
       "Unlock the full notes, full songs, lyrics, and the complete fatherhood experience.",
@@ -43,7 +43,7 @@ const PROJECT_COPY: Record<
   friends: {
     name: "Fri.ends",
     shortName: "Fri.ends",
-    icon: "/apps/friends/icon.png",
+    icon: "/icons/friends.png",
     accent: "Conversation Pass",
     description:
       "Unlock the full conversation experience, all audio bubbles, final songs, and connected music moments.",
@@ -58,7 +58,7 @@ const PROJECT_COPY: Record<
   milia: {
     name: "Milia",
     shortName: "Milia",
-    icon: "/apps/milia/icon.png",
+    icon: "/icons/milia.png",
     accent: "Weather Music",
     description:
       "Unlock the full weather-based music experience, full songs, and project-connected features.",
