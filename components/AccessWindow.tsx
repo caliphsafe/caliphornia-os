@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -12,6 +13,18 @@ type ProjectCopy = {
   price: string;
   unlockLine: string;
   details: string;
+};
+
+type AccessStatus = {
+  ok: boolean;
+  signedIn: boolean;
+  email?: string;
+  hasKiikuPass: boolean;
+  hasProjectAccess: boolean;
+  hasAllAccess?: boolean;
+  hasMusicFull?: boolean;
+  isFounder?: boolean;
+  projectAccess?: string[];
 };
 
 type AccessWindowProps = {
@@ -59,7 +72,7 @@ const PROJECT_COPY: Record<string, ProjectCopy> = {
     price: "$4.99",
     unlockLine: "Unlock the full album experience.",
     details:
-      "Full songs, lyrics, weather-linked memories, project scenes, and extras.",
+      "Full songs, lyrics, weather-linked memories, project scenes, and bonus layers.",
   },
   music: {
     name: "Music",
@@ -99,6 +112,7 @@ export default function AccessWindow({
   const [isCheckingOut, setIsCheckingOut] = useState(false);
   const [autoRenew, setAutoRenew] = useState(false);
   const [error, setError] = useState("");
+  const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null);
 
   const normalizedProjectSlug = projectSlug.trim().toLowerCase();
 
@@ -111,9 +125,42 @@ export default function AccessWindow({
     };
   }, [normalizedProjectSlug, projectName]);
 
+  const hasKiikuPass = Boolean(accessStatus?.hasKiikuPass);
+  const hasProjectAccess = Boolean(accessStatus?.hasProjectAccess);
+  const shouldShowAlbumUnlock = !hasProjectAccess && !hasKiikuPass;
+
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAccessStatus() {
+      try {
+        const res = await fetch(
+          `/api/access/me?projectSlug=${encodeURIComponent(normalizedProjectSlug)}`,
+          { cache: "no-store" }
+        );
+
+        const data = await res.json();
+
+        if (isActive) {
+          setAccessStatus(data);
+        }
+      } catch {
+        if (isActive) {
+          setAccessStatus(null);
+        }
+      }
+    }
+
+    loadAccessStatus();
+
+    return () => {
+      isActive = false;
+    };
+  }, [normalizedProjectSlug]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -170,6 +217,15 @@ export default function AccessWindow({
     ? "supporter_subscription"
     : "kiiku_pass_30d";
 
+  const triggerContent =
+    children || <img src="/icons/access.png" alt="" className={triggerImgClassName} />;
+
+  const triggerClass = joinClasses(
+    "access-window-trigger",
+    className,
+    triggerClassName
+  );
+
   const modal = (
     <div
       className="access-window-overlay"
@@ -188,7 +244,7 @@ export default function AccessWindow({
       >
         <div className="access-window-topbar">
           <div>
-            <p className="access-window-kicker">Kiiku Engine</p>
+            <p className="access-window-kicker">Caliphornia OS Access</p>
             <h2>Kiiku Credits</h2>
           </div>
 
@@ -202,38 +258,57 @@ export default function AccessWindow({
           </button>
         </div>
 
-        <div className="kiiku-album-card">
-          <div className="kiiku-album-main">
+        {hasProjectAccess && !hasKiikuPass ? (
+          <div className="kiiku-owned-card">
             <div className="kiiku-app-icon-wrap">
               <img src={project.icon} alt="" className="kiiku-app-icon" />
             </div>
 
-            <div className="kiiku-album-copy">
-              <p className="kiiku-label">Album unlock</p>
+            <div>
+              <p className="kiiku-label">Already unlocked</p>
               <h3>{project.name}</h3>
-              <p>{project.unlockLine}</p>
-            </div>
-
-            <div className="kiiku-credit-pill">
-              <strong>{project.creditCost}</strong>
-              <span>Kiiku Credits</span>
+              <p>
+                This album experience is active on your account. Keep listening
+                here, or use Kiiku Pass to open the full Caliphornia OS.
+              </p>
             </div>
           </div>
+        ) : null}
 
-          <p className="kiiku-album-details">{project.details}</p>
+        {shouldShowAlbumUnlock ? (
+          <div className="kiiku-album-card">
+            <div className="kiiku-album-main">
+              <div className="kiiku-app-icon-wrap">
+                <img src={project.icon} alt="" className="kiiku-app-icon" />
+              </div>
 
-          <button
-            type="button"
-            className="kiiku-primary-btn"
-            disabled={isCheckingOut}
-            onClick={() => startCheckout("project")}
-          >
-            {isCheckingOut
-              ? "Opening Checkout..."
-              : `Unlock with ${project.creditCost} Kiiku Credits`}
-            <span>{project.price}</span>
-          </button>
-        </div>
+              <div className="kiiku-album-copy">
+                <p className="kiiku-label">Album unlock</p>
+                <h3>{project.name}</h3>
+                <p>{project.unlockLine}</p>
+              </div>
+
+              <div className="kiiku-credit-pill">
+                <strong>{project.creditCost}</strong>
+                <span>Kiiku Credits</span>
+              </div>
+            </div>
+
+            <p className="kiiku-album-details">{project.details}</p>
+
+            <button
+              type="button"
+              className="kiiku-primary-btn"
+              disabled={isCheckingOut}
+              onClick={() => startCheckout("project")}
+            >
+              {isCheckingOut
+                ? "Opening Checkout..."
+                : `Unlock with ${project.creditCost} Kiiku Credits`}
+              <span>{project.price}</span>
+            </button>
+          </div>
+        ) : null}
 
         <div className="kiiku-pass-card">
           <div className="kiiku-pass-header">
@@ -241,8 +316,8 @@ export default function AccessWindow({
               <p className="kiiku-label">Full OS access</p>
               <h3>Kiiku Pass</h3>
               <p>
-                Listening credits for the full Caliphornia OS experience across
-                every current project.
+                Open every current Caliphornia OS project with one listening
+                pass.
               </p>
             </div>
 
@@ -259,8 +334,8 @@ export default function AccessWindow({
               </p>
               <p className="kiiku-pass-small">
                 {autoRenew
-                  ? "Keeps full access active every month until canceled."
-                  : "Unlocks full access for 30 days. No monthly charge unless you turn on auto-renew."}
+                  ? "Keep full access active each month until you cancel."
+                  : "Get 30 days of full access with no automatic monthly charge."}
               </p>
             </div>
 
@@ -268,6 +343,7 @@ export default function AccessWindow({
               type="button"
               className={`kiiku-toggle ${autoRenew ? "is-on" : ""}`}
               aria-pressed={autoRenew}
+              aria-label="Toggle monthly auto-renew"
               onClick={() => setAutoRenew((value) => !value)}
             >
               <span />
@@ -277,7 +353,7 @@ export default function AccessWindow({
           <ul className="kiiku-benefits">
             <li>Full songs across current Caliphornia OS projects</li>
             <li>Lyrics, notes, messages, games, and hidden project layers</li>
-            <li>Early access language we can expand into email reminders later</li>
+            <li>One place to listen, unlock, and support future releases</li>
           </ul>
 
           <button
@@ -295,6 +371,10 @@ export default function AccessWindow({
           </button>
         </div>
 
+        <Link href="/apps/wallet" className="kiiku-wallet-link">
+          Open Wallet Dashboard
+        </Link>
+
         {error ? <p className="access-window-error">{error}</p> : null}
 
         <p className="kiiku-legal">
@@ -306,22 +386,28 @@ export default function AccessWindow({
     </div>
   );
 
+  if (hasKiikuPass) {
+    return (
+      <Link
+        href="/apps/wallet"
+        className={triggerClass}
+        aria-label="Open Kiiku Wallet"
+      >
+        {triggerContent}
+      </Link>
+    );
+  }
+
   return (
     <>
       <button
-  type="button"
-  className={joinClasses(
-    "access-window-trigger",
-    className,
-    triggerClassName
-  )}
-  aria-label={triggerLabel}
-  onClick={() => setIsOpen(true)}
->
-  {children || (
-    <img src="/icons/access.png" alt="" className={triggerImgClassName} />
-  )}
-</button>
+        type="button"
+        className={triggerClass}
+        aria-label={triggerLabel}
+        onClick={() => setIsOpen(true)}
+      >
+        {triggerContent}
+      </button>
 
       {mounted && isOpen ? createPortal(modal, document.body) : null}
     </>
