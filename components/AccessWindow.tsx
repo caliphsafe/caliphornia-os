@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { createPortal } from "react-dom";
 
 type AccessProjectSlug = "fartherhood" | "friends" | "milia" | "music";
 
@@ -17,6 +18,8 @@ const PROJECT_COPY: Record<
   {
     name: string;
     shortName: string;
+    icon: string;
+    accent: string;
     description: string;
     ownLine: string;
     unlocks: string[];
@@ -25,19 +28,23 @@ const PROJECT_COPY: Record<
   fartherhood: {
     name: "FarTHErHOOD",
     shortName: "FarTHErHOOD",
+    icon: "/apps/fartherhood/icon.png",
+    accent: "Warm Notes",
     description:
       "Unlock the full notes, full songs, lyrics, and the complete fatherhood experience.",
     ownLine: "Own the full FarTHErHOOD experience forever.",
     unlocks: [
-      "Full songs from the FarTHErHOOD project",
-      "Full lyrics and transcripts",
-      "Full note/story experience",
-      "Future connected games and project extras",
+      "Full songs from the project",
+      "Lyrics and transcripts",
+      "Full note and story experience",
+      "Connected games and future extras",
     ],
   },
   friends: {
     name: "Fri.ends",
     shortName: "Fri.ends",
+    icon: "/apps/friends/icon.png",
+    accent: "Conversation Pass",
     description:
       "Unlock the full conversation experience, all audio bubbles, final songs, and connected music moments.",
     ownLine: "Own the full Fri.ends experience forever.",
@@ -45,25 +52,29 @@ const PROJECT_COPY: Record<
       "Full conversation threads",
       "All song versions and audio bubbles",
       "Final songs from the project",
-      "Future connected games and project extras",
+      "Connected games and future extras",
     ],
   },
   milia: {
     name: "Milia",
     shortName: "Milia",
+    icon: "/apps/milia/icon.png",
+    accent: "Weather Music",
     description:
       "Unlock the full weather-based music experience, full songs, and project-connected features.",
     ownLine: "Own the full Milia experience forever.",
     unlocks: [
       "Full songs inside Milia",
-      "Full weather/music experience",
+      "Full weather and music experience",
       "Project-connected song access",
-      "Future connected games and project extras",
+      "Connected games and future extras",
     ],
   },
   music: {
     name: "Music",
     shortName: "Music",
+    icon: "/icons/access.png",
+    accent: "Full Library",
     description:
       "Unlock the full listening library, playlists, favorites, and connected platform features.",
     ownLine: "Unlock the full music library experience.",
@@ -84,12 +95,17 @@ export default function AccessWindow({
   triggerLabel,
 }: AccessWindowProps) {
   const [open, setOpen] = useState(false);
+  const [mounted, setMounted] = useState(false);
   const [notice, setNotice] = useState("");
 
   const copy = useMemo(() => {
     const base = PROJECT_COPY[projectSlug] || PROJECT_COPY.music;
     return projectName ? { ...base, name: projectName, shortName: projectName } : base;
   }, [projectSlug, projectName]);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     if (!open) return;
@@ -109,18 +125,172 @@ export default function AccessWindow({
     };
   }, [open]);
 
+  function closeWindow() {
+    setOpen(false);
+    setNotice("");
+  }
+
   function showStripeNotice(plan: "project" | "supporter") {
     if (plan === "project") {
       setNotice(
-        `Next we will connect this button to Stripe so users can own ${copy.shortName} for $4.99.`
+        `Stripe checkout will connect here next: own ${copy.shortName} for $4.99.`
       );
       return;
     }
 
     setNotice(
-      "Next we will connect this button to Stripe so users can subscribe for $3.99/month and unlock all current projects."
+      "Stripe checkout will connect here next: subscribe for $3.99/month and unlock all current projects."
     );
   }
+
+  const modal = open ? (
+    <div className="access-window-overlay" role="presentation">
+      <button
+        type="button"
+        className="access-window-backdrop"
+        aria-label="Close access window"
+        onClick={closeWindow}
+      />
+
+      <section
+        className="access-wallet-sheet"
+        role="dialog"
+        aria-modal="true"
+        aria-label={`Unlock ${copy.name}`}
+      >
+        <div className="access-wallet-handle" />
+
+        <div className="access-wallet-topbar">
+          <button
+            type="button"
+            className="access-wallet-cancel"
+            onClick={closeWindow}
+          >
+            Cancel
+          </button>
+
+          <div className="access-wallet-title">Access Pass</div>
+
+          <button
+            type="button"
+            className="access-wallet-done"
+            onClick={closeWindow}
+            aria-label="Close"
+          >
+            Done
+          </button>
+        </div>
+
+        <div className="access-wallet-card">
+          <div className="access-wallet-card-shine" />
+
+          <div className="access-wallet-card-top">
+            <div className="access-wallet-app-icon">
+              <img src={copy.icon} alt="" aria-hidden="true" />
+            </div>
+
+            <div className="access-wallet-card-copy">
+              <p>{copy.accent}</p>
+              <h2>{copy.name}</h2>
+            </div>
+          </div>
+
+          <div className="access-wallet-card-bottom">
+            <div>
+              <span>Free Preview</span>
+              <strong>Upgrade available</strong>
+            </div>
+
+            <img
+              src="/icons/access.png"
+              alt=""
+              aria-hidden="true"
+              className="access-wallet-mark"
+            />
+          </div>
+        </div>
+
+        <p className="access-wallet-intro">{copy.description}</p>
+
+        <div className="access-wallet-plan-list">
+          <article className="access-wallet-plan is-primary">
+            <div className="access-wallet-plan-head">
+              <div>
+                <p>Own this experience</p>
+                <h3>{copy.shortName}</h3>
+              </div>
+
+              <div className="access-wallet-price">$4.99</div>
+            </div>
+
+            <p className="access-wallet-plan-copy">{copy.ownLine}</p>
+
+            <div className="access-wallet-unlocks">
+              {copy.unlocks.map((item) => (
+                <div key={item} className="access-wallet-unlock-row">
+                  <span>✓</span>
+                  <p>{item}</p>
+                </div>
+              ))}
+            </div>
+
+            <button
+              type="button"
+              className="access-wallet-pay-btn"
+              onClick={() => showStripeNotice("project")}
+            >
+              Own {copy.shortName}
+            </button>
+
+            <div className="access-wallet-mini-note">
+              Subscriber discount later: $2.99 project unlock.
+            </div>
+          </article>
+
+          <article className="access-wallet-plan">
+            <div className="access-wallet-plan-head">
+              <div>
+                <p>Unlock everything</p>
+                <h3>Supporter Pass</h3>
+              </div>
+
+              <div className="access-wallet-price">$3.99/mo</div>
+            </div>
+
+            <p className="access-wallet-plan-copy">
+              Unlock all current projects while subscribed, including Milia,
+              Fri.ends, FarTHErHOOD, Music, playlists, games, and future app experiences.
+            </p>
+
+            <div className="access-wallet-unlocks">
+              <div className="access-wallet-unlock-row">
+                <span>✓</span>
+                <p>All current project experiences</p>
+              </div>
+              <div className="access-wallet-unlock-row">
+                <span>✓</span>
+                <p>Full songs while subscribed</p>
+              </div>
+              <div className="access-wallet-unlock-row">
+                <span>✓</span>
+                <p>Lyrics, conversations, notes, playlists, and games</p>
+              </div>
+            </div>
+
+            <button
+              type="button"
+              className="access-wallet-pay-btn secondary"
+              onClick={() => showStripeNotice("supporter")}
+            >
+              Join Supporter Pass
+            </button>
+          </article>
+        </div>
+
+        {notice ? <p className="access-wallet-notice">{notice}</p> : null}
+      </section>
+    </div>
+  ) : null;
 
   return (
     <>
@@ -149,115 +319,7 @@ export default function AccessWindow({
         )}
       </button>
 
-      {open ? (
-        <div className="access-window-overlay" role="presentation">
-          <button
-            type="button"
-            className="access-window-backdrop"
-            aria-label="Close access window"
-            onClick={() => setOpen(false)}
-          />
-
-          <section
-            className="access-window-panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label={`Unlock ${copy.name}`}
-          >
-            <div className="access-window-handle" />
-
-            <div className="access-window-topline">
-              <div>
-                <p className="access-window-kicker">Access</p>
-                <h2>Unlock {copy.name}</h2>
-              </div>
-
-              <button
-                type="button"
-                className="access-window-close"
-                aria-label="Close"
-                onClick={() => setOpen(false)}
-              >
-                ×
-              </button>
-            </div>
-
-            <p className="access-window-intro">{copy.description}</p>
-
-            <div className="access-window-current">
-              <span className="access-window-current-pill">Free Preview</span>
-              <p>
-                You can open the app, hear 30-second previews, and experience the free full song.
-                Unlock to get the complete project.
-              </p>
-            </div>
-
-            <div className="access-window-plans">
-              <article className="access-plan-card access-plan-featured">
-                <div className="access-plan-head">
-                  <div>
-                    <p className="access-plan-label">Own this experience</p>
-                    <h3>{copy.shortName}</h3>
-                  </div>
-                  <div className="access-plan-price">$4.99</div>
-                </div>
-
-                <p className="access-plan-copy">{copy.ownLine}</p>
-
-                <ul className="access-plan-list">
-                  {copy.unlocks.map((item) => (
-                    <li key={item}>{item}</li>
-                  ))}
-                </ul>
-
-                <button
-                  type="button"
-                  className="access-plan-btn"
-                  onClick={() => showStripeNotice("project")}
-                >
-                  Own {copy.shortName}
-                </button>
-
-                <p className="access-plan-footnote">
-                  Subscriber discount later: $2.99 project unlock.
-                </p>
-              </article>
-
-              <article className="access-plan-card">
-                <div className="access-plan-head">
-                  <div>
-                    <p className="access-plan-label">Unlock everything</p>
-                    <h3>Supporter Pass</h3>
-                  </div>
-                  <div className="access-plan-price">$3.99/mo</div>
-                </div>
-
-                <p className="access-plan-copy">
-                  Unlock all current projects while subscribed, including Milia, Fri.ends,
-                  FarTHErHOOD, Music, playlists, games, and future app experiences.
-                </p>
-
-                <ul className="access-plan-list">
-                  <li>Full access across current projects</li>
-                  <li>Full songs while subscribed</li>
-                  <li>Full lyrics, conversations, notes, and app experiences</li>
-                  <li>Support pushes music toward wider release</li>
-                </ul>
-
-                <button
-                  type="button"
-                  className="access-plan-btn secondary"
-                  onClick={() => showStripeNotice("supporter")}
-                >
-                  Join Supporter Pass
-                </button>
-              </article>
-            </div>
-
-            {notice ? <p className="access-window-notice">{notice}</p> : null}
-          </section>
-        </div>
-      ) : null}
+      {mounted && modal ? createPortal(modal, document.body) : null}
     </>
   );
 }
