@@ -1,6 +1,5 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import Link from "next/link";
 import HomeScreen from "@/components/HomeScreen";
 import { verifySession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -29,17 +28,5 @@ export default async function HomePage() {
     role = data[0].role || "user";
   }
 
-  return (
-    <>
-      <Link
-        href="/apps/wallet"
-        className="home-wallet-access"
-        aria-label="Open Kiiku Wallet"
-      >
-        <img src="/icons/access.png" alt="" />
-      </Link>
-
-      <HomeScreen email={session.email} username={username} role={role} />
-    </>
-  );
+  return <HomeScreen email={session.email} username={username} role={role} />;
 }
