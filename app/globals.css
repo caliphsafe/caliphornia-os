@@ -2730,3 +2730,64 @@ img {
   right: 16px !important;
   z-index: 80 !important;
 }
+
+.account-profile-form {
+  display: grid;
+  gap: 14px;
+}
+
+.account-form-row {
+  display: grid;
+  gap: 7px;
+}
+
+.account-form-row label {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  font-weight: 850;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.account-form-row input {
+  width: 100%;
+  min-height: 50px;
+  border-radius: 18px;
+  padding: 0 14px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(0, 0, 0, 0.24);
+  color: rgba(255, 255, 255, 0.92);
+  font-size: 15px;
+  font-weight: 700;
+  outline: none;
+}
+
+.account-form-row input:disabled {
+  color: rgba(255, 255, 255, 0.5);
+  cursor: not-allowed;
+}
+
+.account-profile-form button {
+  min-height: 50px;
+  border: 0;
+  border-radius: 18px;
+  color: rgba(22, 16, 4, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 230, 161, 1), rgba(232, 176, 66, 1));
+  font-size: 14px;
+  font-weight: 850;
+  letter-spacing: -0.02em;
+  cursor: pointer;
+}
+
+.account-profile-form button:disabled {
+  opacity: 0.62;
+  cursor: wait;
+}
+
+.account-form-message {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  line-height: 1.35;
+}
