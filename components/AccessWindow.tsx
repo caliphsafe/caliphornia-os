@@ -391,17 +391,12 @@ export default function AccessWindow({
               </div>
             </div>
 
-            <div className="kiiku-pass-panel">
-              <div>
-                <p className="kiiku-pass-mode">
-                  {autoRenew ? "Monthly auto-renew" : "30-day access"}
-                </p>
-                <p className="kiiku-pass-small">
-                  {autoRenew
-                    ? "Keep full access active each month until you cancel."
-                    : "Get 30 days of full access with no automatic monthly charge."}
-                </p>
-              </div>
+            <div>
+  <p className="kiiku-pass-mode">Go monthly</p>
+  <p className="kiiku-pass-small">
+    Turn this on to make your Kiiku Pass renew every month.
+  </p>
+</div>
 
               <button
                 type="button"
