@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import type { ReactNode } from "react";
 import { useEffect, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 
@@ -30,11 +31,19 @@ type AccessStatus = {
 type AccessWindowProps = {
   projectSlug?: string;
   projectName?: string;
-  children?: React.ReactNode;
+  children?: ReactNode;
   className?: string;
   triggerClassName?: string;
   triggerImgClassName?: string;
   triggerLabel?: string;
+};
+
+type AppLink = {
+  slug: string;
+  name: string;
+  href: string;
+  icon: string;
+  free?: boolean;
 };
 
 const PROJECT_COPY: Record<string, ProjectCopy> = {
@@ -76,16 +85,25 @@ const PROJECT_COPY: Record<string, ProjectCopy> = {
   },
   music: {
     name: "Music",
-    icon: "/icons/access.png",
+    icon: "/icons/music.png",
     creditCost: 5,
     price: "$4.99",
     unlockLine: "Unlock the full music experience.",
     details:
       "Full listening, playlist access, lyrics, project extras, and bonus music surfaces.",
   },
+  calendar: {
+    name: "Calendar",
+    icon: "/icons/calendar.svg",
+    creditCost: 0,
+    price: "Free",
+    unlockLine: "View the Caliphornia OS release schedule.",
+    details:
+      "Songs, games, videos, merch drops, project updates, and future release windows in one place.",
+  },
 };
 
-const APP_LINKS = [
+const APP_LINKS: AppLink[] = [
   {
     slug: "friends",
     name: "Fri.ends",
@@ -110,6 +128,20 @@ const APP_LINKS = [
     href: "/apps/music",
     icon: "/icons/music.png",
   },
+  {
+    slug: "calendar",
+    name: "Calendar",
+    href: "/apps/calendar",
+    icon: "/icons/calendar.svg",
+    free: true,
+  },
+  {
+    slug: "stats",
+    name: "Stats",
+    href: "/apps/stats",
+    icon: "/icons/stats.png",
+    free: true,
+  },
 ];
 
 const FALLBACK_PROJECT: ProjectCopy = {
@@ -126,16 +158,17 @@ function joinClasses(...classes: Array<string | undefined>) {
 }
 
 function ownsApp({
-  slug,
+  app,
   hasKiikuPass,
   projectAccess,
 }: {
-  slug: string;
+  app: AppLink;
   hasKiikuPass: boolean;
   projectAccess?: string[];
 }) {
+  if (app.free) return true;
   if (hasKiikuPass) return true;
-  return Boolean(projectAccess?.includes(slug));
+  return Boolean(projectAccess?.includes(app.slug));
 }
 
 export default function AccessWindow({
@@ -168,7 +201,10 @@ export default function AccessWindow({
   const hasKiikuPass = Boolean(accessStatus?.hasKiikuPass);
   const hasProjectAccess = Boolean(accessStatus?.hasProjectAccess);
   const projectAccess = accessStatus?.projectAccess || [];
-  const shouldShowAlbumUnlock = !hasProjectAccess && !hasKiikuPass;
+
+  const shouldShowAlbumUnlock =
+    project.creditCost > 0 && !hasProjectAccess && !hasKiikuPass;
+
   const shouldShowOwnedCard = hasProjectAccess && !hasKiikuPass;
   const shouldShowPassPurchase = !hasKiikuPass;
 
@@ -391,12 +427,13 @@ export default function AccessWindow({
               </div>
             </div>
 
-            <div>
-  <p className="kiiku-pass-mode">Go monthly</p>
-  <p className="kiiku-pass-small">
-    Turn this on to make your Kiiku Pass renew every month.
-  </p>
-</div>
+            <div className="kiiku-pass-panel">
+              <div>
+                <p className="kiiku-pass-mode">Go monthly</p>
+                <p className="kiiku-pass-small">
+                  Turn this on to make your Kiiku Pass renew every month.
+                </p>
+              </div>
 
               <button
                 type="button"
@@ -446,7 +483,7 @@ export default function AccessWindow({
           <div className="kiiku-app-links-grid">
             {APP_LINKS.map((app) => {
               const isUnlocked = ownsApp({
-                slug: app.slug,
+                app,
                 hasKiikuPass,
                 projectAccess,
               });
