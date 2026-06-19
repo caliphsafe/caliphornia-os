@@ -556,3 +556,104 @@ button.apple-cal-day:disabled {
     padding: 0 20px;
   }
 }
+
+/* --- Calendar release sheet refinements --- */
+
+.apple-cal-legend {
+  display: flex;
+  gap: 8px;
+  overflow-x: auto;
+  padding: 0 20px 6px;
+  margin-top: -4px;
+  scrollbar-width: none;
+}
+
+.apple-cal-legend::-webkit-scrollbar {
+  display: none;
+}
+
+.apple-cal-legend span {
+  flex: 0 0 auto;
+  min-height: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 10px;
+  border-radius: 999px;
+  color: rgba(255, 255, 255, 0.58);
+  background: rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.apple-cal-legend .apple-cal-marker {
+  position: static;
+  width: 7px;
+  height: 7px;
+  transform: none;
+}
+
+.apple-cal-status-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 8px;
+}
+
+.apple-cal-status-pill,
+.apple-cal-access-pill {
+  min-height: 25px;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 9px;
+  border-radius: 999px;
+  font-size: 10.5px;
+  font-weight: 900;
+  letter-spacing: 0.01em;
+}
+
+.apple-cal-status-pill.is-available {
+  color: rgba(18, 28, 16, 0.96);
+  background: rgba(102, 220, 132, 0.92);
+}
+
+.apple-cal-status-pill.is-coming {
+  color: rgba(255, 232, 173, 0.95);
+  background: rgba(255, 214, 119, 0.12);
+  border: 1px solid rgba(255, 214, 119, 0.15);
+}
+
+.apple-cal-access-pill.is-free {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.apple-cal-access-pill.is-included {
+  color: rgba(18, 28, 16, 0.96);
+  background: rgba(102, 220, 132, 0.88);
+}
+
+.apple-cal-access-pill.is-locked {
+  color: rgba(255, 232, 173, 0.95);
+  background: rgba(255, 214, 119, 0.12);
+  border: 1px solid rgba(255, 214, 119, 0.15);
+}
+
+.apple-cal-sheet-access-copy {
+  margin: 9px 0 0;
+  color: rgba(255, 214, 119, 0.78);
+  font-size: 12.5px;
+  line-height: 1.35;
+  font-weight: 700;
+}
+
+.apple-cal-day.has-events:not(:disabled):active span {
+  transform: scale(0.92);
+}
+
+.apple-cal-day span {
+  transition:
+    transform 160ms ease,
+    background 160ms ease;
+}
