@@ -371,8 +371,8 @@ export default function AccessWindow({
           </button>
         </div>
 
-        <Link href="/apps/wallet" className="kiiku-wallet-link">
-          Open Wallet Dashboard
+        <Link href="/apps/account" className="kiiku-wallet-link">
+          Open Account
         </Link>
 
         {error ? <p className="access-window-error">{error}</p> : null}
@@ -389,9 +389,9 @@ export default function AccessWindow({
   if (hasKiikuPass) {
     return (
       <Link
-        href="/apps/wallet"
+        href="/apps/account"
         className={triggerClass}
-        aria-label="Open Kiiku Wallet"
+        aria-label="Open Account"
       >
         {triggerContent}
       </Link>
