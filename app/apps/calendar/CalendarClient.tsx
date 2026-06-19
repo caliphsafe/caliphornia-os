@@ -1,7 +1,7 @@
 "use client";
 
 import Link from "next/link";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import AccessWindow from "@/components/AccessWindow";
 
 export type CalendarEvent = {
@@ -24,6 +24,18 @@ type CalendarCell = {
   day: number | null;
 };
 
+type AccessStatus = {
+  ok: boolean;
+  signedIn: boolean;
+  email?: string;
+  hasKiikuPass: boolean;
+  hasProjectAccess: boolean;
+  hasAllAccess?: boolean;
+  hasMusicFull?: boolean;
+  isFounder?: boolean;
+  projectAccess?: string[];
+};
+
 const PROJECT_NAMES: Record<string, string> = {
   friends: "Fri.ends",
   fartherhood: "FarTHErHOOD",
@@ -44,6 +56,15 @@ const TYPE_LABELS: Record<string, string> = {
   access: "Access",
   release: "Release",
 };
+
+const LEGEND_ITEMS = [
+  { type: "song", label: "Song" },
+  { type: "album", label: "Album" },
+  { type: "game", label: "Game" },
+  { type: "merch", label: "Merch" },
+  { type: "video", label: "Video" },
+  { type: "access", label: "Access" },
+];
 
 function pad(value: number) {
   return String(value).padStart(2, "0");
@@ -92,12 +113,6 @@ function typeLabel(type?: string | null) {
   return TYPE_LABELS[type] || type;
 }
 
-function accessLabel(level?: string | null) {
-  if (level === "kiiku_pass") return "Kiiku Pass";
-  if (level === "album") return "Album Unlock";
-  return "Free";
-}
-
 function markerClass(type?: string | null) {
   const clean = String(type || "release")
     .toLowerCase()
@@ -136,11 +151,101 @@ function buildMonthCells(monthDate: Date): CalendarCell[] {
   return cells;
 }
 
+function isAvailableNow(event: CalendarEvent) {
+  return new Date(event.starts_at).getTime() <= Date.now();
+}
+
+function getReleaseStatus(event: CalendarEvent) {
+  return isAvailableNow(event) ? "Available Now" : "Coming Soon";
+}
+
+function getAccessInfo(event: CalendarEvent, accessStatus: AccessStatus | null) {
+  const level = String(event.access_level || "free").toLowerCase();
+  const projectSlug = String(event.project_slug || "").toLowerCase();
+  const hasKiikuPass = Boolean(accessStatus?.hasKiikuPass);
+  const ownedProjects = accessStatus?.projectAccess || [];
+  const ownsProject = Boolean(projectSlug && ownedProjects.includes(projectSlug));
+
+  if (level === "free") {
+    return {
+      label: "Free",
+      tone: "free",
+      copy: "This drop is open to all listeners.",
+    };
+  }
+
+  if (level === "kiiku_pass") {
+    if (hasKiikuPass) {
+      return {
+        label: "Included with Kiiku Pass",
+        tone: "included",
+        copy: "Your Kiiku Pass includes this release.",
+      };
+    }
+
+    return {
+      label: "Kiiku Pass",
+      tone: "locked",
+      copy: "Kiiku Pass unlocks this release across Caliphornia OS.",
+    };
+  }
+
+  if (level === "album") {
+    if (hasKiikuPass) {
+      return {
+        label: "Included with Kiiku Pass",
+        tone: "included",
+        copy: "Your Kiiku Pass includes the full album experience.",
+      };
+    }
+
+    if (ownsProject) {
+      return {
+        label: "Album Unlocked",
+        tone: "included",
+        copy: `Your ${projectName(projectSlug)} unlock includes this release.`,
+      };
+    }
+
+    return {
+      label: "Album Unlock",
+      tone: "locked",
+      copy: `Unlock ${projectName(projectSlug)} to access the full release.`,
+    };
+  }
+
+  return {
+    label: "Caliphornia OS",
+    tone: "free",
+    copy: "This release is part of the Caliphornia OS schedule.",
+  };
+}
+
+function getEventAction(event: CalendarEvent, accessStatus: AccessStatus | null) {
+  const available = isAvailableNow(event);
+  const accessInfo = getAccessInfo(event, accessStatus);
+
+  if (!event.href) {
+    return null;
+  }
+
+  if (!available) {
+    return "View App";
+  }
+
+  if (accessInfo.tone === "locked") {
+    return "Preview";
+  }
+
+  return "Open Now";
+}
+
 export default function CalendarClient({ events }: { events: CalendarEvent[] }) {
   const now = new Date();
   const todayKey = getDateKey(now);
 
   const [selectedDateKey, setSelectedDateKey] = useState<string | null>(null);
+  const [accessStatus, setAccessStatus] = useState<AccessStatus | null>(null);
 
   const monthSections = useMemo(
     () => [
@@ -165,6 +270,34 @@ export default function CalendarClient({ events }: { events: CalendarEvent[] }) 
     selectedEvents[0]?.starts_at && selectedDateKey
       ? formatFullDate(selectedEvents[0].starts_at)
       : "";
+
+  useEffect(() => {
+    let isActive = true;
+
+    async function loadAccessStatus() {
+      try {
+        const res = await fetch("/api/access/me?projectSlug=calendar", {
+          cache: "no-store",
+        });
+
+        const data = await res.json();
+
+        if (isActive) {
+          setAccessStatus(data);
+        }
+      } catch {
+        if (isActive) {
+          setAccessStatus(null);
+        }
+      }
+    }
+
+    loadAccessStatus();
+
+    return () => {
+      isActive = false;
+    };
+  }, []);
 
   function openToday() {
     if (eventsByDate[todayKey]?.length) {
@@ -204,6 +337,15 @@ export default function CalendarClient({ events }: { events: CalendarEvent[] }) 
             </button>
           </div>
         </header>
+
+        <section className="apple-cal-legend" aria-label="Release type legend">
+          {LEGEND_ITEMS.map((item) => (
+            <span key={item.type}>
+              <i className={`apple-cal-marker ${markerClass(item.type)}`} />
+              {item.label}
+            </span>
+          ))}
+        </section>
 
         <section className="apple-cal-month-scroll">
           {monthSections.map((monthDate, monthIndex) => {
@@ -268,7 +410,7 @@ export default function CalendarClient({ events }: { events: CalendarEvent[] }) 
                         }}
                         aria-label={
                           hasEvents
-                            ? `Open events for ${formatMonthName(cell.date as Date)} ${cell.day}`
+                            ? `Open releases for ${formatMonthName(cell.date as Date)} ${cell.day}`
                             : `${formatMonthName(cell.date as Date)} ${cell.day}`
                         }
                       >
@@ -317,34 +459,60 @@ export default function CalendarClient({ events }: { events: CalendarEvent[] }) 
             </div>
 
             <div className="apple-cal-sheet-list">
-              {selectedEvents.map((event) => (
-                <article className="apple-cal-sheet-event" key={event.id}>
-                  <div className="apple-cal-sheet-event-top">
-                    <div>
-                      <p>{typeLabel(event.event_type)}</p>
-                      <h4>{event.title}</h4>
+              {selectedEvents.map((event) => {
+                const releaseStatus = getReleaseStatus(event);
+                const accessInfo = getAccessInfo(event, accessStatus);
+                const actionLabel = getEventAction(event, accessStatus);
+
+                return (
+                  <article className="apple-cal-sheet-event" key={event.id}>
+                    <div className="apple-cal-sheet-event-top">
+                      <div>
+                        <div className="apple-cal-status-line">
+                          <span
+                            className={`apple-cal-status-pill ${
+                              releaseStatus === "Available Now"
+                                ? "is-available"
+                                : "is-coming"
+                            }`}
+                          >
+                            {releaseStatus}
+                          </span>
+
+                          <span className={`apple-cal-access-pill is-${accessInfo.tone}`}>
+                            {accessInfo.label}
+                          </span>
+                        </div>
+
+                        <p>{typeLabel(event.event_type)}</p>
+                        <h4>{event.title}</h4>
+                      </div>
+
+                      <i className={`apple-cal-sheet-dot ${markerClass(event.event_type)}`} />
                     </div>
 
-                    <i className={`apple-cal-sheet-dot ${markerClass(event.event_type)}`} />
-                  </div>
+                    <p className="apple-cal-sheet-desc">
+                      {event.description || "A scheduled Caliphornia OS drop."}
+                    </p>
 
-                  <p className="apple-cal-sheet-desc">
-                    {event.description || "A scheduled Caliphornia OS drop."}
-                  </p>
+                    <p className="apple-cal-sheet-access-copy">
+                      {accessInfo.copy}
+                    </p>
 
-                  <div className="apple-cal-sheet-meta">
-                    <span>{projectName(event.project_slug)}</span>
-                    <span>{accessLabel(event.access_level)}</span>
-                    <span>{formatShortDate(event.starts_at)}</span>
-                  </div>
+                    <div className="apple-cal-sheet-meta">
+                      <span>{projectName(event.project_slug)}</span>
+                      <span>{formatShortDate(event.starts_at)}</span>
+                      <span>{typeLabel(event.event_type)}</span>
+                    </div>
 
-                  {event.href ? (
-                    <Link href={event.href} className="apple-cal-sheet-link">
-                      Open Release
-                    </Link>
-                  ) : null}
-                </article>
-              ))}
+                    {event.href && actionLabel ? (
+                      <Link href={event.href} className="apple-cal-sheet-link">
+                        {actionLabel}
+                      </Link>
+                    ) : null}
+                  </article>
+                );
+              })}
             </div>
           </section>
         ) : null}
