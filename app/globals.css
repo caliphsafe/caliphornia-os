@@ -2791,3 +2791,12 @@ img {
   font-size: 13px;
   line-height: 1.35;
 }
+
+.home-username-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.home-username-link:active {
+  opacity: 0.72;
+}
