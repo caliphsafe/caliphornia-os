@@ -10,30 +10,36 @@ export const appRegistry: AppItem[] = [
     id: "fartherhood",
     name: "FarTHErHOOD",
     icon: "/icons/fatherhood.png",
-    href: "/apps/fartherhood"
+    href: "/apps/fartherhood",
   },
   {
     id: "friends",
     name: "fri.ends",
     icon: "/icons/friends.png",
-    href: "/apps/friends"
+    href: "/apps/friends",
   },
   {
-  id: "milia",
-  name: "Milia",
-  href: "/apps/milia",
-  icon: "/icons/milia.png"
-},
+    id: "milia",
+    name: "Milia",
+    href: "/apps/milia",
+    icon: "/icons/milia.png",
+  },
   {
     id: "music",
     name: "Music",
     icon: "/icons/music.png",
-    href: "/apps/music"
+    href: "/apps/music",
   },
   {
-  id: "stats",
-  name: "Stats",
-  href: "/apps/stats",
-  icon: "/icons/stats.png",
-}
+    id: "calendar",
+    name: "Calendar",
+    icon: "/icons/calendar.svg",
+    href: "/apps/calendar",
+  },
+  {
+    id: "stats",
+    name: "Stats",
+    href: "/apps/stats",
+    icon: "/icons/stats.png",
+  },
 ];
