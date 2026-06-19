@@ -20,12 +20,19 @@ type CalendarEvent = {
   is_published: boolean;
 };
 
+type CalendarCell = {
+  key: string;
+  date: Date | null;
+  day: number | null;
+};
+
 const PROJECT_NAMES: Record<string, string> = {
   friends: "Fri.ends",
   fartherhood: "FarTHErHOOD",
   fatherhood: "FarTHErHOOD",
   milia: "Milia",
   music: "Music",
+  calendar: "Calendar",
 };
 
 const TYPE_LABELS: Record<string, string> = {
@@ -40,33 +47,39 @@ const TYPE_LABELS: Record<string, string> = {
   release: "Release",
 };
 
+function pad(value: number) {
+  return String(value).padStart(2, "0");
+}
+
 function getDateKey(value: string | Date) {
   const date = typeof value === "string" ? new Date(value) : value;
-  return date.toISOString().slice(0, 10);
+  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
-function getDayNumber(value: string) {
-  return new Date(value).getDate();
+function formatMonthName(value: Date) {
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+  }).format(value);
 }
 
-function formatMonth(value: Date) {
+function formatMonthYear(value: Date) {
   return new Intl.DateTimeFormat("en-US", {
     month: "long",
     year: "numeric",
   }).format(value);
 }
 
-function formatFullDate(value: string) {
+function formatShortDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
+    month: "short",
     day: "numeric",
   }).format(new Date(value));
 }
 
-function formatShortDate(value: string) {
+function formatFullDate(value: string) {
   return new Intl.DateTimeFormat("en-US", {
-    month: "short",
+    weekday: "long",
+    month: "long",
     day: "numeric",
   }).format(new Date(value));
 }
@@ -87,22 +100,39 @@ function accessLabel(level?: string | null) {
   return "Free";
 }
 
-function buildMonthDays(monthDate: Date) {
+function markerClass(type?: string | null) {
+  const clean = String(type || "release")
+    .toLowerCase()
+    .replace(/[^a-z0-9-]/g, "");
+
+  return `is-${clean || "release"}`;
+}
+
+function buildMonthCells(monthDate: Date): CalendarCell[] {
   const year = monthDate.getFullYear();
   const month = monthDate.getMonth();
   const firstDay = new Date(year, month, 1);
   const firstWeekday = firstDay.getDay();
   const daysInMonth = new Date(year, month + 1, 0).getDate();
 
-  const cells: Array<{ day: number | null; key: string }> = [];
+  const cells: CalendarCell[] = [];
 
   for (let i = 0; i < firstWeekday; i += 1) {
-    cells.push({ day: null, key: `empty-${i}` });
+    cells.push({
+      key: `empty-${year}-${month}-${i}`,
+      date: null,
+      day: null,
+    });
   }
 
   for (let day = 1; day <= daysInMonth; day += 1) {
     const date = new Date(year, month, day);
-    cells.push({ day, key: getDateKey(date) });
+
+    cells.push({
+      key: getDateKey(date),
+      date,
+      day,
+    });
   }
 
   return cells;
@@ -120,6 +150,11 @@ export default async function CalendarAppPage() {
   const now = new Date();
   const todayKey = getDateKey(now);
 
+  const monthSections = [
+    new Date(now.getFullYear(), now.getMonth(), 1),
+    new Date(now.getFullYear(), now.getMonth() + 1, 1),
+  ];
+
   const eventsRes = await supabaseAdmin
     .from("calendar_events")
     .select(
@@ -128,151 +163,151 @@ export default async function CalendarAppPage() {
     .eq("is_published", true)
     .gte("starts_at", new Date(now.getTime() - 24 * 60 * 60 * 1000).toISOString())
     .order("starts_at", { ascending: true })
-    .limit(80);
+    .limit(120);
 
   const events = (eventsRes.data || []) as CalendarEvent[];
-  const featuredEvent = events.find((event) => event.is_featured) || events[0] || null;
-  const upcomingEvents = events.slice(0, 12);
-  const monthDays = buildMonthDays(now);
+  const upcomingEvents = events.slice(0, 10);
 
-  const eventCountByDay = events.reduce<Record<string, number>>((acc, event) => {
+  const eventsByDate = events.reduce<Record<string, CalendarEvent[]>>((acc, event) => {
     const key = getDateKey(event.starts_at);
-    acc[key] = (acc[key] || 0) + 1;
+    acc[key] = acc[key] || [];
+    acc[key].push(event);
     return acc;
   }, {});
 
   return (
-    <main className="cal-app-shell">
-      <section className="cal-screen">
-        <header className="cal-topbar">
-          <Link href="/home" className="cal-back-link">
-            Home
+    <main className="apple-cal-app">
+      <section className="apple-cal-screen">
+        <header className="apple-cal-topbar">
+          <Link href="/home" className="apple-cal-year-pill">
+            <span>‹</span>
+            {now.getFullYear()}
           </Link>
 
-          <div className="cal-title-block">
-            <p>Caliphornia OS</p>
-            <h1>Calendar</h1>
-          </div>
+          <div className="apple-cal-control-pill">
+            <AccessWindow
+              projectSlug="calendar"
+              projectName="Calendar"
+              triggerClassName="apple-cal-icon-button apple-cal-access-button"
+              triggerImgClassName="apple-cal-access-icon"
+            />
 
-          <AccessWindow
-            projectSlug="calendar"
-            projectName="Calendar"
-            triggerClassName="cal-access-button"
-            triggerImgClassName="cal-access-icon"
-          />
+            <button type="button" className="apple-cal-icon-button" aria-label="Search">
+              <span className="apple-cal-search-symbol">⌕</span>
+            </button>
+
+            <button type="button" className="apple-cal-icon-button apple-cal-plus" aria-label="Add">
+              +
+            </button>
+          </div>
         </header>
 
-        <section className="cal-hero">
-          <div className="cal-date-card">
-            <span>
-              {new Intl.DateTimeFormat("en-US", { month: "short" }).format(now)}
-            </span>
-            <strong>{now.getDate()}</strong>
-          </div>
+        <section className="apple-cal-month-scroll">
+          {monthSections.map((monthDate, monthIndex) => {
+            const cells = buildMonthCells(monthDate);
+            const isCurrentMonth = monthIndex === 0;
 
-          <div className="cal-hero-copy">
-            <p className="cal-kicker">Release map</p>
-            <h2>What’s coming next</h2>
-            <p>
-              Track songs, album experiences, games, videos, merch drops, and
-              Caliphornia OS updates in one place.
-            </p>
-          </div>
-        </section>
+            return (
+              <section
+                className={`apple-cal-month ${isCurrentMonth ? "is-current-month" : "is-next-month"}`}
+                key={formatMonthYear(monthDate)}
+              >
+                {isCurrentMonth ? (
+                  <h1>{formatMonthName(monthDate)}</h1>
+                ) : (
+                  <h2>{formatMonthName(monthDate).slice(0, 3)}</h2>
+                )}
 
-        {featuredEvent ? (
-          <section className="cal-featured-card">
-            <div>
-              <p className="cal-kicker">Featured drop</p>
-              <h3>{featuredEvent.title}</h3>
-              <p>{featuredEvent.description || "A new Caliphornia OS release is on the way."}</p>
+                {isCurrentMonth ? (
+                  <div className="apple-cal-weekdays">
+                    <span>S</span>
+                    <span>M</span>
+                    <span>T</span>
+                    <span>W</span>
+                    <span>T</span>
+                    <span>F</span>
+                    <span>S</span>
+                  </div>
+                ) : null}
 
-              <div className="cal-meta-row">
-                <span>{formatFullDate(featuredEvent.starts_at)}</span>
-                <span>{typeLabel(featuredEvent.event_type)}</span>
-                <span>{accessLabel(featuredEvent.access_level)}</span>
-              </div>
-            </div>
+                <div className="apple-cal-grid">
+                  {cells.map((cell) => {
+                    const dayEvents = cell.day ? eventsByDate[cell.key] || [] : [];
+                    const isToday = cell.key === todayKey;
+                    const isWeekend =
+                      cell.date?.getDay() === 0 || cell.date?.getDay() === 6;
 
-            {featuredEvent.href ? (
-              <Link href={featuredEvent.href} className="cal-open-button">
-                Open
-              </Link>
-            ) : null}
-          </section>
-        ) : null}
+                    return (
+                      <div
+                        key={cell.key}
+                        className={[
+                          "apple-cal-day",
+                          isToday ? "is-today" : "",
+                          isWeekend ? "is-weekend" : "",
+                          dayEvents.length ? "has-events" : "",
+                        ]
+                          .filter(Boolean)
+                          .join(" ")}
+                      >
+                        {cell.day ? <span>{cell.day}</span> : null}
 
-        <section className="cal-month-card">
-          <div className="cal-section-head">
-            <div>
-              <p className="cal-kicker">Month view</p>
-              <h3>{formatMonth(now)}</h3>
-            </div>
-          </div>
-
-          <div className="cal-weekdays">
-            <span>S</span>
-            <span>M</span>
-            <span>T</span>
-            <span>W</span>
-            <span>T</span>
-            <span>F</span>
-            <span>S</span>
-          </div>
-
-          <div className="cal-grid">
-            {monthDays.map((cell) => {
-              const isToday = cell.key === todayKey;
-              const hasEvents = cell.day ? Boolean(eventCountByDay[cell.key]) : false;
-
-              return (
-                <div
-                  key={cell.key}
-                  className={`cal-day ${isToday ? "is-today" : ""} ${
-                    hasEvents ? "has-event" : ""
-                  }`}
-                >
-                  {cell.day ? <span>{cell.day}</span> : null}
-                  {hasEvents ? <i /> : null}
+                        {dayEvents.length ? (
+                          <div
+                            className={`apple-cal-markers ${
+                              dayEvents.length > 1 ? "has-multiple" : ""
+                            }`}
+                          >
+                            {dayEvents.slice(0, 3).map((event) => (
+                              <i
+                                key={event.id}
+                                className={`apple-cal-marker ${markerClass(event.event_type)}`}
+                              />
+                            ))}
+                          </div>
+                        ) : null}
+                      </div>
+                    );
+                  })}
                 </div>
-              );
-            })}
-          </div>
+              </section>
+            );
+          })}
         </section>
 
-        <section className="cal-events-card">
-          <div className="cal-section-head">
+        <section className="apple-cal-agenda">
+          <div className="apple-cal-agenda-head">
             <div>
-              <p className="cal-kicker">Upcoming</p>
-              <h3>Release schedule</h3>
+              <p>Upcoming</p>
+              <h3>Release Schedule</h3>
             </div>
           </div>
 
           {upcomingEvents.length ? (
-            <div className="cal-event-list">
+            <div className="apple-cal-agenda-list">
               {upcomingEvents.map((event) => (
-                <article key={event.id} className="cal-event-row">
-                  <div className="cal-event-date">
-                    <strong>{getDayNumber(event.starts_at)}</strong>
+                <article className="apple-cal-agenda-row" key={event.id}>
+                  <div className="apple-cal-agenda-date">
+                    <strong>{new Date(event.starts_at).getDate()}</strong>
                     <span>{formatShortDate(event.starts_at).split(" ")[0]}</span>
                   </div>
 
-                  <div className="cal-event-main">
-                    <div className="cal-event-title-row">
+                  <div className="apple-cal-agenda-copy">
+                    <div className="apple-cal-agenda-title">
                       <h4>{event.title}</h4>
                       <span>{typeLabel(event.event_type)}</span>
                     </div>
 
                     <p>{event.description || "A scheduled Caliphornia OS drop."}</p>
 
-                    <div className="cal-event-tags">
+                    <div className="apple-cal-agenda-meta">
+                      <small>{formatFullDate(event.starts_at)}</small>
                       <small>{projectName(event.project_slug)}</small>
                       <small>{accessLabel(event.access_level)}</small>
                     </div>
                   </div>
 
                   {event.href ? (
-                    <Link href={event.href} className="cal-event-link">
+                    <Link href={event.href} className="apple-cal-open-link">
                       Open
                     </Link>
                   ) : null}
@@ -280,15 +315,24 @@ export default async function CalendarAppPage() {
               ))}
             </div>
           ) : (
-            <div className="cal-empty-state">
+            <div className="apple-cal-empty">
               <h4>No upcoming drops yet</h4>
-              <p>
-                Add release dates in Supabase and they will appear here
-                automatically.
-              </p>
+              <p>Add release dates in Supabase and they will appear here automatically.</p>
             </div>
           )}
         </section>
+
+        <div className="apple-cal-floating-actions">
+          <Link href="/apps/calendar" className="apple-cal-today-button">
+            Today
+          </Link>
+
+          <div className="apple-cal-bottom-pill">
+            <span>!</span>
+            <span className="apple-cal-inbox-icon">▱</span>
+            <strong>{upcomingEvents.length}</strong>
+          </div>
+        </div>
       </section>
     </main>
   );
