@@ -160,14 +160,26 @@
 }
 
 .apple-cal-day {
+  appearance: none;
   position: relative;
   height: 92px;
   display: flex;
   justify-content: center;
   align-items: flex-start;
-  padding-top: 20px;
+  padding: 20px 0 0;
   color: rgba(255, 255, 255, 0.96);
+  background: transparent;
+  border: 0;
   border-bottom: 1px solid rgba(255, 255, 255, 0.17);
+  font: inherit;
+}
+
+button.apple-cal-day {
+  cursor: pointer;
+}
+
+button.apple-cal-day:disabled {
+  cursor: default;
 }
 
 .apple-cal-day span {
@@ -189,6 +201,10 @@
 .apple-cal-day.is-today span {
   color: white;
   background: #ff453a;
+}
+
+.apple-cal-day.is-selected:not(.is-today) span {
+  background: rgba(255, 255, 255, 0.16);
 }
 
 .apple-cal-markers {
@@ -214,56 +230,85 @@
   width: 14px;
 }
 
-.apple-cal-marker.is-song {
+.apple-cal-marker.is-song,
+.apple-cal-sheet-dot.is-song {
   background: #6aa2a8;
 }
 
-.apple-cal-marker.is-album {
+.apple-cal-marker.is-album,
+.apple-cal-sheet-dot.is-album {
   background: #139d66;
 }
 
-.apple-cal-marker.is-game {
+.apple-cal-marker.is-game,
+.apple-cal-sheet-dot.is-game {
   background: #2f9bd3;
 }
 
-.apple-cal-marker.is-merch {
+.apple-cal-marker.is-merch,
+.apple-cal-sheet-dot.is-merch {
   background: #b56a24;
 }
 
-.apple-cal-marker.is-video {
+.apple-cal-marker.is-video,
+.apple-cal-sheet-dot.is-video {
   background: #ff453a;
 }
 
-.apple-cal-marker.is-access {
+.apple-cal-marker.is-access,
+.apple-cal-sheet-dot.is-access {
   background: #b56a24;
 }
 
 .apple-cal-marker.is-release,
 .apple-cal-marker.is-app,
-.apple-cal-marker.is-live {
+.apple-cal-marker.is-live,
+.apple-cal-sheet-dot.is-release,
+.apple-cal-sheet-dot.is-app,
+.apple-cal-sheet-dot.is-live {
   background: #6aa2a8;
 }
 
-.apple-cal-agenda {
-  margin: 28px 14px 0;
-  padding: 16px;
+.apple-cal-event-sheet {
+  position: fixed;
+  left: 50%;
+  bottom: calc(88px + env(safe-area-inset-bottom, 0px));
+  z-index: 34;
+  width: min(470px, calc(100vw - 22px));
+  max-height: min(58dvh, 520px);
+  overflow: auto;
+  padding: 10px 14px 14px;
   border-radius: 30px;
+  color: rgba(255, 255, 255, 0.94);
   background:
-    linear-gradient(180deg, rgba(28, 28, 30, 0.94), rgba(15, 15, 16, 0.96));
-  border: 1px solid rgba(255, 255, 255, 0.11);
+    linear-gradient(180deg, rgba(38, 38, 40, 0.96), rgba(15, 15, 16, 0.98));
+  border: 1px solid rgba(255, 255, 255, 0.13);
   box-shadow:
-    0 26px 70px rgba(0, 0, 0, 0.5),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+    0 28px 80px rgba(0, 0, 0, 0.62),
+    inset 0 1px 0 rgba(255, 255, 255, 0.11);
+  backdrop-filter: blur(22px);
+  -webkit-backdrop-filter: blur(22px);
+  transform: translateX(-50%);
 }
 
-.apple-cal-agenda-head {
+.apple-cal-sheet-handle {
+  width: 44px;
+  height: 5px;
+  margin: 0 auto 12px;
+  border-radius: 999px;
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.apple-cal-sheet-head {
   display: flex;
-  align-items: flex-end;
+  align-items: flex-start;
   justify-content: space-between;
-  margin-bottom: 14px;
+  gap: 14px;
+  margin-bottom: 12px;
 }
 
-.apple-cal-agenda-head p {
+.apple-cal-sheet-head p,
+.apple-cal-sheet-event-top p {
   margin: 0 0 5px;
   color: rgba(255, 214, 119, 0.9);
   font-size: 11px;
@@ -273,145 +318,99 @@
   text-transform: uppercase;
 }
 
-.apple-cal-agenda-head h3 {
+.apple-cal-sheet-head h3 {
   margin: 0;
-  color: white;
-  font-size: 24px;
+  font-size: 23px;
   line-height: 1;
-  letter-spacing: -0.055em;
+  letter-spacing: -0.05em;
 }
 
-.apple-cal-agenda-list {
+.apple-cal-sheet-head button {
+  width: 34px;
+  height: 34px;
+  border-radius: 999px;
+  border: 0;
+  background: rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.82);
+  font-size: 24px;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.apple-cal-sheet-list {
   display: grid;
   gap: 10px;
 }
 
-.apple-cal-agenda-row {
-  display: grid;
-  grid-template-columns: 48px 1fr auto;
-  gap: 12px;
-  align-items: center;
-  padding: 12px;
+.apple-cal-sheet-event {
+  padding: 14px;
   border-radius: 22px;
   background: rgba(0, 0, 0, 0.24);
   border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
-.apple-cal-agenda-date {
-  width: 48px;
-  height: 56px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  border-radius: 17px;
-  background: rgba(255, 255, 255, 0.08);
-}
-
-.apple-cal-agenda-date strong {
-  font-size: 25px;
-  line-height: 1;
-  letter-spacing: -0.06em;
-}
-
-.apple-cal-agenda-date span {
-  margin-top: 3px;
-  color: rgba(255, 255, 255, 0.52);
-  font-size: 10px;
-  font-weight: 900;
-  text-transform: uppercase;
-}
-
-.apple-cal-agenda-copy {
-  min-width: 0;
-}
-
-.apple-cal-agenda-title {
+.apple-cal-sheet-event-top {
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
-  gap: 8px;
+  gap: 14px;
 }
 
-.apple-cal-agenda-title h4 {
+.apple-cal-sheet-event h4 {
   margin: 0;
-  min-width: 0;
-  color: rgba(255, 255, 255, 0.96);
-  font-size: 16px;
-  line-height: 1.12;
-  letter-spacing: -0.035em;
+  font-size: 19px;
+  line-height: 1.08;
+  letter-spacing: -0.04em;
 }
 
-.apple-cal-agenda-title span {
+.apple-cal-sheet-dot {
   flex: 0 0 auto;
-  padding: 5px 7px;
+  width: 12px;
+  height: 12px;
+  margin-top: 4px;
   border-radius: 999px;
-  color: rgba(255, 214, 119, 0.9);
-  background: rgba(255, 214, 119, 0.1);
-  border: 1px solid rgba(255, 214, 119, 0.12);
-  font-size: 10px;
-  font-weight: 900;
+  background: #6aa2a8;
 }
 
-.apple-cal-agenda-copy p {
-  margin: 6px 0 0;
-  color: rgba(255, 255, 255, 0.56);
-  font-size: 12.5px;
-  line-height: 1.32;
+.apple-cal-sheet-desc {
+  margin: 9px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  line-height: 1.38;
 }
 
-.apple-cal-agenda-meta {
+.apple-cal-sheet-meta {
   display: flex;
   flex-wrap: wrap;
-  gap: 6px;
-  margin-top: 9px;
+  gap: 7px;
+  margin-top: 12px;
 }
 
-.apple-cal-agenda-meta small {
-  min-height: 24px;
+.apple-cal-sheet-meta span {
+  min-height: 26px;
   display: inline-flex;
   align-items: center;
-  padding: 0 8px;
+  padding: 0 9px;
   border-radius: 999px;
-  color: rgba(255, 255, 255, 0.62);
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 10.5px;
+  color: rgba(255, 255, 255, 0.68);
+  background: rgba(255, 255, 255, 0.07);
+  font-size: 11px;
   font-weight: 800;
 }
 
-.apple-cal-open-link {
-  min-height: 34px;
-  display: inline-flex;
+.apple-cal-sheet-link {
+  min-height: 42px;
+  margin-top: 12px;
+  display: flex;
   align-items: center;
   justify-content: center;
-  padding: 0 11px;
-  border-radius: 999px;
+  border-radius: 16px;
   text-decoration: none;
   color: rgba(22, 16, 4, 0.96);
   background:
     linear-gradient(180deg, rgba(255, 230, 161, 1), rgba(232, 176, 66, 1));
-  font-size: 12px;
-  font-weight: 900;
-}
-
-.apple-cal-empty {
-  padding: 16px;
-  border-radius: 22px;
-  background: rgba(0, 0, 0, 0.24);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.apple-cal-empty h4 {
-  margin: 0 0 6px;
-  color: white;
-  font-size: 18px;
-  letter-spacing: -0.035em;
-}
-
-.apple-cal-empty p {
-  margin: 0;
-  color: rgba(255, 255, 255, 0.56);
   font-size: 13px;
-  line-height: 1.35;
+  font-weight: 900;
 }
 
 .apple-cal-floating-actions {
@@ -452,6 +451,7 @@
   font-size: 23px;
   font-weight: 850;
   letter-spacing: -0.04em;
+  cursor: pointer;
 }
 
 .apple-cal-bottom-pill {
@@ -534,12 +534,10 @@
     font-size: 22px;
   }
 
-  .apple-cal-agenda-row {
-    grid-template-columns: 44px 1fr;
-  }
-
-  .apple-cal-open-link {
-    grid-column: 1 / -1;
+  .apple-cal-event-sheet {
+    bottom: calc(82px + env(safe-area-inset-bottom, 0px));
+    width: calc(100vw - 18px);
+    max-height: min(58dvh, 480px);
   }
 
   .apple-cal-floating-actions {
