@@ -1,17 +1,21 @@
 "use client";
 
+import Link from "next/link";
 import AppIcon from "@/components/AppIcon";
 import { appRegistry } from "@/lib/app-registry";
 
 export default function HomeScreen({
   email,
   username,
-  role
+  role,
 }: {
   email: string;
   username?: string;
   role?: string;
 }) {
+  const accountLabel = username
+    ? `@${username}`
+    : email.slice(0, 1).toUpperCase();
 
   return (
     <main className="iphone-shell home-screen ios-home-screen">
@@ -19,14 +23,14 @@ export default function HomeScreen({
         <div className="home-topbar">
           <div className="home-brand-chip">Caliphornia OS</div>
 
-          <div
-  className="account-chip"
-  title={username ? `@${username}` : email}
->
-  {username
-    ? `@${username}`
-    : email.slice(0, 1).toUpperCase()}
-</div>
+          <Link
+            href="/apps/account"
+            className="account-chip home-username-link"
+            title={username ? `@${username}` : email}
+            aria-label="Open account page"
+          >
+            {accountLabel}
+          </Link>
         </div>
 
         <section className="home-feature-card">
@@ -37,12 +41,13 @@ export default function HomeScreen({
             <span className="feature-kicker">Welcome To Caliphornia</span>
             <h1>cOS 1.8</h1>
             <p>
-              A cinematic ecosystem of text worlds, music experiences, evolving playlists, visual drops, and future apps.
+              A cinematic ecosystem of text worlds, music experiences, evolving
+              playlists, visual drops, and future apps.
             </p>
           </div>
         </section>
 
-               <section className="app-grid ios-app-grid">
+        <section className="app-grid ios-app-grid">
           {appRegistry.map((app) => (
             <AppIcon key={app.id} app={app} email={email} />
           ))}
