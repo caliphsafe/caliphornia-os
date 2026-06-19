@@ -2800,3 +2800,151 @@ img {
 .home-username-link:active {
   opacity: 0.72;
 }
+
+.kiiku-pass-active-card {
+  display: grid;
+  grid-template-columns: 58px 1fr;
+  gap: 13px;
+  align-items: center;
+  padding: 15px;
+  margin-bottom: 12px;
+  border-radius: 26px;
+  background:
+    radial-gradient(circle at 10% 0%, rgba(255, 214, 119, 0.2), transparent 36%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.06)),
+    rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 214, 119, 0.2);
+}
+
+.kiiku-pass-active-icon {
+  width: 58px;
+  height: 58px;
+  border-radius: 20px;
+  display: grid;
+  place-items: center;
+  background:
+    linear-gradient(180deg, rgba(255, 230, 161, 0.26), rgba(232, 176, 66, 0.08)),
+    rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 214, 119, 0.18);
+}
+
+.kiiku-pass-active-icon img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.kiiku-pass-active-card h3,
+.kiiku-app-access-head h3 {
+  margin: 0;
+  font-size: 20px;
+  line-height: 1.05;
+  letter-spacing: -0.035em;
+  font-weight: 850;
+}
+
+.kiiku-pass-active-card p:last-child {
+  margin: 6px 0 0;
+  color: rgba(255, 255, 255, 0.66);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.kiiku-app-access-card {
+  margin-top: 12px;
+  padding: 14px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.11), rgba(255, 255, 255, 0.05)),
+    rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+}
+
+.kiiku-app-access-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.kiiku-account-small-link {
+  flex: 0 0 auto;
+  min-height: 34px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0 11px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: rgba(255, 232, 173, 0.94);
+  background: rgba(255, 214, 119, 0.12);
+  border: 1px solid rgba(255, 214, 119, 0.16);
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.kiiku-app-links-grid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+}
+
+.kiiku-app-link {
+  min-width: 0;
+  min-height: 92px;
+  border-radius: 20px;
+  padding: 10px 6px;
+  display: grid;
+  justify-items: center;
+  align-content: center;
+  gap: 5px;
+  text-decoration: none;
+  color: rgba(255, 255, 255, 0.72);
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.09);
+}
+
+.kiiku-app-link.is-unlocked {
+  color: rgba(255, 255, 255, 0.94);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(255, 214, 119, 0.2), transparent 42%),
+    rgba(0, 0, 0, 0.24);
+  border-color: rgba(255, 214, 119, 0.18);
+}
+
+.kiiku-app-link img {
+  width: 30px;
+  height: 30px;
+  object-fit: contain;
+}
+
+.kiiku-app-link span {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: -0.01em;
+  white-space: nowrap;
+}
+
+.kiiku-app-link small {
+  font-size: 9px;
+  font-weight: 850;
+  color: rgba(255, 255, 255, 0.45);
+}
+
+.kiiku-app-link.is-unlocked small {
+  color: rgba(255, 214, 119, 0.88);
+}
+
+@media (max-width: 420px) {
+  .kiiku-app-links-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .kiiku-app-link {
+    min-height: 82px;
+  }
+}
