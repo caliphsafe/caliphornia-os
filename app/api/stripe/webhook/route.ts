@@ -308,6 +308,10 @@ async function findPurchaseBySubscription(subscriptionId: string) {
 }
 
 async function findPurchaseFromCharge(charge: Stripe.Charge) {
+  const typedCharge = charge as Stripe.Charge & {
+    invoice?: string | { id?: string | null } | null;
+  };
+
   const paymentIntentId = getStripeId(charge.payment_intent);
 
   if (paymentIntentId) {
@@ -317,6 +321,22 @@ async function findPurchaseFromCharge(charge: Stripe.Charge) {
       return purchase;
     }
   }
+
+  const invoiceId = getStripeId(typedCharge.invoice);
+
+  if (!invoiceId) {
+    return null;
+  }
+
+  const invoice = await stripe.invoices.retrieve(invoiceId);
+  const subscriptionId = getInvoiceSubscriptionId(invoice);
+
+  if (!subscriptionId) {
+    return null;
+  }
+
+  return findPurchaseBySubscription(subscriptionId);
+}
 
   const invoiceId = getStripeId(charge.invoice);
 
@@ -592,11 +612,6 @@ async function handleDisputeCreated(dispute: Stripe.Dispute) {
   }
 
   const charge = await stripe.charges.retrieve(chargeId);
-
-  if (charge.deleted) {
-    return;
-  }
-
   const purchase = await findPurchaseFromCharge(charge);
 
   if (!purchase) {
@@ -604,6 +619,7 @@ async function handleDisputeCreated(dispute: Stripe.Dispute) {
   }
 
   await revokePurchaseAccess(purchase);
+
   await updatePurchaseStatus({
     purchaseId: purchase.id,
     status: "disputed",
