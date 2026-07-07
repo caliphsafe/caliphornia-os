@@ -1,74 +1,45 @@
+import Stripe from "stripe";
 import { NextResponse } from "next/server";
 import { cookies } from "next/headers";
-import { stripe } from "@/lib/stripe";
 import { verifySession } from "@/lib/session";
+import { stripe } from "@/lib/stripe";
 
 type AccessPlan = "project" | "kiiku_pass_30d" | "supporter_subscription";
 
-type ProjectCheckoutCopy = {
-  name: string;
-  creditCost: number;
-  amountCents: number;
+const PROJECT_NAMES: Record<string, string> = {
+  friends: "Fri.ends",
+  fartherhood: "FarTHErHOOD",
+  fatherhood: "FarTHErHOOD",
+  milia: "Milia",
+  music: "Music",
 };
 
-const PROJECTS: Record<string, ProjectCheckoutCopy> = {
-  friends: {
-    name: "Fri.ends",
-    creditCost: 5,
-    amountCents: 499,
-  },
-  fartherhood: {
-    name: "FarTHErHOOD",
-    creditCost: 5,
-    amountCents: 499,
-  },
-  fatherhood: {
-    name: "FarTHErHOOD",
-    creditCost: 5,
-    amountCents: 499,
-  },
-  milia: {
-    name: "Milia",
-    creditCost: 5,
-    amountCents: 499,
-  },
-  music: {
-    name: "Music",
-    creditCost: 5,
-    amountCents: 499,
-  },
-};
-
-function normalizeSiteUrl(value: string) {
-  const trimmed = value.trim().replace(/\/$/, "");
-
-  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
-    return trimmed;
-  }
-
-  return `https://${trimmed}`;
-}
-
-function getSiteUrl() {
-  const explicit = process.env.NEXT_PUBLIC_SITE_URL;
-
-  if (explicit) {
-    return normalizeSiteUrl(explicit);
-  }
-
-  if (process.env.VERCEL_PROJECT_PRODUCTION_URL) {
-    return normalizeSiteUrl(process.env.VERCEL_PROJECT_PRODUCTION_URL);
-  }
-
-  if (process.env.VERCEL_URL) {
-    return normalizeSiteUrl(process.env.VERCEL_URL);
-  }
-
-  return "http://localhost:3000";
-}
-
-function normalizeValue(value: unknown) {
+function normalizeEmail(value: string | null | undefined) {
   return String(value || "").trim().toLowerCase();
+}
+
+function normalizeValue(value: string | null | undefined) {
+  return String(value || "").trim().toLowerCase();
+}
+
+function getBaseUrl(req: Request) {
+  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const originUrl = req.headers.get("origin");
+  let baseUrl = envUrl || originUrl || "http://localhost:3000";
+
+  if (!/^https?:\/\//i.test(baseUrl)) {
+    baseUrl = `https://${baseUrl}`;
+  }
+
+  return baseUrl.replace(/\/$/, "");
+}
+
+function isAccessPlan(value: unknown): value is AccessPlan {
+  return (
+    value === "project" ||
+    value === "kiiku_pass_30d" ||
+    value === "supporter_subscription"
+  );
 }
 
 export async function POST(req: Request) {
@@ -78,49 +49,62 @@ export async function POST(req: Request) {
 
     if (!session?.email) {
       return NextResponse.json(
-        { ok: false, error: "You need to sign in before checkout." },
+        { ok: false, error: "You need to sign in first." },
         { status: 401 }
       );
     }
 
     const body = await req.json();
-    const plan = normalizeValue(body?.plan) as AccessPlan;
-    const requestedProjectSlug = normalizeValue(body?.projectSlug);
-    const siteUrl = getSiteUrl();
-    const userEmail = normalizeValue(session.email);
+    const plan = body?.plan;
+
+    if (!isAccessPlan(plan)) {
+      return NextResponse.json(
+        { ok: false, error: "Invalid access plan." },
+        { status: 400 }
+      );
+    }
+
+    const userEmail = normalizeEmail(session.email);
+    const projectSlug = normalizeValue(body?.projectSlug);
+    const baseUrl = getBaseUrl(req);
+
+    if (plan === "project" && !projectSlug) {
+      return NextResponse.json(
+        { ok: false, error: "Missing project." },
+        { status: 400 }
+      );
+    }
+
+    const successUrl = `${baseUrl}/apps/account?checkout=success`;
+    const cancelUrl = `${baseUrl}/home?checkout=cancelled`;
 
     if (plan === "project") {
-      const project = PROJECTS[requestedProjectSlug];
-
-      if (!project) {
-        return NextResponse.json(
-          { ok: false, error: "Unknown project." },
-          { status: 400 }
-        );
-      }
+      const projectName = PROJECT_NAMES[projectSlug] || "Album Experience";
 
       const metadata = {
         user_email: userEmail,
         purchase_type: "project",
-        project_slug: requestedProjectSlug,
+        project_slug: projectSlug,
         access_key: "",
-        kiiku_credits: String(project.creditCost),
+        duration_days: "",
+        kiiku_credits: "5",
       };
 
       const checkoutSession = await stripe.checkout.sessions.create({
         mode: "payment",
         customer_email: userEmail,
         client_reference_id: userEmail,
-        allow_promotion_codes: true,
         line_items: [
           {
             quantity: 1,
             price_data: {
               currency: "usd",
-              unit_amount: project.amountCents,
+              unit_amount: 499,
               product_data: {
-                name: `${project.name} Kiiku Unlock`,
-                description: `${project.creditCost} Kiiku Credits unlock the full ${project.name} album experience.`,
+                name: `${projectName} Unlock`,
+                description:
+                  "Permanent access to this album experience inside Caliphornia OS.",
+                metadata,
               },
             },
           },
@@ -129,11 +113,15 @@ export async function POST(req: Request) {
         payment_intent_data: {
           metadata,
         },
-        success_url: `${siteUrl}/access/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/access/cancel`,
-      });
+        allow_promotion_codes: true,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      } satisfies Stripe.Checkout.SessionCreateParams);
 
-      return NextResponse.json({ ok: true, url: checkoutSession.url });
+      return NextResponse.json({
+        ok: true,
+        url: checkoutSession.url,
+      });
     }
 
     if (plan === "kiiku_pass_30d") {
@@ -150,7 +138,6 @@ export async function POST(req: Request) {
         mode: "payment",
         customer_email: userEmail,
         client_reference_id: userEmail,
-        allow_promotion_codes: true,
         line_items: [
           {
             quantity: 1,
@@ -158,9 +145,10 @@ export async function POST(req: Request) {
               currency: "usd",
               unit_amount: 399,
               product_data: {
-                name: "Kiiku Pass - 30 Days",
+                name: "30-Day Kiiku Pass",
                 description:
-                  "4 Kiiku Credits unlock full Caliphornia OS access for 30 days.",
+                  "30 days of full access across current Caliphornia OS apps.",
+                metadata,
               },
             },
           },
@@ -169,64 +157,67 @@ export async function POST(req: Request) {
         payment_intent_data: {
           metadata,
         },
-        success_url: `${siteUrl}/access/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/access/cancel`,
-      });
+        allow_promotion_codes: true,
+        success_url: successUrl,
+        cancel_url: cancelUrl,
+      } satisfies Stripe.Checkout.SessionCreateParams);
 
-      return NextResponse.json({ ok: true, url: checkoutSession.url });
+      return NextResponse.json({
+        ok: true,
+        url: checkoutSession.url,
+      });
     }
 
-    if (plan === "supporter_subscription") {
-      const metadata = {
-        user_email: userEmail,
-        purchase_type: "subscription",
-        project_slug: "",
-        access_key: "all_access",
-        kiiku_credits: "4",
-      };
+    const metadata = {
+      user_email: userEmail,
+      purchase_type: "subscription",
+      project_slug: "",
+      access_key: "all_access",
+      duration_days: "",
+      kiiku_credits: "4",
+    };
 
-      const checkoutSession = await stripe.checkout.sessions.create({
-        mode: "subscription",
-        customer_email: userEmail,
-        client_reference_id: userEmail,
-        allow_promotion_codes: true,
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: "usd",
-              unit_amount: 399,
-              recurring: {
-                interval: "month",
-              },
-              product_data: {
-                name: "Kiiku Pass - Monthly",
-                description:
-                  "Monthly full Caliphornia OS access with auto-renew turned on.",
-              },
+    const checkoutSession = await stripe.checkout.sessions.create({
+      mode: "subscription",
+      customer_email: userEmail,
+      client_reference_id: userEmail,
+      line_items: [
+        {
+          quantity: 1,
+          price_data: {
+            currency: "usd",
+            unit_amount: 399,
+            recurring: {
+              interval: "month",
+            },
+            product_data: {
+              name: "Monthly Kiiku Pass",
+              description:
+                "Monthly full access across current Caliphornia OS apps.",
+              metadata,
             },
           },
-        ],
-        metadata,
-        subscription_data: {
-          metadata,
         },
-        success_url: `${siteUrl}/access/success?session_id={CHECKOUT_SESSION_ID}`,
-        cancel_url: `${siteUrl}/access/cancel`,
-      });
+      ],
+      metadata,
+      subscription_data: {
+        metadata,
+      },
+      allow_promotion_codes: true,
+      success_url: successUrl,
+      cancel_url: cancelUrl,
+    } satisfies Stripe.Checkout.SessionCreateParams);
 
-      return NextResponse.json({ ok: true, url: checkoutSession.url });
-    }
-
-    return NextResponse.json(
-      { ok: false, error: "Unknown access plan." },
-      { status: 400 }
-    );
+    return NextResponse.json({
+      ok: true,
+      url: checkoutSession.url,
+    });
   } catch (error) {
-    console.error("Checkout error:", error);
+    const message =
+      error instanceof Error ? error.message : "Checkout could not be started.";
 
     return NextResponse.json(
-      { ok: false, error: "Checkout could not be started." },
+      { ok: false, error: message },
       { status: 500 }
     );
   }
