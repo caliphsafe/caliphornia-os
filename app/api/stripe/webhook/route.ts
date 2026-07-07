@@ -1,5 +1,5 @@
 import Stripe from "stripe";
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
 import { stripe } from "@/lib/stripe";
 import { supabaseAdmin } from "@/lib/supabase-admin";
 
@@ -15,11 +15,7 @@ type PurchaseRow = {
   stripe_subscription_id: string | null;
 };
 
-function normalizeEmail(value: string | null | undefined) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function normalizeValue(value: string | null | undefined) {
+function normalizeValue(value: unknown) {
   return String(value || "").trim().toLowerCase();
 }
 
@@ -27,12 +23,12 @@ function nowIso() {
   return new Date().toISOString();
 }
 
+function addDaysFrom(base: number, days: number) {
+  return new Date(base + days * 24 * 60 * 60 * 1000).toISOString();
+}
+
 function getStripeId(
-  value:
-    | string
-    | { id?: string | null }
-    | null
-    | undefined
+  value: string | { id?: string | null } | null | undefined
 ) {
   if (!value) return null;
   if (typeof value === "string") return value;
@@ -76,6 +72,10 @@ async function shouldProcessEvent(event: Stripe.Event) {
     .eq("id", event.id)
     .maybeSingle();
 
+  if (existingRes.error) {
+    throw new Error(existingRes.error.message);
+  }
+
   if (existingRes.data?.status === "processed") {
     return false;
   }
@@ -110,7 +110,7 @@ async function shouldProcessEvent(event: Stripe.Event) {
 }
 
 async function markEventProcessed(event: Stripe.Event) {
-  await supabaseAdmin
+  const res = await supabaseAdmin
     .from("stripe_webhook_events")
     .update({
       status: "processed",
@@ -118,6 +118,10 @@ async function markEventProcessed(event: Stripe.Event) {
       error_message: null,
     })
     .eq("id", event.id);
+
+  if (res.error) {
+    throw new Error(res.error.message);
+  }
 }
 
 async function markEventFailed(event: Stripe.Event, error: unknown) {
@@ -133,7 +137,108 @@ async function markEventFailed(event: Stripe.Event, error: unknown) {
     .eq("id", event.id);
 }
 
-async function grantProjectAccess({
+async function getExtendedPassExpiration({
+  userEmail,
+  accessKey,
+  days,
+}: {
+  userEmail: string;
+  accessKey: string;
+  days: number;
+}) {
+  const now = Date.now();
+
+  const existingRes = await supabaseAdmin
+    .from("user_access_passes")
+    .select("expires_at")
+    .eq("user_email", userEmail)
+    .eq("access_key", accessKey)
+    .maybeSingle();
+
+  if (existingRes.error) {
+    throw new Error(existingRes.error.message);
+  }
+
+  const existing = existingRes.data;
+
+  if (existing && existing.expires_at === null) {
+    return null;
+  }
+
+  const existingExpiresAt = existing?.expires_at
+    ? new Date(existing.expires_at).getTime()
+    : 0;
+
+  const base = Math.max(now, existingExpiresAt);
+
+  return addDaysFrom(base, days);
+}
+
+async function recordCompletedPurchase({
+  session,
+  expiresAt,
+}: {
+  session: Stripe.Checkout.Session;
+  expiresAt?: string | null;
+}) {
+  const metadata = session.metadata || {};
+  const userEmail = normalizeValue(
+    metadata.user_email ||
+      session.customer_details?.email ||
+      session.customer_email
+  );
+  const purchaseType = normalizeValue(metadata.purchase_type);
+  const projectSlug = normalizeValue(metadata.project_slug);
+  const accessKey = normalizeValue(metadata.access_key);
+  const kiikuCredits = Number(metadata.kiiku_credits || 0) || null;
+
+  const subscriptionId =
+    typeof session.subscription === "string" ? session.subscription : null;
+
+  const paymentIntentId =
+    typeof session.payment_intent === "string"
+      ? session.payment_intent
+      : null;
+
+  if (!userEmail || !purchaseType) {
+    console.error("Webhook missing required metadata:", {
+      sessionId: session.id,
+      userEmail,
+      purchaseType,
+      metadata,
+    });
+
+    return;
+  }
+
+  const purchaseRow = {
+    user_email: userEmail,
+    purchase_type: purchaseType,
+    project_slug: projectSlug || null,
+    access_key: accessKey || null,
+    stripe_checkout_session_id: session.id,
+    stripe_payment_intent_id: paymentIntentId,
+    stripe_subscription_id: subscriptionId,
+    amount_cents: session.amount_total ?? null,
+    currency: session.currency || "usd",
+    status: "completed",
+    completed_at: nowIso(),
+    expires_at: expiresAt || null,
+    kiiku_credits: kiikuCredits,
+  };
+
+  const purchaseRes = await supabaseAdmin
+    .from("purchases")
+    .upsert(purchaseRow, {
+      onConflict: "stripe_checkout_session_id",
+    });
+
+  if (purchaseRes.error) {
+    throw new Error(purchaseRes.error.message);
+  }
+}
+
+async function unlockProject({
   userEmail,
   projectSlug,
 }: {
@@ -148,7 +253,9 @@ async function grantProjectAccess({
       starts_at: nowIso(),
       expires_at: null,
     },
-    { onConflict: "user_email,project_slug" }
+    {
+      onConflict: "user_email,project_slug",
+    }
   );
 
   if (res.error) {
@@ -156,72 +263,25 @@ async function grantProjectAccess({
   }
 }
 
-async function grantThirtyDayPass({
+async function unlockAllAccessPass({
   userEmail,
   accessKey,
-  durationDays,
+  expiresAt,
 }: {
   userEmail: string;
   accessKey: string;
-  durationDays: number;
-}) {
-  const existingRes = await supabaseAdmin
-    .from("user_access_passes")
-    .select("expires_at")
-    .eq("user_email", userEmail)
-    .eq("access_key", accessKey)
-    .maybeSingle();
-
-  if (existingRes.error) {
-    throw new Error(existingRes.error.message);
-  }
-
-  const currentTime = Date.now();
-  const existingExpiration = existingRes.data?.expires_at
-    ? new Date(existingRes.data.expires_at).getTime()
-    : 0;
-
-  const baseTime =
-    existingExpiration && existingExpiration > currentTime
-      ? existingExpiration
-      : currentTime;
-
-  const expiresAt = new Date(
-    baseTime + durationDays * 24 * 60 * 60 * 1000
-  ).toISOString();
-
-  const upsertRes = await supabaseAdmin.from("user_access_passes").upsert(
-    {
-      user_email: userEmail,
-      access_key: accessKey,
-      starts_at: nowIso(),
-      expires_at: expiresAt,
-    },
-    { onConflict: "user_email,access_key" }
-  );
-
-  if (upsertRes.error) {
-    throw new Error(upsertRes.error.message);
-  }
-
-  return expiresAt;
-}
-
-async function grantMonthlyPass({
-  userEmail,
-  accessKey,
-}: {
-  userEmail: string;
-  accessKey: string;
+  expiresAt: string | null;
 }) {
   const res = await supabaseAdmin.from("user_access_passes").upsert(
     {
       user_email: userEmail,
       access_key: accessKey,
       starts_at: nowIso(),
-      expires_at: null,
+      expires_at: expiresAt,
     },
-    { onConflict: "user_email,access_key" }
+    {
+      onConflict: "user_email,access_key",
+    }
   );
 
   if (res.error) {
@@ -265,6 +325,36 @@ async function expireAccessPass({
     })
     .eq("user_email", userEmail)
     .eq("access_key", accessKey);
+
+  if (res.error) {
+    throw new Error(res.error.message);
+  }
+}
+
+async function updatePurchaseStatus({
+  purchaseId,
+  status,
+  expiresAt,
+}: {
+  purchaseId: string;
+  status: string;
+  expiresAt?: string | null;
+}) {
+  const updateValues: {
+    status: string;
+    expires_at?: string | null;
+  } = {
+    status,
+  };
+
+  if (expiresAt !== undefined) {
+    updateValues.expires_at = expiresAt;
+  }
+
+  const res = await supabaseAdmin
+    .from("purchases")
+    .update(updateValues)
+    .eq("id", purchaseId);
 
   if (res.error) {
     throw new Error(res.error.message);
@@ -338,24 +428,8 @@ async function findPurchaseFromCharge(charge: Stripe.Charge) {
   return findPurchaseBySubscription(subscriptionId);
 }
 
-  const invoiceId = getStripeId(charge.invoice);
-
-  if (!invoiceId) {
-    return null;
-  }
-
-  const invoice = await stripe.invoices.retrieve(invoiceId);
-  const subscriptionId = getInvoiceSubscriptionId(invoice);
-
-  if (!subscriptionId) {
-    return null;
-  }
-
-  return findPurchaseBySubscription(subscriptionId);
-}
-
 async function revokePurchaseAccess(purchase: PurchaseRow) {
-  const userEmail = normalizeEmail(purchase.user_email);
+  const userEmail = normalizeValue(purchase.user_email);
   const purchaseType = normalizeValue(purchase.purchase_type);
   const projectSlug = normalizeValue(purchase.project_slug);
   const accessKey = normalizeValue(purchase.access_key || "all_access");
@@ -371,11 +445,7 @@ async function revokePurchaseAccess(purchase: PurchaseRow) {
     return;
   }
 
-  if (
-    purchaseType === "kiiku_pass_30d" ||
-    purchaseType === "subscription" ||
-    accessKey
-  ) {
+  if (purchaseType === "kiiku_pass_30d" || purchaseType === "subscription") {
     await expireAccessPass({
       userEmail,
       accessKey: accessKey || "all_access",
@@ -383,71 +453,140 @@ async function revokePurchaseAccess(purchase: PurchaseRow) {
   }
 }
 
-async function updatePurchaseStatus({
-  purchaseId,
-  status,
-}: {
-  purchaseId: string;
-  status: string;
-}) {
-  const res = await supabaseAdmin
-    .from("purchases")
-    .update({
-      status,
-    })
-    .eq("id", purchaseId);
+async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
+  const metadata = session.metadata || {};
+  const userEmail = normalizeValue(
+    metadata.user_email ||
+      session.customer_details?.email ||
+      session.customer_email
+  );
+  const purchaseType = normalizeValue(metadata.purchase_type);
+  const projectSlug = normalizeValue(metadata.project_slug);
+  const accessKey = normalizeValue(metadata.access_key || "all_access");
 
-  if (res.error) {
-    throw new Error(res.error.message);
+  if (!userEmail) {
+    console.error("Checkout completed without user email:", session.id);
+    return;
   }
+
+  if (purchaseType === "project") {
+    if (!projectSlug) {
+      console.error("Project purchase missing project_slug:", session.id);
+      return;
+    }
+
+    await recordCompletedPurchase({
+      session,
+      expiresAt: null,
+    });
+
+    await unlockProject({
+      userEmail,
+      projectSlug,
+    });
+
+    return;
+  }
+
+  if (purchaseType === "kiiku_pass_30d") {
+    const expiresAt = await getExtendedPassExpiration({
+      userEmail,
+      accessKey,
+      days: 30,
+    });
+
+    await recordCompletedPurchase({
+      session,
+      expiresAt,
+    });
+
+    await unlockAllAccessPass({
+      userEmail,
+      accessKey,
+      expiresAt,
+    });
+
+    return;
+  }
+
+  if (purchaseType === "subscription") {
+    await recordCompletedPurchase({
+      session,
+      expiresAt: null,
+    });
+
+    await unlockAllAccessPass({
+      userEmail,
+      accessKey,
+      expiresAt: null,
+    });
+
+    const subscriptionId =
+      typeof session.subscription === "string" ? session.subscription : null;
+
+    if (subscriptionId) {
+      const subscription = await stripe.subscriptions.retrieve(subscriptionId);
+      await syncSubscriptionAccess(subscription);
+    }
+
+    return;
+  }
+
+  console.log("Unhandled checkout purchase type:", purchaseType);
 }
 
 async function resolveSubscriptionIdentity({
-  subscriptionId,
-  metadata,
+  subscription,
 }: {
-  subscriptionId: string;
-  metadata: Stripe.Metadata | null | undefined;
+  subscription: Stripe.Subscription;
 }) {
-  const userEmailFromMetadata = normalizeEmail(metadata?.user_email);
-  const accessKeyFromMetadata = normalizeValue(metadata?.access_key || "all_access");
+  const metadata = subscription.metadata || {};
+  let userEmail = normalizeValue(metadata.user_email);
+  let accessKey = normalizeValue(metadata.access_key || "all_access");
 
-  if (userEmailFromMetadata) {
-    return {
-      userEmail: userEmailFromMetadata,
-      accessKey: accessKeyFromMetadata || "all_access",
-    };
+  if (!userEmail) {
+    const purchaseRes = await supabaseAdmin
+      .from("purchases")
+      .select("user_email, access_key")
+      .eq("stripe_subscription_id", subscription.id)
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle();
+
+    if (purchaseRes.error) {
+      throw new Error(purchaseRes.error.message);
+    }
+
+    userEmail = normalizeValue(purchaseRes.data?.user_email);
+    accessKey = normalizeValue(purchaseRes.data?.access_key || accessKey);
   }
 
-  const purchase = await findPurchaseBySubscription(subscriptionId);
-
-  if (!purchase) {
+  if (!userEmail) {
     return null;
   }
 
   return {
-    userEmail: normalizeEmail(purchase.user_email),
-    accessKey: normalizeValue(purchase.access_key || "all_access"),
+    userEmail,
+    accessKey: accessKey || "all_access",
   };
 }
 
 async function syncSubscriptionAccess(subscription: Stripe.Subscription) {
-  const subscriptionId = subscription.id;
-
   const identity = await resolveSubscriptionIdentity({
-    subscriptionId,
-    metadata: subscription.metadata,
+    subscription,
   });
 
-  if (!identity?.userEmail) {
+  if (!identity) {
+    console.error("Subscription event without matching user:", subscription.id);
     return;
   }
 
-  const status = subscription.status;
-  const periodEndIso = secondsToIso(getSubscriptionPeriodEnd(subscription));
   const typedSubscription = subscription as Stripe.Subscription & {
     cancel_at_period_end?: boolean | null;
   };
+
+  const status = subscription.status;
+  const periodEndIso = secondsToIso(getSubscriptionPeriodEnd(subscription));
 
   let expiresAt: string | null = null;
 
@@ -465,19 +604,11 @@ async function syncSubscriptionAccess(subscription: Stripe.Subscription) {
     expiresAt = nowIso();
   }
 
-  const passRes = await supabaseAdmin.from("user_access_passes").upsert(
-    {
-      user_email: identity.userEmail,
-      access_key: identity.accessKey || "all_access",
-      starts_at: nowIso(),
-      expires_at: expiresAt,
-    },
-    { onConflict: "user_email,access_key" }
-  );
-
-  if (passRes.error) {
-    throw new Error(passRes.error.message);
-  }
+  await unlockAllAccessPass({
+    userEmail: identity.userEmail,
+    accessKey: identity.accessKey,
+    expiresAt,
+  });
 
   const purchaseStatus =
     status === "active" || status === "trialing" ? "completed" : status;
@@ -488,87 +619,41 @@ async function syncSubscriptionAccess(subscription: Stripe.Subscription) {
       status: purchaseStatus,
       expires_at: expiresAt,
     })
-    .eq("stripe_subscription_id", subscriptionId);
+    .eq("stripe_subscription_id", subscription.id);
 
   if (purchaseRes.error) {
     throw new Error(purchaseRes.error.message);
   }
 }
 
-async function handleCheckoutCompleted(session: Stripe.Checkout.Session) {
-  const metadata = session.metadata || {};
-  const purchaseType = normalizeValue(metadata.purchase_type);
-  const userEmail = normalizeEmail(
-    metadata.user_email ||
-      session.customer_details?.email ||
-      session.customer_email
-  );
+async function handleSubscriptionDeleted(subscription: Stripe.Subscription) {
+  const identity = await resolveSubscriptionIdentity({
+    subscription,
+  });
 
-  if (!userEmail) {
-    throw new Error("Missing user email on checkout session.");
+  if (!identity) {
+    console.error("Subscription deleted without matching user:", subscription.id);
+    return;
   }
 
-  const projectSlug = normalizeValue(metadata.project_slug);
-  const accessKey = normalizeValue(metadata.access_key || "all_access");
-  const paymentIntentId = getStripeId(session.payment_intent);
-  const subscriptionId = getStripeId(session.subscription);
-  const kiikuCredits = Number(metadata.kiiku_credits || 0) || null;
-  const durationDays = Number(metadata.duration_days || 30) || 30;
+  const expiresAt = nowIso();
 
-  let expiresAt: string | null = null;
+  await expireAccessPass({
+    userEmail: identity.userEmail,
+    accessKey: identity.accessKey || "all_access",
+    expiresAt,
+  });
 
-  if (purchaseType === "project") {
-    if (!projectSlug) {
-      throw new Error("Missing project slug for project purchase.");
-    }
-
-    await grantProjectAccess({
-      userEmail,
-      projectSlug,
-    });
-  }
-
-  if (purchaseType === "kiiku_pass_30d") {
-    expiresAt = await grantThirtyDayPass({
-      userEmail,
-      accessKey: accessKey || "all_access",
-      durationDays,
-    });
-  }
-
-  if (purchaseType === "subscription") {
-    await grantMonthlyPass({
-      userEmail,
-      accessKey: accessKey || "all_access",
-    });
-  }
-
-  const purchaseRes = await supabaseAdmin.from("purchases").upsert(
-    {
-      user_email: userEmail,
-      purchase_type: purchaseType,
-      project_slug: projectSlug || null,
-      access_key: accessKey || null,
-      stripe_checkout_session_id: session.id,
-      stripe_payment_intent_id: paymentIntentId,
-      stripe_subscription_id: subscriptionId,
-      amount_cents: session.amount_total,
-      currency: session.currency || "usd",
-      status: "completed",
-      completed_at: nowIso(),
+  const purchaseRes = await supabaseAdmin
+    .from("purchases")
+    .update({
+      status: "canceled",
       expires_at: expiresAt,
-      kiiku_credits: kiikuCredits,
-    },
-    { onConflict: "stripe_checkout_session_id" }
-  );
+    })
+    .eq("stripe_subscription_id", subscription.id);
 
   if (purchaseRes.error) {
     throw new Error(purchaseRes.error.message);
-  }
-
-  if (purchaseType === "subscription" && subscriptionId) {
-    const subscription = await stripe.subscriptions.retrieve(subscriptionId);
-    await syncSubscriptionAccess(subscription);
   }
 }
 
@@ -598,9 +683,11 @@ async function handleRefundedCharge(charge: Stripe.Charge) {
   }
 
   await revokePurchaseAccess(purchase);
+
   await updatePurchaseStatus({
     purchaseId: purchase.id,
     status: "refunded",
+    expiresAt: nowIso(),
   });
 }
 
@@ -623,15 +710,16 @@ async function handleDisputeCreated(dispute: Stripe.Dispute) {
   await updatePurchaseStatus({
     purchaseId: purchase.id,
     status: "disputed",
+    expiresAt: nowIso(),
   });
 }
 
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   const webhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
 
   if (!webhookSecret) {
     return NextResponse.json(
-      { ok: false, error: "Missing STRIPE_WEBHOOK_SECRET." },
+      { ok: false, error: "Missing STRIPE_WEBHOOK_SECRET" },
       { status: 500 }
     );
   }
@@ -640,27 +728,21 @@ export async function POST(req: Request) {
 
   if (!signature) {
     return NextResponse.json(
-      { ok: false, error: "Missing Stripe signature." },
+      { ok: false, error: "Missing Stripe signature" },
       { status: 400 }
     );
   }
 
-  const rawBody = await req.text();
-
   let event: Stripe.Event;
 
   try {
-    event = stripe.webhooks.constructEvent(
-      rawBody,
-      signature,
-      webhookSecret
-    );
+    const rawBody = await req.text();
+    event = stripe.webhooks.constructEvent(rawBody, signature, webhookSecret);
   } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Invalid webhook signature.";
+    console.error("Webhook signature verification failed:", error);
 
     return NextResponse.json(
-      { ok: false, error: message },
+      { ok: false, error: "Invalid webhook signature" },
       { status: 400 }
     );
   }
@@ -670,59 +752,49 @@ export async function POST(req: Request) {
 
     if (!shouldProcess) {
       return NextResponse.json({
-        received: true,
+        ok: true,
         duplicate: true,
       });
     }
 
-    switch (event.type) {
-      case "checkout.session.completed": {
-        await handleCheckoutCompleted(
-          event.data.object as Stripe.Checkout.Session
-        );
-        break;
-      }
+    if (event.type === "checkout.session.completed") {
+      await handleCheckoutCompleted(event.data.object as Stripe.Checkout.Session);
+    }
 
-      case "customer.subscription.updated":
-      case "customer.subscription.deleted": {
-        await syncSubscriptionAccess(event.data.object as Stripe.Subscription);
-        break;
-      }
+    if (event.type === "customer.subscription.updated") {
+      await syncSubscriptionAccess(event.data.object as Stripe.Subscription);
+    }
 
-      case "invoice.paid":
-      case "invoice.payment_failed": {
-        await handleInvoiceSubscriptionSync(event.data.object as Stripe.Invoice);
-        break;
-      }
+    if (event.type === "customer.subscription.deleted") {
+      await handleSubscriptionDeleted(event.data.object as Stripe.Subscription);
+    }
 
-      case "charge.refunded": {
-        await handleRefundedCharge(event.data.object as Stripe.Charge);
-        break;
-      }
+    if (event.type === "invoice.paid") {
+      await handleInvoiceSubscriptionSync(event.data.object as Stripe.Invoice);
+    }
 
-      case "charge.dispute.created": {
-        await handleDisputeCreated(event.data.object as Stripe.Dispute);
-        break;
-      }
+    if (event.type === "invoice.payment_failed") {
+      await handleInvoiceSubscriptionSync(event.data.object as Stripe.Invoice);
+    }
 
-      default: {
-        break;
-      }
+    if (event.type === "charge.refunded") {
+      await handleRefundedCharge(event.data.object as Stripe.Charge);
+    }
+
+    if (event.type === "charge.dispute.created") {
+      await handleDisputeCreated(event.data.object as Stripe.Dispute);
     }
 
     await markEventProcessed(event);
 
-    return NextResponse.json({
-      received: true,
-    });
+    return NextResponse.json({ ok: true });
   } catch (error) {
+    console.error("Webhook handler error:", error);
+
     await markEventFailed(event, error);
 
-    const message =
-      error instanceof Error ? error.message : "Webhook processing failed.";
-
     return NextResponse.json(
-      { ok: false, error: message },
+      { ok: false, error: "Webhook handler failed" },
       { status: 500 }
     );
   }
