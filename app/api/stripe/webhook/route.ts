@@ -193,13 +193,17 @@ async function recordCompletedPurchase({
   const kiikuCredits = Number(metadata.kiiku_credits || 0) || null;
 
   const subscriptionId =
-    typeof session.subscription === "string" ? session.subscription : null;
+  typeof session.subscription === "string" ? session.subscription : null;
 
-  const paymentIntentId =
-    typeof session.payment_intent === "string"
-      ? session.payment_intent
-      : null;
+const paymentIntentId =
+  typeof session.payment_intent === "string"
+    ? session.payment_intent
+    : null;
 
+const stripeCustomerId =
+  typeof session.customer === "string"
+    ? session.customer
+    : session.customer?.id || null;
   if (!userEmail || !purchaseType) {
     console.error("Webhook missing required metadata:", {
       sessionId: session.id,
@@ -219,6 +223,7 @@ async function recordCompletedPurchase({
     stripe_checkout_session_id: session.id,
     stripe_payment_intent_id: paymentIntentId,
     stripe_subscription_id: subscriptionId,
+    stripe_customer_id: stripeCustomerId,
     amount_cents: session.amount_total ?? null,
     currency: session.currency || "usd",
     status: "completed",
