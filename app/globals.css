@@ -2977,4 +2977,70 @@ img {
   color: rgba(255, 120, 120, 0.86);
   font-size: 12px;
   line-height: 1.35;
+
+  .wallet-billing-card,
+.wallet-support-card {
+  display: grid;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.05)),
+    rgba(255, 255, 255, 0.055);
+  border: 1px solid rgba(255, 255, 255, 0.105);
+}
+
+.wallet-billing-card h3,
+.wallet-support-card h3 {
+  margin: 0;
+  color: rgba(255, 255, 255, 0.94);
+  font-size: 19px;
+  line-height: 1.05;
+  letter-spacing: -0.04em;
+}
+
+.wallet-billing-card p,
+.wallet-support-card p {
+  margin: 7px 0 0;
+  color: rgba(255, 255, 255, 0.62);
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.wallet-billing-note {
+  display: grid;
+  gap: 5px;
+  padding: 13px;
+  border-radius: 20px;
+  background: rgba(0, 0, 0, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.085);
+}
+
+.wallet-billing-note strong {
+  color: rgba(255, 255, 255, 0.88);
+  font-size: 14px;
+  letter-spacing: -0.02em;
+}
+
+.wallet-billing-note span {
+  color: rgba(255, 255, 255, 0.58);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.wallet-support-card a {
+  min-height: 46px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: fit-content;
+  padding: 0 16px;
+  border-radius: 999px;
+  text-decoration: none;
+  color: rgba(22, 16, 4, 0.96);
+  background:
+    linear-gradient(180deg, rgba(255, 230, 161, 1), rgba(232, 176, 66, 1));
+  font-size: 13px;
+  font-weight: 900;
+}
 }
