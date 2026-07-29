@@ -24,6 +24,16 @@ export type GlobalTrack = {
   clipEnd?: number | null;
   clipStartSeconds?: number | null;
   clipEndSeconds?: number | null;
+
+  conversationSlug?: string;
+  conversationRoute?: string;
+  threadSlug?: string;
+  messageId?: string;
+  projectSlug?: string;
+  projectName?: string;
+  appSlug?: string;
+
+  [key: string]: unknown;
 };
 
 type ActiveTrack = GlobalTrack & {
