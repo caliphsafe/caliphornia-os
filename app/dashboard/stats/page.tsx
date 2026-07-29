@@ -1,0 +1,2 @@
+import AdminTable from "@/components/admin/AdminTable";
+export default function Page() { return <main className="shell stack"><header className="topbar"><div><span className="eyebrow">Admin</span><h1 className="h1">Stats</h1></div><a className="btn" href="/dashboard">Dashboard</a></header><section className="glass card stack"><p className="muted">Review global and personal aggregate health.</p><AdminTable table="stats_daily_rollups" /></section></main>; }

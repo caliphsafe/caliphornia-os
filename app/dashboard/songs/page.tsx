@@ -1,0 +1,2 @@
+import AdminTable from "@/components/admin/AdminTable";
+export default function Page() { return <main className="shell stack"><header className="topbar"><div><span className="eyebrow">Admin</span><h1 className="h1">Songs</h1></div><a className="btn" href="/dashboard">Dashboard</a></header><section className="glass card stack"><p className="muted">Manage song metadata, previews, sharing, and Kiiku costs.</p><AdminTable table="songs" /></section></main>; }

@@ -1,17 +1,12 @@
-import "./fartherhood.css";
+import GlobalReleaseProgress from "@/components/projects/GlobalReleaseProgress";
+import ProjectSongs from "@/components/projects/ProjectSongs";
 
-import { cookies } from "next/headers";
-import { redirect } from "next/navigation";
-import { verifySession } from "@/lib/session";
-import FartherhoodClient from "@/components/FartherhoodClient";
-
-export default async function FartherhoodPage() {
-  const cookieStore = await cookies();
-  const session = verifySession(cookieStore.get("caliph_os_session")?.value);
-
-  if (!session) {
-    redirect("/");
-  }
-
-  return <FartherhoodClient />;
+export default function Page() {
+  return (
+    <main className="shell stack">
+      <header className="topbar"><div><span className="eyebrow">Project</span><h1 className="h1">FarTHErHOOD</h1></div><a className="btn" href="/home">Home</a></header>
+      <GlobalReleaseProgress projectSlug="fartherhood" />
+      <ProjectSongs projectSlug="fartherhood" />
+    </main>
+  );
 }

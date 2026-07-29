@@ -1,0 +1,2 @@
+import AdminTable from "@/components/admin/AdminTable";
+export default function Page() { return <main className="shell stack"><header className="topbar"><div><span className="eyebrow">Admin</span><h1 className="h1">Audit</h1></div><a className="btn" href="/dashboard">Dashboard</a></header><section className="glass card stack"><p className="muted">Review privileged actions and overrides.</p><AdminTable table="admin_audit_logs" /></section></main>; }

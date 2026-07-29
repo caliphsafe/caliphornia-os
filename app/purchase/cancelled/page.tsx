@@ -1,0 +1,1 @@
+export default function PurchaseCancelled() { return <main className="shell stack"><section className="glass card stack"><span className="eyebrow">Checkout canceled</span><h1 className="h1">No payment completed.</h1><p className="muted">No access, Kiiku, shares, or project progress was created.</p><a className="btn" href="/home">Back home</a></section></main>; }

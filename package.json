@@ -1,11 +1,13 @@
 {
   "name": "caliphornia-os",
-  "version": "0.1.0",
+  "version": "0.2.0-43-build",
   "private": true,
   "scripts": {
     "dev": "next dev --turbopack",
     "build": "next build",
-    "start": "next start"
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "verify:files": "node scripts/verify-build-files.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.53.0",

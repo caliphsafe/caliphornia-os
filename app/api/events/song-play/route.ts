@@ -1,83 +1,10 @@
-import { NextResponse } from "next/server";
-import { headers } from "next/headers";
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentAppUser } from "@/lib/users";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-
-export async function POST(request: Request) {
-  try {
-    const body = await request.json();
-
-    const userEmail = body.userEmail ? String(body.userEmail).toLowerCase() : null;
-    const songSlug = body.songSlug ? String(body.songSlug).trim() : null;
-    const sourcePath = body.sourcePath ? String(body.sourcePath) : null;
-    const sourceApp = body.sourceApp ? String(body.sourceApp).trim() : null;
-
-    if (!songSlug) {
-      return NextResponse.json(
-        { ok: false, error: "Missing songSlug" },
-        { status: 400 }
-      );
-    }
-
-    const { data: song, error: songError } = await supabaseAdmin
-      .from("songs")
-      .select("id, slug, source_app_slug")
-      .eq("slug", songSlug)
-      .single();
-
-    if (songError || !song) {
-      return NextResponse.json(
-        { ok: false, error: "Song not found" },
-        { status: 404 }
-      );
-    }
-
-    const h = await headers();
-
-    const resolvedAppSlug =
-      sourceApp ||
-      song.source_app_slug ||
-      (sourcePath?.startsWith("/apps/milia")
-        ? "milia"
-        : sourcePath?.startsWith("/apps/friends")
-          ? "friends"
-          : sourcePath?.startsWith("/apps/fartherhood")
-            ? "fartherhood"
-            : sourcePath?.startsWith("/apps/music")
-              ? "music"
-              : null);
-
-        const { error: logError } = await supabaseAdmin
-      .from("event_logs")
-      .insert({
-        user_email: userEmail,
-        event_type: "song_play",
-        song_id: song.id,
-        song_slug: song.slug,
-        app_slug: resolvedAppSlug,
-        source_path: sourcePath,
-        user_agent: h.get("user-agent"),
-        country: h.get("x-vercel-ip-country"),
-        region: h.get("x-vercel-ip-country-region"),
-        city: h.get("x-vercel-ip-city"),
-        metadata: {
-          song_slug: song.slug
-        }
-      });
-
-    if (logError) {
-      console.error("event_logs insert failed:", logError);
-      return NextResponse.json(
-        { ok: false, error: logError.message },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({ ok: true });
-  } catch (error: any) {
-    console.error("song-play route error:", error);
-    return NextResponse.json(
-      { ok: false, error: error?.message || "Server error" },
-      { status: 500 }
-    );
-  }
+import { idempotencyKey } from "@/lib/crypto";
+export async function POST(req: NextRequest) {
+  const user = await getCurrentAppUser();
+  const body = await req.json().catch(()=>({}));
+  await supabaseAdmin.from("event_logs").insert({ event_type:"song_play", user_id:user?.id || null, user_email:user?.email || null, song_id:body.songId || null, song_slug:body.songSlug || null, app_slug:body.appSlug || null, privacy_level:"reduced", qualification_status:"pending", idempotency_key:idempotencyKey(["event_song_play", user?.id || "anon", body.songId || body.songSlug, Date.now()]), metadata:{} });
+  return NextResponse.json({ ok:true });
 }

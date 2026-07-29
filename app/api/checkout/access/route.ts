@@ -1,224 +1,27 @@
-import Stripe from "stripe";
-import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
-import { verifySession } from "@/lib/session";
+import { NextRequest, NextResponse } from "next/server";
+import { requireCurrentAppUser } from "@/lib/users";
 import { stripe } from "@/lib/stripe";
+import { supabaseAdmin } from "@/lib/supabase-admin";
+import { requiredEnv } from "@/lib/env";
 
-type AccessPlan = "project" | "kiiku_pass_30d" | "supporter_subscription";
-
-const PROJECT_NAMES: Record<string, string> = {
-  friends: "Fri.ends",
-  fartherhood: "FarTHErHOOD",
-  fatherhood: "FarTHErHOOD",
-  milia: "Milia",
-  music: "Music",
-};
-
-function normalizeEmail(value: string | null | undefined) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function normalizeValue(value: string | null | undefined) {
-  return String(value || "").trim().toLowerCase();
-}
-
-function getBaseUrl(req: Request) {
-  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const originUrl = req.headers.get("origin");
-  let baseUrl = envUrl || originUrl || "http://localhost:3000";
-
-  if (!/^https?:\/\//i.test(baseUrl)) {
-    baseUrl = `https://${baseUrl}`;
-  }
-
-  return baseUrl.replace(/\/$/, "");
-}
-
-function isAccessPlan(value: unknown): value is AccessPlan {
-  return (
-    value === "project" ||
-    value === "kiiku_pass_30d" ||
-    value === "supporter_subscription"
-  );
-}
-
-export async function POST(req: Request) {
+export async function POST(req: NextRequest) {
   try {
-    const cookieStore = await cookies();
-    const session = verifySession(cookieStore.get("caliph_os_session")?.value);
-
-    if (!session?.email) {
-      return NextResponse.json(
-        { ok: false, error: "You need to sign in first." },
-        { status: 401 }
-      );
-    }
-
+    const user = await requireCurrentAppUser();
     const body = await req.json();
-    const plan = body?.plan;
-
-    if (!isAccessPlan(plan)) {
-      return NextResponse.json(
-        { ok: false, error: "Invalid access plan." },
-        { status: 400 }
-      );
-    }
-
-    const userEmail = normalizeEmail(session.email);
-    const projectSlug = normalizeValue(body?.projectSlug);
-    const baseUrl = getBaseUrl(req);
-
-    if (plan === "project" && !projectSlug) {
-      return NextResponse.json(
-        { ok: false, error: "Missing project." },
-        { status: 400 }
-      );
-    }
-
-    const successUrl = `${baseUrl}/apps/account?checkout=success`;
-    const cancelUrl = `${baseUrl}/home?checkout=cancelled`;
-
-    if (plan === "project") {
-      const projectName = PROJECT_NAMES[projectSlug] || "Album Experience";
-
-      const metadata = {
-        user_email: userEmail,
-        purchase_type: "project",
-        project_slug: projectSlug,
-        access_key: "",
-        duration_days: "",
-        kiiku_credits: "5",
-      };
-
-      const checkoutSession = await stripe.checkout.sessions.create({
-        mode: "payment",
-        customer_email: userEmail,
-        client_reference_id: userEmail,
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: "usd",
-              unit_amount: 499,
-              product_data: {
-                name: `${projectName} Unlock`,
-                description:
-                  "Permanent access to this album experience inside Caliphornia OS.",
-                metadata,
-              },
-            },
-          },
-        ],
-        metadata,
-        payment_intent_data: {
-          metadata,
-        },
-        allow_promotion_codes: true,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      } satisfies Stripe.Checkout.SessionCreateParams);
-
-      return NextResponse.json({
-        ok: true,
-        url: checkoutSession.url,
-      });
-    }
-
-    if (plan === "kiiku_pass_30d") {
-      const metadata = {
-        user_email: userEmail,
-        purchase_type: "kiiku_pass_30d",
-        project_slug: "",
-        access_key: "all_access",
-        duration_days: "30",
-        kiiku_credits: "4",
-      };
-
-      const checkoutSession = await stripe.checkout.sessions.create({
-        mode: "payment",
-        customer_email: userEmail,
-        client_reference_id: userEmail,
-        line_items: [
-          {
-            quantity: 1,
-            price_data: {
-              currency: "usd",
-              unit_amount: 399,
-              product_data: {
-                name: "30-Day Kiiku Pass",
-                description:
-                  "30 days of full access across current Caliphornia OS apps.",
-                metadata,
-              },
-            },
-          },
-        ],
-        metadata,
-        payment_intent_data: {
-          metadata,
-        },
-        allow_promotion_codes: true,
-        success_url: successUrl,
-        cancel_url: cancelUrl,
-      } satisfies Stripe.Checkout.SessionCreateParams);
-
-      return NextResponse.json({
-        ok: true,
-        url: checkoutSession.url,
-      });
-    }
-
-    const metadata = {
-      user_email: userEmail,
-      purchase_type: "subscription",
-      project_slug: "",
-      access_key: "all_access",
-      duration_days: "",
-      kiiku_credits: "4",
-    };
-
-    const checkoutSession = await stripe.checkout.sessions.create({
-      mode: "subscription",
-      customer_email: userEmail,
-      client_reference_id: userEmail,
-      line_items: [
-        {
-          quantity: 1,
-          price_data: {
-            currency: "usd",
-            unit_amount: 399,
-            recurring: {
-              interval: "month",
-            },
-            product_data: {
-              name: "Monthly Kiiku Pass",
-              description:
-                "Monthly full access across current Caliphornia OS apps.",
-              metadata,
-            },
-          },
-        },
-      ],
-      metadata,
-      subscription_data: {
-        metadata,
-      },
-      allow_promotion_codes: true,
-      success_url: successUrl,
-      cancel_url: cancelUrl,
-    } satisfies Stripe.Checkout.SessionCreateParams);
-
-    return NextResponse.json({
-      ok: true,
-      url: checkoutSession.url,
+    const productKey = String(body.productKey || "");
+    const product = await supabaseAdmin.from("commerce_products").select("*").eq("product_key", productKey).eq("status", "active").maybeSingle();
+    if (!product.data) return NextResponse.json({ ok:false, error:"This product is not available." }, { status:404 });
+    const lineItems = [{ productKey, type: product.data.product_type, songId: product.data.song_id, projectId: product.data.project_id, appId: product.data.app_id, amountCents: product.data.price_cents, currency: product.data.currency }];
+    const session = await stripe.checkout.sessions.create({
+      mode: product.data.product_type === "subscription" ? "subscription" : "payment",
+      customer_email: user.email,
+      line_items: [{ price_data: { currency: product.data.currency || "usd", product_data: { name: product.data.name }, unit_amount: Number(product.data.price_cents) }, quantity: 1 }],
+      success_url: `${requiredEnv("NEXT_PUBLIC_SITE_URL")}/purchase/complete?session_id={CHECKOUT_SESSION_ID}`,
+      cancel_url: `${requiredEnv("NEXT_PUBLIC_SITE_URL")}/purchase/cancelled`,
+      metadata: { user_email:user.email, user_id:user.id, purchase_type:product.data.product_type, project_id:product.data.project_id || "", song_id:product.data.song_id || "", line_items: JSON.stringify(lineItems) }
     });
-  } catch (error) {
-    const message =
-      error instanceof Error ? error.message : "Checkout could not be started.";
-
-    return NextResponse.json(
-      { ok: false, error: message },
-      { status: 500 }
-    );
+    return NextResponse.json({ ok:true, url: session.url });
+  } catch {
+    return NextResponse.json({ ok:false, error:"Could not create checkout." }, { status:500 });
   }
 }

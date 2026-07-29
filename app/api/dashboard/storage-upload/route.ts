@@ -1,42 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireAdminUser } from "@/lib/admin-auth";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-
-export async function POST(request: NextRequest) {
+import { auditAction } from "@/lib/audit";
+const allowedBuckets = new Set(["songs", "cover-art", "visuals", "admin-uploads"]);
+export async function POST(req: NextRequest) {
   try {
-    const body = await request.json();
-
-    const bucket = String(body.bucket || "").trim();
-    const path = String(body.path || "").trim();
-    const upsert = Boolean(body.upsert);
-
-    if (!bucket || !path) {
-      return NextResponse.json(
-        { ok: false, error: "Missing bucket or path." },
-        { status: 400 }
-      );
-    }
-
-    const { data, error } = await supabaseAdmin.storage
-      .from(bucket)
-      .createSignedUploadUrl(path, { upsert });
-
-    if (error || !data?.token) {
-      return NextResponse.json(
-        { ok: false, error: error?.message || "Could not create signed upload URL." },
-        { status: 500 }
-      );
-    }
-
-    return NextResponse.json({
-      ok: true,
-      bucket,
-      path,
-      token: data.token
-    });
-  } catch (error: any) {
-    return NextResponse.json(
-      { ok: false, error: error?.message || "Server error." },
-      { status: 500 }
-    );
-  }
+    const admin = await requireAdminUser();
+    const body = await req.json();
+    const bucket = String(body.bucket || "");
+    const path = String(body.path || "").replace(/^\/+/, "");
+    if (!allowedBuckets.has(bucket)) return NextResponse.json({ ok:false, error:"Bucket not allowed." }, { status:400 });
+    if (!path || path.includes("..") || !/^[a-zA-Z0-9_./-]+$/.test(path)) return NextResponse.json({ ok:false, error:"Path not allowed." }, { status:400 });
+    const signed = await supabaseAdmin.storage.from(bucket).createSignedUploadUrl(path, { upsert: Boolean(body.upsert) });
+    if (signed.error) throw new Error(signed.error.message);
+    await auditAction({ adminUserId:admin.id, actionType:"signed_upload_url_created", targetTable:"storage", targetId:`${bucket}/${path}`, reason:"admin_upload", metadata:{ bucket, path } });
+    return NextResponse.json({ ok:true, ...signed.data });
+  } catch { return NextResponse.json({ ok:false, error:"Could not create upload URL." }, { status:500 }); }
 }
