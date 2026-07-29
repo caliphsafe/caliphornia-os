@@ -68,8 +68,29 @@ async function applyLineItemEffects(input: { purchaseId: string; userId: string;
     await addProjectSongsToLibrary(input.userId, input.userEmail, item.projectId, input.purchaseId);
   }
   if (item.type === "subscription") {
-    await supabaseAdmin.from("user_access_passes").upsert({ user_id:input.userId, user_email:input.userEmail, access_key:String(input.session.metadata?.access_key || "music_full"), source_type:"subscription", source_purchase_id:input.purchaseId, stripe_subscription_id: typeof input.session.subscription === "string" ? input.session.subscription : input.session.subscription?.id || null, status:"active", idempotency_key:idempotencyKey(["pass_access", input.purchaseId, input.session.subscription || "subscription"]) }, { onConflict:"idempotency_key" });
-  }
+  const subscriptionId =
+    typeof input.session.subscription === "string"
+      ? input.session.subscription
+      : input.session.subscription?.id || null;
+
+  await supabaseAdmin.from("user_access_passes").upsert(
+    {
+      user_id: input.userId,
+      user_email: input.userEmail,
+      access_key: String(input.session.metadata?.access_key || "music_full"),
+      source_type: "subscription",
+      source_purchase_id: input.purchaseId,
+      stripe_subscription_id: subscriptionId,
+      status: "active",
+      idempotency_key: idempotencyKey([
+        "pass_access",
+        input.purchaseId,
+        subscriptionId || "subscription",
+      ]),
+    },
+    { onConflict: "idempotency_key" }
+  );
+}
   await maybeGrantShares(input, line.data);
   await maybeGrantKiiku(input, line.data);
   await maybeCreateContribution(input, line.data);
