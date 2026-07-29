@@ -23,12 +23,7 @@ export default async function HomePage() {
 
   try {
     const existingUser = await getCurrentAppUser();
-
-    if (existingUser?.id) {
-      user = existingUser;
-    } else {
-      user = await getOrCreateAppUser(session.email, session.username || null);
-    }
+    user = existingUser || (await getOrCreateAppUser(session.email, session.username || null));
   } catch (error) {
     console.error("HOME_USER_LOOKUP_FAILED", error);
   }
