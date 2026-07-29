@@ -3,66 +3,66 @@
 import { useEffect, useState } from "react";
 import FriendsInboxClient from "@/components/FriendsInboxClient";
 
+type Conversation = {
+  id: string;
+  slug: string;
+  title: string;
+  avatar_letter?: string | null;
+  list_preview?: string | null;
+  last_activity_label?: string | null;
+  sort_order?: number | null;
+  can_open_conversation?: boolean;
+  locked_reason?: string | null;
+  final_track?: any;
+};
+
 export default function FriendsInboxLoader() {
-  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    let mounted = true;
+    let active = true;
     async function load() {
       try {
         const res = await fetch("/api/apps/friends/conversations", { cache: "no-store" });
-        const data = await res.json().catch(() => null);
-        if (!mounted) return;
-        if (!res.ok || !data?.ok) {
-          setError(data?.error || "Fri.ends could not load.");
-          setState("error");
+        const data = await res.json();
+        if (!active) return;
+        if (!data?.ok) {
+          setError(data?.error || "Could not load Fri.ends.");
+          setConversations([]);
           return;
         }
         setConversations(Array.isArray(data.conversations) ? data.conversations : []);
-        setState("ready");
       } catch {
-        if (!mounted) return;
-        setError("Fri.ends could not load.");
-        setState("error");
+        if (active) setError("Could not load Fri.ends.");
+      } finally {
+        if (active) setLoading(false);
       }
     }
-    void load();
-    return () => { mounted = false; };
+    load();
+    return () => { active = false; };
   }, []);
 
-  if (state !== "ready") {
-    return (
-      <main className="friends-original-app-shell">
-        <section className="screen screen-inbox is-active">
-          <div className="friends-original-inbox-topbar top-safe">
-            <a href="/home" className="friends-original-back-btn">‹ Home</a>
-            <h1>fri.ends</h1>
-          </div>
-          <div className="friends-original-thread-list">
-            <div className="friends-original-thread-row">
-              <div className="friends-original-thread-avatar group">{state === "loading" ? "F" : "!"}</div>
-              <div className="friends-original-thread-main">
-                <div className="friends-original-thread-title">{state === "loading" ? "Loading conversations..." : "Could not load Fri.ends"}</div>
-                <div className="friends-original-thread-preview">{state === "loading" ? "Reconnecting message threads." : error}</div>
-              </div>
-            </div>
-          </div>
-        </section>
-      </main>
-    );
-  }
-
   return (
-    <main className="friends-original-app-shell">
+    <main className="app-shell friends-original-app-shell">
       <section className="screen screen-inbox is-active" aria-label="Fri.ends inbox">
         <div className="friends-original-inbox-topbar top-safe">
-          <a href="/home" className="friends-original-back-btn">‹ Home</a>
-          <h1>fri.ends</h1>
+          <a href="/home" className="friends-original-back-btn" aria-label="Back to home">
+            <span className="friends-original-back-chevron" aria-hidden="true"></span>
+            <span className="friends-original-back-text">Home</span>
+          </a>
           <a href="/apps/share" className="friends-original-thread-face-btn" aria-label="Share">⌁</a>
         </div>
-        <FriendsInboxClient conversations={conversations} />
+
+        <header className="friends-original-inbox-header">
+          <h1>Fri.ends</h1>
+          <p>Conversations, audio messages, and final songs.</p>
+        </header>
+
+        {loading ? <div className="friends-original-empty-state">Loading conversations...</div> : null}
+        {error ? <div className="friends-original-empty-state">{error}</div> : null}
+        {!loading && !error ? <FriendsInboxClient conversations={conversations} /> : null}
       </section>
     </main>
   );

@@ -1,0 +1,140 @@
+.settings-page {
+  min-height: 100dvh;
+  background: #0b0b0f;
+  color: white;
+  padding: 18px 14px 120px;
+}
+.settings-phone {
+  width: min(520px, 100%);
+  margin: 0 auto;
+}
+.settings-topbar {
+  position: sticky;
+  top: calc(env(safe-area-inset-top, 0px) + 10px);
+  z-index: 60;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 18px;
+  pointer-events: none;
+}
+.settings-back,
+.settings-share-link,
+.settings-action {
+  pointer-events: auto;
+  min-height: 44px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 16px;
+  color: white;
+  text-decoration: none;
+  font-weight: 800;
+  background: rgba(255,255,255,.12);
+  border: 1px solid rgba(255,255,255,.13);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+  box-shadow: 0 18px 44px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
+}
+.settings-hero {
+  display: grid;
+  grid-template-columns: 78px 1fr;
+  gap: 16px;
+  align-items: center;
+  margin-bottom: 22px;
+  padding-top: 10px;
+}
+.settings-avatar {
+  width: 78px;
+  height: 78px;
+  border-radius: 24px;
+  display: grid;
+  place-items: center;
+  font-size: 34px;
+  font-weight: 900;
+  background: linear-gradient(160deg, #7ec3ff, #6d5dfc);
+  box-shadow: 0 22px 44px rgba(0,0,0,.35);
+}
+.settings-hero p,
+.settings-hero h1,
+.settings-hero span { margin: 0; }
+.settings-hero p { color: rgba(255,255,255,.58); font-weight: 750; font-size: 14px; }
+.settings-hero h1 { margin-top: 4px; font-size: 44px; line-height: .94; letter-spacing: -.06em; }
+.settings-hero span { display:block; margin-top: 8px; color: rgba(255,255,255,.66); font-size: 15px; overflow-wrap:anywhere; }
+.settings-list { display: grid; gap: 12px; }
+.settings-group {
+  border-radius: 28px;
+  background: rgba(255,255,255,.09);
+  border: 1px solid rgba(255,255,255,.10);
+  overflow: hidden;
+  box-shadow: 0 20px 48px rgba(0,0,0,.22), inset 0 1px 0 rgba(255,255,255,.06);
+}
+.settings-group summary {
+  list-style: none;
+  cursor: pointer;
+  padding: 15px;
+  display: grid;
+  grid-template-columns: 42px 1fr;
+  gap: 12px;
+  align-items: center;
+}
+.settings-group summary::-webkit-details-marker { display: none; }
+.settings-group summary strong { display:block; font-size: 17px; }
+.settings-group summary small { display:block; color: rgba(255,255,255,.58); margin-top: 3px; font-size: 13px; }
+.settings-icon {
+  width: 42px;
+  height: 42px;
+  border-radius: 13px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+.settings-icon.blue { background:#0a84ff; }
+.settings-icon.gold { background:#f5b642; color:#211400; }
+.settings-icon.green { background:#32d74b; color:#051507; }
+.settings-icon.cyan { background:#64d2ff; color:#06131b; }
+.settings-icon.purple { background:#bf5af2; }
+.settings-icon.red { background:#ff453a; }
+.settings-icon.gray { background:#636366; }
+.settings-panel {
+  border-top: 1px solid rgba(255,255,255,.08);
+  padding: 14px 15px 16px;
+  display: grid;
+  gap: 10px;
+}
+.wallet-panel { grid-template-columns: repeat(2, minmax(0,1fr)); }
+.settings-row,
+.settings-history {
+  display:flex;
+  justify-content:space-between;
+  align-items:flex-start;
+  gap: 12px;
+  padding: 12px 0;
+  border-bottom: 1px solid rgba(255,255,255,.07);
+}
+.settings-row span,
+.settings-history span,
+.settings-copy { color: rgba(255,255,255,.62); }
+.settings-row strong,
+.settings-history strong { text-align:right; overflow-wrap:anywhere; }
+.settings-kpi,
+.settings-mini-card {
+  border-radius: 20px;
+  padding: 14px;
+  background: rgba(255,255,255,.07);
+  border: 1px solid rgba(255,255,255,.08);
+}
+.settings-kpi span { display:block; color: rgba(255,255,255,.58); font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing:.08em; }
+.settings-kpi strong { display:block; margin-top:8px; font-size: 34px; line-height:.9; }
+.settings-stack { display:grid; gap: 10px; }
+.settings-mini-card strong,
+.settings-mini-card span { display:block; }
+.settings-mini-card span { margin-top:5px; color: rgba(255,255,255,.62); }
+.settings-action { justify-self:start; min-height: 42px; background: #0a84ff; border-color: rgba(255,255,255,.1); }
+.settings-action.secondary { background: rgba(255,255,255,.12); }
+@media (max-width: 520px) {
+  .settings-hero h1 { font-size: 38px; }
+  .wallet-panel { grid-template-columns: 1fr 1fr; }
+}

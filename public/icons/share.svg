@@ -1,1 +1,7 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120"><defs><linearGradient id="g" x1="20" y1="12" x2="100" y2="110" gradientUnits="userSpaceOnUse"><stop stop-color="#7dd3fc"/><stop offset=".45" stop-color="#8b5cf6"/><stop offset="1" stop-color="#f8d477"/></linearGradient></defs><rect width="120" height="120" rx="27" fill="url(#g)"/><path d="M37 62c9-17 37-17 46 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/><path d="M48 73c5-9 19-9 24 0" fill="none" stroke="white" stroke-width="7" stroke-linecap="round"/><circle cx="60" cy="85" r="6" fill="white"/><path d="M60 27v26m0-26 10 10M60 27 50 37" fill="none" stroke="white" stroke-width="7" stroke-linecap="round" stroke-linejoin="round"/></svg>
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 1024">
+  <defs><linearGradient id="g" x1="0" x2="1" y1="0" y2="1"><stop stop-color="#9be6ff"/><stop offset="1" stop-color="#0a84ff"/></linearGradient></defs>
+  <rect width="1024" height="1024" rx="232" fill="url(#g)"/>
+  <path d="M512 706c92 0 166-74 166-166s-74-166-166-166-166 74-166 166 74 166 166 166Z" fill="white" opacity=".96"/>
+  <path d="M512 284c142 0 257 115 257 257M512 194c192 0 347 155 347 347M512 836c-164 0-296-132-296-296M512 926c-213 0-386-173-386-386" fill="none" stroke="white" stroke-width="58" stroke-linecap="round" opacity=".62"/>
+  <path d="M512 452v176M424 540h176" stroke="#0a84ff" stroke-width="58" stroke-linecap="round"/>
+</svg>

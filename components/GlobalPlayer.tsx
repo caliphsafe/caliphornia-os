@@ -1,212 +1,280 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useRouter } from "next/navigation";
+import { useEffect, useMemo, useRef, useState } from "react";
 
 export type GlobalTrack = {
   id?: string | null;
-  slug?: string | null;
   songId?: string | null;
+  slug?: string | null;
   songSlug?: string | null;
   title: string;
   artist?: string | null;
   displayTitle?: string | null;
+  date?: string | null;
   duration?: string | null;
-  description?: string | null;
   file?: string | null;
   playbackUrl?: string | null;
+  transcript?: string | null;
+  description?: string | null;
+  clipId?: string | null;
+  clipStartSeconds?: number | null;
+  clipEndSeconds?: number | null;
   playlistSongSlug?: string | null;
   analyticsSongSlug?: string | null;
   sourceApp?: string | null;
-  coverUrl?: string | null;
   isPreview?: boolean | null;
-  access?: string | null;
-  clipId?: string | null;
-  clipStart?: number | null;
-  clipEnd?: number | null;
-  clipStartSeconds?: number | null;
-  clipEndSeconds?: number | null;
   conversationSlug?: string | null;
   conversationRoute?: string | null;
-  projectSlug?: string | null;
-  projectName?: string | null;
+  isFriendsFinal?: boolean;
+  resumeSeconds?: number | null;
+  coverUrl?: string | null;
+  coverPath?: string | null;
+  coverBucket?: string | null;
+  access?: string | null;
   [key: string]: unknown;
 };
 
-type ActiveTrack = GlobalTrack & { playbackUrl: string };
+type Props = {
+  email: string;
+};
+
+type FriendsConversationListItem = {
+  slug: string;
+  title?: string | null;
+  subtitle?: string | null;
+  final_track?: {
+    slug?: string | null;
+    title?: string | null;
+    artist?: string | null;
+    file?: string | null;
+    playlist_song_slug?: string | null;
+    analytics_song_slug?: string | null;
+  } | null;
+};
 
 function looksLikeUuid(value?: string | null) {
   if (!value) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function trackSlug(track?: GlobalTrack | null) {
-  if (!track) return null;
-  return (
-    track.songSlug ||
-    track.playlistSongSlug ||
-    track.analyticsSongSlug ||
-    track.slug ||
-    (!looksLikeUuid(String(track.id || "")) ? String(track.id || "") : null)
+function getTrackParts(title: string, artist?: string | null) {
+  if (artist && artist.trim()) return { artist: artist.trim(), song: String(title || "").trim() };
+  const raw = String(title || "").trim();
+  const parts = raw.split(/\s*-\s*/);
+  if (parts.length >= 2) return { artist: parts[0].trim(), song: parts.slice(1).join(" - ").trim() };
+  return { artist: "Caliph", song: raw };
+}
+
+function getDisplaySongTitle(track: GlobalTrack | null) {
+  if (!track) return "";
+  const title = String(track.displayTitle || track.title || "");
+  if (track.isPreview && !title.toLowerCase().includes("(preview)")) return `${title} (Preview)`;
+  return title;
+}
+
+function formatTime(seconds: number) {
+  if (!Number.isFinite(seconds) || seconds < 0) return "0:00";
+  const mins = Math.floor(seconds / 60);
+  const secs = Math.floor(seconds % 60);
+  return `${mins}:${String(secs).padStart(2, "0")}`;
+}
+
+function IconPrev() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon"><path d="M7 6v12M18 7l-7 5 7 5V7Z" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" /></svg>;
+}
+function IconNext() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon"><path d="M17 6v12M6 7l7 5-7 5V7Z" fill="currentColor" stroke="currentColor" strokeWidth="1.2" strokeLinejoin="round" strokeLinecap="round" /></svg>;
+}
+function IconPlay() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon gp-icon-play"><path d="M8 6.5v11l9-5.5-9-5.5Z" fill="currentColor" /></svg>;
+}
+function IconPause() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon"><path d="M8 6h3v12H8zM13 6h3v12h-3z" fill="currentColor" /></svg>;
+}
+function IconStar({ filled }: { filled: boolean }) {
+  return filled ? (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon"><path d="M12 3.8l2.52 5.11 5.64.82-4.08 3.98.96 5.62L12 16.66 6.96 19.33l.96-5.62L3.84 9.73l5.64-.82L12 3.8Z" fill="currentColor" /></svg>
+  ) : (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className="gp-icon"><path d="M12 3.8l2.52 5.11 5.64.82-4.08 3.98.96 5.62L12 16.66 6.96 19.33l.96-5.62L3.84 9.73l5.64-.82L12 3.8Z" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinejoin="round" /></svg>
   );
 }
 
-function trackSongId(track?: GlobalTrack | null) {
-  if (!track) return null;
-  return track.songId || (looksLikeUuid(String(track.id || "")) ? String(track.id) : null);
+function normalizeFriendsFinalTrack(convo: FriendsConversationListItem): GlobalTrack | null {
+  const finalTrack = convo.final_track;
+  if (!finalTrack?.file) return null;
+  return {
+    slug: finalTrack.slug || `${convo.slug}-final`,
+    title: finalTrack.title || convo.title || convo.slug,
+    artist: finalTrack.artist || convo.subtitle || "",
+    displayTitle: convo.title || convo.slug,
+    description: "Final song",
+    file: finalTrack.file,
+    playlistSongSlug: finalTrack.playlist_song_slug || finalTrack.slug || null,
+    analyticsSongSlug: finalTrack.analytics_song_slug || finalTrack.playlist_song_slug || finalTrack.slug || null,
+    sourceApp: "friends",
+    conversationSlug: convo.slug,
+    conversationRoute: `/apps/friends/${convo.slug}`,
+    isFriendsFinal: true
+  };
 }
 
-function trackTitle(track?: GlobalTrack | null) {
-  return track?.displayTitle || track?.title || "Untitled";
+function MarqueeText({ text, active = true }: { text: string; active?: boolean }) {
+  const shouldMarquee = active && text.length > 22;
+  return <span className={shouldMarquee ? "music-marquee-shell" : "music-ellipsis"}><span className={shouldMarquee ? "music-marquee-track" : ""}><span>{text}</span></span></span>;
 }
 
-export default function GlobalPlayer() {
-  const [track, setTrack] = useState<ActiveTrack | null>(null);
-  const [queue, setQueue] = useState<GlobalTrack[]>([]);
-  const [index, setIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [error, setError] = useState("");
-
+export default function GlobalPlayer({ email }: Props) {
+  const router = useRouter();
   const audioRef = useRef<HTMLAudioElement | null>(null);
-  const activeRef = useRef<ActiveTrack | null>(null);
-  const sessionRef = useRef<string | null>(null);
+  const playbackSessionRef = useRef<string | null>(null);
 
-  const broadcast = useCallback((nextTrack: GlobalTrack | null, playing: boolean) => {
-    const audio = audioRef.current;
-    const start = Number(nextTrack?.clipStartSeconds ?? nextTrack?.clipStart ?? 0);
-    const end = Number(nextTrack?.clipEndSeconds ?? nextTrack?.clipEnd ?? audio?.duration ?? 0);
-    const current = Number(audio?.currentTime || 0);
-    const clipElapsed = Math.max(0, current - start);
-    const clipDuration = Math.max(1, end - start);
+  const [queue, setQueue] = useState<GlobalTrack[]>([]);
+  const [currentIndex, setCurrentIndex] = useState<number>(-1);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isVisible, setIsVisible] = useState(false);
+  const [isSaved, setIsSaved] = useState(false);
+  const [friendsFinalQueue, setFriendsFinalQueue] = useState<GlobalTrack[]>([]);
+  const [resolvedCoverUrl, setResolvedCoverUrl] = useState<string | null>(null);
+  const [playbackUrl, setPlaybackUrl] = useState<string | null>(null);
+  const [playerTime, setPlayerTime] = useState({ current: 0, duration: 0, progress: 0 });
 
-    window.postMessage(
-      {
-        type: "CALIPH_PLAYER_STATE",
-        isPlaying: playing,
-        slug: trackSlug(nextTrack),
-        playlistSongSlug: nextTrack?.playlistSongSlug || trackSlug(nextTrack),
-        analyticsSongSlug: nextTrack?.analyticsSongSlug || trackSlug(nextTrack),
-        sourceApp: nextTrack?.sourceApp || null,
-        title: nextTrack ? trackTitle(nextTrack) : null,
-        clipId: nextTrack?.clipId || null,
-        currentTime: current,
-        duration: Number(audio?.duration || 0),
-        clipElapsed,
-        clipProgress: Math.min(1, Math.max(0, clipElapsed / clipDuration)),
-        conversationSlug: nextTrack?.conversationSlug || null,
-        conversationRoute: nextTrack?.conversationRoute || null,
-      },
-      "*"
-    );
-  }, []);
+  const currentTrack = useMemo(() => {
+    if (currentIndex < 0 || currentIndex >= queue.length) return null;
+    return queue[currentIndex];
+  }, [queue, currentIndex]);
 
-  const sendHeartbeat = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio || !sessionRef.current || audio.paused) return;
-    void fetch("/api/playback/heartbeat", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        playbackSessionId: sessionRef.current,
-        secondsPlayed: Math.floor(audio.currentTime),
-      }),
-    }).catch(() => {});
-  }, []);
+  const trackParts = useMemo(() => getTrackParts(getDisplaySongTitle(currentTrack), currentTrack?.artist), [currentTrack]);
 
-  const startTrack = useCallback(async (nextTrack: GlobalTrack, nextQueue: GlobalTrack[] = [nextTrack], nextIndex = 0) => {
-    setError("");
+  function getCurrentTrackSongSlug(track: GlobalTrack | null) {
+    if (!track) return null;
+    return track.songSlug || track.playlistSongSlug || track.analyticsSongSlug || track.slug || null;
+  }
 
-    let playbackUrl = nextTrack.playbackUrl || nextTrack.file || "";
-    let playbackSessionId: string | null = null;
-    let accessLabel = nextTrack.access || null;
-    let isPreview = Boolean(nextTrack.isPreview);
-    let clipStart = nextTrack.clipStartSeconds ?? nextTrack.clipStart ?? null;
-    let clipEnd = nextTrack.clipEndSeconds ?? nextTrack.clipEnd ?? null;
+  function getCurrentTrackSongId(track: GlobalTrack | null) {
+    if (!track) return null;
+    if (track.songId) return track.songId;
+    if (track.id && looksLikeUuid(String(track.id))) return String(track.id);
+    return null;
+  }
 
-    const songId = trackSongId(nextTrack);
-    const songSlug = trackSlug(nextTrack);
-
-    if (songId || songSlug) {
-      try {
-        const res = await fetch("/api/playback/start", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ songId, songSlug }),
-        });
-        const data = await res.json().catch(() => null);
-        if (res.ok && data?.ok && data.playbackUrl) {
-          playbackUrl = data.playbackUrl;
-          playbackSessionId = data.playbackSessionId || null;
-          accessLabel = data.access?.displayLabel || accessLabel;
-          isPreview = data.access?.playbackMode === "preview" || data.access?.accessType === "preview" || isPreview;
-          clipStart = data.access?.previewStartSeconds ?? clipStart;
-          clipEnd = data.access?.previewEndSeconds ?? clipEnd;
-        }
-      } catch {
-        // The older app experiences often pass an already signed file URL. Keep that working.
-      }
+  async function loadFriendsFinalQueue() {
+    try {
+      const res = await fetch("/api/apps/friends/conversations", { cache: "no-store" });
+      const data = await res.json();
+      const conversations = Array.isArray(data?.conversations) ? data.conversations : [];
+      const normalized = conversations.map((convo: FriendsConversationListItem) => normalizeFriendsFinalTrack(convo)).filter(Boolean) as GlobalTrack[];
+      setFriendsFinalQueue(normalized);
+      return normalized;
+    } catch {
+      return [];
     }
+  }
 
-    if (!playbackUrl) {
-      setError("Playback unavailable for this item.");
+  async function resolveTrackUrl(track: GlobalTrack | null) {
+    playbackSessionRef.current = null;
+    if (!track) return null;
+    if (track.playbackUrl) return track.playbackUrl;
+    if (track.file) return track.file;
+
+    const songId = getCurrentTrackSongId(track);
+    const songSlug = getCurrentTrackSongSlug(track);
+    if (!songId && !songSlug) return null;
+
+    try {
+      const res = await fetch("/api/playback/start", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ songId, songSlug })
+      });
+      const data = await res.json();
+      if (!res.ok || !data?.ok || !data?.playbackUrl) return null;
+      playbackSessionRef.current = data.playbackSessionId || null;
+      if (data.access) {
+        track.isPreview = data.access.playbackMode === "preview" || data.access.accessType === "preview";
+        track.clipStartSeconds = data.access.previewStartSeconds ?? track.clipStartSeconds ?? null;
+        track.clipEndSeconds = data.access.previewEndSeconds ?? track.clipEndSeconds ?? null;
+      }
+      return data.playbackUrl as string;
+    } catch {
+      return null;
+    }
+  }
+
+  function getPlaylistTarget(track: GlobalTrack | null) {
+    const songId = getCurrentTrackSongId(track);
+    const songSlug = getCurrentTrackSongSlug(track);
+    return { songId, songSlug };
+  }
+
+  async function refreshFavoriteState(track: GlobalTrack | null) {
+    const { songId, songSlug } = getPlaylistTarget(track);
+    if (!email || (!songId && !songSlug)) {
+      setIsSaved(false);
       return;
     }
 
-    const active: ActiveTrack = {
-      ...nextTrack,
-      playbackUrl,
-      access: accessLabel || undefined,
-      isPreview,
-      clipStartSeconds: typeof clipStart === "number" ? clipStart : null,
-      clipEndSeconds: typeof clipEnd === "number" ? clipEnd : null,
+    try {
+      const params = new URLSearchParams();
+      if (songId) params.set("songId", songId);
+      if (songSlug) params.set("songSlug", songSlug);
+      const res = await fetch(`/api/playlists/is-favorite?${params.toString()}`, { cache: "no-store" });
+      const data = await res.json();
+      setIsSaved(Boolean(data?.ok && data?.saved));
+    } catch {
+      setIsSaved(false);
+    }
+  }
+
+  function broadcastState() {
+    const audio = audioRef.current;
+    const start = currentTrack?.resumeSeconds ?? currentTrack?.clipStartSeconds ?? 0;
+    const end = currentTrack?.clipEndSeconds ?? null;
+    const current = audio?.currentTime || 0;
+    const elapsed = Math.max(0, current - start);
+    const clipDuration = end != null ? Math.max(0, end - start) : audio?.duration && Number.isFinite(audio.duration) ? Math.max(0, audio.duration - start) : 0;
+
+    const payload = {
+      type: "CALIPH_PLAYER_STATE",
+      slug: currentTrack?.slug || currentTrack?.songSlug || null,
+      clipId: currentTrack?.clipId || null,
+      playlistSongSlug: currentTrack?.playlistSongSlug || currentTrack?.songSlug || currentTrack?.slug || null,
+      analyticsSongSlug: currentTrack?.analyticsSongSlug || currentTrack?.songSlug || currentTrack?.slug || null,
+      isPlaying: audio ? !audio.paused : false,
+      currentTime: current,
+      duration: audio?.duration || 0,
+      clipElapsed: elapsed,
+      clipDuration,
+      clipProgress: clipDuration > 0 ? Math.min(1, elapsed / clipDuration) : 0,
+      sourceApp: currentTrack?.sourceApp || null,
+      conversationSlug: currentTrack?.conversationSlug || null,
+      title: currentTrack?.title || null
     };
 
-    activeRef.current = active;
-    sessionRef.current = playbackSessionId;
-    setQueue(nextQueue);
-    setIndex(nextIndex);
-    setTrack(active);
+    window.postMessage(payload, "*");
+    document.querySelectorAll("iframe").forEach((frame) => frame.contentWindow?.postMessage(payload, "*"));
+  }
 
-    window.setTimeout(() => {
-      const audio = audioRef.current;
-      if (!audio) return;
-      if (typeof active.clipStartSeconds === "number") {
-        audio.currentTime = active.clipStartSeconds;
-      }
-      audio.play().then(() => {
-        setIsPlaying(true);
-        broadcast(active, true);
-      }).catch(() => {
-        setIsPlaying(false);
-        broadcast(active, false);
-      });
-    }, 40);
-  }, [broadcast]);
+  async function advanceWithinCurrentProject(direction: "next" | "prev" = "next") {
+    if (!currentTrack) return;
 
-  const play = useCallback(() => {
-    const audio = audioRef.current;
-    const active = activeRef.current;
-    if (!audio || !active) return;
-    audio.play().then(() => {
-      setIsPlaying(true);
-      broadcast(active, true);
-    }).catch(() => {});
-  }, [broadcast]);
+    if (currentTrack.sourceApp === "friends") {
+      const finals = friendsFinalQueue.length ? friendsFinalQueue : await loadFriendsFinalQueue();
+      if (!finals.length) return;
+      const currentConversationSlug = currentTrack.conversationSlug || currentTrack.playlistSongSlug || currentTrack.slug;
+      const currentFinalIndex = finals.findIndex((track) => track.conversationSlug === currentConversationSlug);
+      const nextFinalIndex = direction === "prev" ? currentFinalIndex <= 0 ? finals.length - 1 : currentFinalIndex - 1 : currentFinalIndex >= finals.length - 1 || currentFinalIndex === -1 ? 0 : currentFinalIndex + 1;
+      setQueue(finals);
+      setCurrentIndex(nextFinalIndex);
+      setIsVisible(true);
+      return;
+    }
 
-  const pause = useCallback(() => {
-    const audio = audioRef.current;
-    const active = activeRef.current;
-    if (!audio) return;
-    audio.pause();
-    setIsPlaying(false);
-    broadcast(active, false);
-  }, [broadcast]);
-
-  const toggle = useCallback(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
-    if (audio.paused) play();
-    else pause();
-  }, [pause, play]);
+    if (!queue.length) return;
+    const nextIndex = direction === "prev" ? currentIndex <= 0 ? queue.length - 1 : currentIndex - 1 : currentIndex >= queue.length - 1 ? 0 : currentIndex + 1;
+    setCurrentIndex(nextIndex);
+    setIsVisible(true);
+  }
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -214,116 +282,229 @@ export default function GlobalPlayer() {
       if (!data || typeof data !== "object") return;
 
       if (data.type === "CALIPH_PLAY" && data.track) {
-        void startTrack(data.track as GlobalTrack);
-        return;
+        setQueue([data.track as GlobalTrack]);
+        setCurrentIndex(0);
+        setIsVisible(true);
       }
 
-      if (data.type === "CALIPH_PLAYER_LOAD_QUEUE" || data.type === "CALIPH_PLAYER_TOGGLE_TRACK") {
-        const tracks = Array.isArray(data.tracks) ? (data.tracks as GlobalTrack[]) : [];
-        const nextIndex = typeof data.startIndex === "number" ? data.startIndex : 0;
-        const nextTrack = tracks[nextIndex];
-        if (!nextTrack) return;
+      if (data.type === "CALIPH_PLAYER_LOAD_QUEUE") {
+        const tracks = Array.isArray(data.tracks) ? data.tracks : [];
+        const startIndex = typeof data.startIndex === "number" ? data.startIndex : 0;
+        if (!tracks.length) return;
+        setQueue(tracks);
+        setCurrentIndex(startIndex);
+        setIsVisible(true);
+      }
 
-        const currentSlug = trackSlug(activeRef.current);
-        const nextSlug = trackSlug(nextTrack);
-
-        if (data.type === "CALIPH_PLAYER_TOGGLE_TRACK" && currentSlug && nextSlug && currentSlug === nextSlug) {
-          toggle();
+      if (data.type === "CALIPH_PLAYER_TOGGLE_TRACK") {
+        const tracks = Array.isArray(data.tracks) ? data.tracks : [];
+        const startIndex = typeof data.startIndex === "number" ? data.startIndex : 0;
+        if (!tracks.length) return;
+        const incoming = tracks[startIndex];
+        const same = currentTrack && incoming && ((currentTrack.clipId && incoming.clipId && currentTrack.clipId === incoming.clipId) || (currentTrack.slug && incoming.slug && currentTrack.slug === incoming.slug));
+        if (same && audioRef.current) {
+          if (audioRef.current.paused) audioRef.current.play().catch(() => {});
+          else audioRef.current.pause();
           return;
         }
-
-        void startTrack(nextTrack, tracks, nextIndex);
-        return;
+        setQueue(tracks);
+        setCurrentIndex(startIndex);
+        setIsVisible(true);
       }
 
-      if (data.type === "CALIPH_PLAYER_PLAY") play();
-      if (data.type === "CALIPH_PLAYER_PAUSE") pause();
+      if (data.type === "CALIPH_PLAYER_PLAY") audioRef.current?.play().catch(() => {});
+      if (data.type === "CALIPH_PLAYER_PAUSE") audioRef.current?.pause();
       if (data.type === "CALIPH_PLAYER_SEEK") {
-        const audio = audioRef.current;
-        if (!audio) return;
         const delta = Number(data.delta || 0);
-        audio.currentTime = Math.max(0, audio.currentTime + delta);
-        broadcast(activeRef.current, !audio.paused);
+        if (audioRef.current) {
+          audioRef.current.currentTime = Math.max(0, (audioRef.current.currentTime || 0) + delta);
+          broadcastState();
+        }
       }
     }
 
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [broadcast, pause, play, startTrack, toggle]);
+  }, [currentTrack]);
 
   useEffect(() => {
-    const interval = window.setInterval(() => {
-      const audio = audioRef.current;
-      const active = activeRef.current;
-      if (!audio || !active) return;
+    const audio = audioRef.current;
+    if (!audio || !currentTrack) return;
 
-      sendHeartbeat();
-      broadcast(active, !audio.paused);
+    let cancelled = false;
+    const start = currentTrack.resumeSeconds ?? currentTrack.clipStartSeconds ?? 0;
 
-      if (typeof active.clipEndSeconds === "number" && audio.currentTime >= active.clipEndSeconds) {
-        audio.pause();
-        setIsPlaying(false);
-        broadcast(active, false);
+    async function load() {
+      const url = await resolveTrackUrl(currentTrack);
+      if (cancelled || !url || !audio) return;
+      setPlaybackUrl(url);
+      audio.pause();
+      audio.src = url;
+      audio.load();
+
+      const onCanPlay = async () => {
+        audio.removeEventListener("canplay", onCanPlay);
+        try { audio.currentTime = start; } catch {}
+        audio.play().catch(() => {});
+        setIsVisible(true);
+        setTimeout(() => broadcastState(), 50);
+      };
+
+      audio.addEventListener("canplay", onCanPlay, { once: true });
+
+      const analyticsSlug = currentTrack.analyticsSongSlug || currentTrack.playlistSongSlug || currentTrack.songSlug || currentTrack.slug;
+      const analyticsSongId = getCurrentTrackSongId(currentTrack);
+      if (analyticsSlug || analyticsSongId) {
+        void fetch("/api/events/song-play", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ songId: analyticsSongId, songSlug: analyticsSlug, sourcePath: window.location.pathname, appSlug: currentTrack.sourceApp || null })
+        }).catch(() => {});
       }
-    }, 1000);
 
-    return () => window.clearInterval(interval);
-  }, [broadcast, sendHeartbeat]);
+      void refreshFavoriteState(currentTrack);
 
-  async function handleEnded() {
-    if (sessionRef.current) {
-      await fetch("/api/playback/end", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ playbackSessionId: sessionRef.current }),
-      }).catch(() => {});
+      if (currentTrack.sourceApp === "friends" && currentTrack.conversationRoute) {
+        const path = window.location.pathname;
+        const isOnFriendsConversationPage = path.startsWith("/apps/friends/") && path !== "/apps/friends";
+        if (isOnFriendsConversationPage && path !== currentTrack.conversationRoute) router.push(currentTrack.conversationRoute);
+      }
     }
 
-    const nextIndex = index + 1;
-    const nextTrack = queue[nextIndex];
-    if (nextTrack) {
-      void startTrack(nextTrack, queue, nextIndex);
+    void load();
+    return () => { cancelled = true; };
+  }, [currentTrack, email, router]);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    function sync() {
+      const currentAudio = audioRef.current;
+      if (!currentAudio) return;
+      setIsPlaying(!currentAudio.paused);
+      const start = currentTrack?.resumeSeconds ?? currentTrack?.clipStartSeconds ?? 0;
+      const end = currentTrack?.clipEndSeconds ?? null;
+      const rawDuration = end != null ? Math.max(0, end - start) : currentAudio.duration && Number.isFinite(currentAudio.duration) ? Math.max(0, currentAudio.duration - start) : 0;
+      const rawCurrent = Math.max(0, (currentAudio.currentTime || 0) - start);
+      setPlayerTime({ current: rawCurrent, duration: rawDuration, progress: rawDuration > 0 ? Math.min(1, rawCurrent / rawDuration) : 0 });
+
+      if (currentTrack?.clipEndSeconds != null && currentAudio.currentTime >= currentTrack.clipEndSeconds) {
+        currentAudio.pause();
+        currentAudio.currentTime = currentTrack.clipEndSeconds;
+      }
+
+      if (playbackSessionRef.current && !currentAudio.paused) {
+        void fetch("/api/playback/heartbeat", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ playbackSessionId: playbackSessionRef.current, secondsPlayed: Math.floor(currentAudio.currentTime || 0) })
+        }).catch(() => {});
+      }
+
+      broadcastState();
+    }
+
+    function onEnded() {
+      if (playbackSessionRef.current) {
+        void fetch("/api/playback/end", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ playbackSessionId: playbackSessionRef.current })
+        }).catch(() => {});
+      }
+      if (currentTrack?.clipEndSeconds != null) return;
+      void advanceWithinCurrentProject("next");
+    }
+
+    audio.addEventListener("play", sync);
+    audio.addEventListener("pause", sync);
+    audio.addEventListener("timeupdate", sync);
+    audio.addEventListener("loadedmetadata", sync);
+    audio.addEventListener("seeked", sync);
+    audio.addEventListener("ended", onEnded);
+
+    return () => {
+      audio.removeEventListener("play", sync);
+      audio.removeEventListener("pause", sync);
+      audio.removeEventListener("timeupdate", sync);
+      audio.removeEventListener("loadedmetadata", sync);
+      audio.removeEventListener("seeked", sync);
+      audio.removeEventListener("ended", onEnded);
+    };
+  }, [currentTrack, currentIndex, queue, friendsFinalQueue, playbackUrl]);
+
+  useEffect(() => {
+    const rawSongSlug = getCurrentTrackSongSlug(currentTrack);
+    if (!rawSongSlug) {
+      setResolvedCoverUrl(null);
       return;
     }
+    let isCancelled = false;
+    async function fetchCover() {
+      try {
+        const res = await fetch(`/api/songs/by-slug/${encodeURIComponent(rawSongSlug)}`, { cache: "no-store" });
+        const data = await res.json();
+        if (!isCancelled) setResolvedCoverUrl(data?.ok ? data.song?.coverUrl || null : null);
+      } catch {
+        if (!isCancelled) setResolvedCoverUrl(null);
+      }
+    }
+    fetchCover();
+    return () => { isCancelled = true; };
+  }, [currentTrack]);
 
-    setIsPlaying(false);
-    broadcast(activeRef.current, false);
+  useEffect(() => {
+    const shouldOffset = Boolean(isVisible && currentTrack);
+    document.body.classList.toggle("has-global-player", shouldOffset);
+    return () => document.body.classList.remove("has-global-player");
+  }, [isVisible, currentTrack]);
+
+  async function playPrev() { await advanceWithinCurrentProject("prev"); }
+  async function playNext() { await advanceWithinCurrentProject("next"); }
+
+  async function togglePlaylistSave() {
+    const { songId, songSlug } = getPlaylistTarget(currentTrack);
+    if (!songId && !songSlug) return;
+    const res = await fetch("/api/playlists/toggle-favorite", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songId, songSlug })
+    });
+    const data = await res.json();
+    if (data?.ok) setIsSaved(Boolean(data.saved));
   }
 
-  if (!track && !error) return null;
+  if (!isVisible || !currentTrack) return null;
 
   return (
-    <div className="caliph-global-player" data-source={track?.sourceApp || "music"}>
-      {error ? <p className="caliph-global-player-error">{error}</p> : null}
-      {track ? (
-        <>
-          <div className="caliph-global-player-main">
-            {track.coverUrl ? <img src={track.coverUrl} alt="" /> : <div className="caliph-global-player-art">♪</div>}
-            <div className="caliph-global-player-meta">
-              <strong>{trackTitle(track)}</strong>
-              <span>{track.artist || "Caliph"}{track.isPreview ? " · Preview" : track.access ? ` · ${track.access}` : ""}</span>
+    <>
+      <audio ref={audioRef} />
+      <div className="music-inline-player-shell global-player">
+        <div className="music-inline-player">
+          <div className="music-inline-player-left">
+            <div className="music-inline-cover">
+              {resolvedCoverUrl ? <img src={resolvedCoverUrl} alt={trackParts.song} /> : <div className="music-inline-cover-fallback">{trackParts.song?.[0] || "♪"}</div>}
             </div>
-            <button type="button" onClick={toggle} aria-label={isPlaying ? "Pause" : "Play"}>
-              {isPlaying ? "⏸" : "▶"}
-            </button>
+            <div className="music-inline-copy">
+              <div className="music-inline-title"><MarqueeText text={trackParts.song} active={true} /></div>
+              <div className="music-inline-artist music-ellipsis">{trackParts.artist}</div>
+              <div className="music-inline-progress">
+                <span>{formatTime(playerTime.current)}</span>
+                <div className="music-inline-progress-track"><span className="music-inline-progress-fill" style={{ width: `${playerTime.progress * 100}%` }} /></div>
+                <span>{formatTime(playerTime.duration)}</span>
+              </div>
+            </div>
           </div>
-          <audio
-            ref={audioRef}
-            src={track.playbackUrl}
-            controls
-            controlsList="nodownload noplaybackrate"
-            onPlay={() => {
-              setIsPlaying(true);
-              broadcast(activeRef.current, true);
-            }}
-            onPause={() => {
-              setIsPlaying(false);
-              broadcast(activeRef.current, false);
-            }}
-            onEnded={() => void handleEnded()}
-          />
-        </>
-      ) : null}
-    </div>
+
+          <div className="music-inline-controls">
+            <button onClick={togglePlaylistSave} className={`music-inline-btn ${isSaved ? "is-saved" : ""}`} aria-label="Favorite"><IconStar filled={isSaved} /></button>
+            <button onClick={playPrev} className="music-inline-btn" aria-label="Previous"><IconPrev /></button>
+            <button onClick={() => { if (!audioRef.current) return; if (audioRef.current.paused) audioRef.current.play().catch(() => {}); else audioRef.current.pause(); }} className="music-inline-btn music-inline-btn-main" aria-label="Play or pause">{isPlaying ? <IconPause /> : <IconPlay />}</button>
+            <button onClick={playNext} className="music-inline-btn" aria-label="Next"><IconNext /></button>
+          </div>
+        </div>
+      </div>
+    </>
   );
 }

@@ -1,20 +1,25 @@
-import type { Metadata } from "next";
 import "./globals.css";
+import type { Metadata } from "next";
+import { cookies } from "next/headers";
+import { verifySession } from "@/lib/session";
 import GlobalPlayer from "@/components/GlobalPlayer";
-import { readSession } from "@/lib/session";
 
 export const metadata: Metadata = {
   title: "Caliphornia OS",
-  description: "A connected digital music world for Caliph."
+  description: "A modular iPhone-style music and media platform."
 };
 
-export default async function RootLayout({ children }: { children: React.ReactNode }) {
-  const session = await readSession();
+export default async function RootLayout({
+  children
+}: Readonly<{ children: React.ReactNode }>) {
+  const cookieStore = await cookies();
+  const session = verifySession(cookieStore.get("caliph_os_session")?.value);
+
   return (
     <html lang="en">
       <body>
         {children}
-        {session?.email ? <GlobalPlayer /> : null}
+        {session?.email ? <GlobalPlayer email={session.email} /> : null}
       </body>
     </html>
   );
