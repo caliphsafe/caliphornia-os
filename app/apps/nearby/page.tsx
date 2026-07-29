@@ -1,7 +1,7 @@
-import NearbyClient from "@/components/nearby/NearbyClient";
-import { getCurrentAppUser } from "@/lib/users";
+import { redirect } from "next/navigation";
 
-export default async function NearbyPage() {
-  const user = await getCurrentAppUser();
-  return <NearbyClient signedIn={Boolean(user)} />;
+export const dynamic = "force-dynamic";
+
+export default function NearbyRedirectPage() {
+  redirect("/apps/share");
 }

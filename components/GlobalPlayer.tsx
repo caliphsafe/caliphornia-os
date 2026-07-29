@@ -10,7 +10,6 @@ export type GlobalTrack = {
   title: string;
   artist?: string | null;
   displayTitle?: string | null;
-  isPreview?: boolean | null;
   duration?: string | null;
   description?: string | null;
   file?: string | null;
@@ -19,100 +18,80 @@ export type GlobalTrack = {
   analyticsSongSlug?: string | null;
   sourceApp?: string | null;
   coverUrl?: string | null;
+  isPreview?: boolean | null;
   access?: string | null;
+  clipId?: string | null;
   clipStart?: number | null;
   clipEnd?: number | null;
   clipStartSeconds?: number | null;
   clipEndSeconds?: number | null;
-  clipId?: string | null;
   conversationSlug?: string | null;
   conversationRoute?: string | null;
-  threadSlug?: string | null;
-  messageId?: string | null;
   projectSlug?: string | null;
   projectName?: string | null;
-  appSlug?: string | null;
-  date?: string | null;
-  transcript?: string | null;
-  isFriendsFinal?: boolean | null;
   [key: string]: unknown;
 };
 
-type ActiveTrack = GlobalTrack & {
-  playbackUrl: string;
-  accessLabel?: string | null;
-};
+type ActiveTrack = GlobalTrack & { playbackUrl: string };
 
 function looksLikeUuid(value?: string | null) {
   if (!value) return false;
   return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
 }
 
-function getTrackSlug(track?: GlobalTrack | null) {
-  if (!track) return undefined;
-
+function trackSlug(track?: GlobalTrack | null) {
+  if (!track) return null;
   return (
     track.songSlug ||
     track.playlistSongSlug ||
     track.analyticsSongSlug ||
     track.slug ||
-    (!looksLikeUuid(track.id || undefined) ? track.id || undefined : undefined)
+    (!looksLikeUuid(String(track.id || "")) ? String(track.id || "") : null)
   );
 }
 
-function getTrackSongId(track?: GlobalTrack | null) {
-  if (!track) return undefined;
-  if (track.songId) return track.songId;
-  if (looksLikeUuid(track.id || undefined)) return track.id || undefined;
-  return undefined;
+function trackSongId(track?: GlobalTrack | null) {
+  if (!track) return null;
+  return track.songId || (looksLikeUuid(String(track.id || "")) ? String(track.id) : null);
 }
 
-function getTrackTitle(track?: GlobalTrack | null) {
+function trackTitle(track?: GlobalTrack | null) {
   return track?.displayTitle || track?.title || "Untitled";
-}
-
-function normalizeNumber(value: unknown) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
 }
 
 export default function GlobalPlayer() {
   const [track, setTrack] = useState<ActiveTrack | null>(null);
   const [queue, setQueue] = useState<GlobalTrack[]>([]);
-  const [queueIndex, setQueueIndex] = useState(0);
+  const [index, setIndex] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [error, setError] = useState("");
 
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const activeRef = useRef<ActiveTrack | null>(null);
   const sessionRef = useRef<string | null>(null);
-  const currentTrackRef = useRef<ActiveTrack | null>(null);
-  const queuedRef = useRef<GlobalTrack[]>([]);
-  const queueIndexRef = useRef(0);
 
-  const broadcastPlayerState = useCallback((nextTrack: GlobalTrack | null, playing: boolean) => {
-    if (typeof window === "undefined") return;
-
+  const broadcast = useCallback((nextTrack: GlobalTrack | null, playing: boolean) => {
     const audio = audioRef.current;
-    const clipStart = normalizeNumber(nextTrack?.clipStartSeconds ?? nextTrack?.clipStart) || 0;
-    const clipEnd = normalizeNumber(nextTrack?.clipEndSeconds ?? nextTrack?.clipEnd);
-    const currentTime = audio?.currentTime || 0;
-    const duration = audio?.duration || 0;
-    const clipElapsed = Math.max(0, currentTime - clipStart);
-    const clipTotal = clipEnd && clipEnd > clipStart ? clipEnd - clipStart : duration || 0;
+    const start = Number(nextTrack?.clipStartSeconds ?? nextTrack?.clipStart ?? 0);
+    const end = Number(nextTrack?.clipEndSeconds ?? nextTrack?.clipEnd ?? audio?.duration ?? 0);
+    const current = Number(audio?.currentTime || 0);
+    const clipElapsed = Math.max(0, current - start);
+    const clipDuration = Math.max(1, end - start);
 
     window.postMessage(
       {
         type: "CALIPH_PLAYER_STATE",
         isPlaying: playing,
-        slug: getTrackSlug(nextTrack),
-        playlistSongSlug: nextTrack?.playlistSongSlug || getTrackSlug(nextTrack),
-        analyticsSongSlug: nextTrack?.analyticsSongSlug || getTrackSlug(nextTrack),
+        slug: trackSlug(nextTrack),
+        playlistSongSlug: nextTrack?.playlistSongSlug || trackSlug(nextTrack),
+        analyticsSongSlug: nextTrack?.analyticsSongSlug || trackSlug(nextTrack),
         sourceApp: nextTrack?.sourceApp || null,
-        title: nextTrack ? getTrackTitle(nextTrack) : null,
-        currentTime,
-        duration,
+        title: nextTrack ? trackTitle(nextTrack) : null,
         clipId: nextTrack?.clipId || null,
+        currentTime: current,
+        duration: Number(audio?.duration || 0),
         clipElapsed,
-        clipProgress: clipTotal > 0 ? Math.min(1, clipElapsed / clipTotal) : 0,
+        clipProgress: Math.min(1, Math.max(0, clipElapsed / clipDuration)),
         conversationSlug: nextTrack?.conversationSlug || null,
         conversationRoute: nextTrack?.conversationRoute || null,
       },
@@ -120,142 +99,117 @@ export default function GlobalPlayer() {
     );
   }, []);
 
-  const startTrack = useCallback(
-    async (nextTrack: GlobalTrack, nextQueue: GlobalTrack[] = [nextTrack], nextIndex = 0) => {
-      setError("");
+  const sendHeartbeat = useCallback(() => {
+    const audio = audioRef.current;
+    if (!audio || !sessionRef.current || audio.paused) return;
+    void fetch("/api/playback/heartbeat", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        playbackSessionId: sessionRef.current,
+        secondsPlayed: Math.floor(audio.currentTime),
+      }),
+    }).catch(() => {});
+  }, []);
 
-      const songId = getTrackSongId(nextTrack);
-      const songSlug = getTrackSlug(nextTrack);
-      const isClip = Boolean(nextTrack.clipId);
-      let playbackUrl = nextTrack.playbackUrl || nextTrack.file || null;
-      let playbackSessionId: string | null = null;
-      let accessLabel = nextTrack.access || null;
-      let clipStartSeconds = normalizeNumber(nextTrack.clipStartSeconds ?? nextTrack.clipStart);
-      let clipEndSeconds = normalizeNumber(nextTrack.clipEndSeconds ?? nextTrack.clipEnd);
-      let isPreview = Boolean(nextTrack.isPreview);
+  const startTrack = useCallback(async (nextTrack: GlobalTrack, nextQueue: GlobalTrack[] = [nextTrack], nextIndex = 0) => {
+    setError("");
 
-      if (!isClip && (songId || songSlug)) {
-        try {
-          const res = await fetch("/api/playback/start", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ songId, songSlug }),
-          });
+    let playbackUrl = nextTrack.playbackUrl || nextTrack.file || "";
+    let playbackSessionId: string | null = null;
+    let accessLabel = nextTrack.access || null;
+    let isPreview = Boolean(nextTrack.isPreview);
+    let clipStart = nextTrack.clipStartSeconds ?? nextTrack.clipStart ?? null;
+    let clipEnd = nextTrack.clipEndSeconds ?? nextTrack.clipEnd ?? null;
 
-          const data = await res.json().catch(() => null);
+    const songId = trackSongId(nextTrack);
+    const songSlug = trackSlug(nextTrack);
 
-          if (res.ok && data?.ok && data.playbackUrl) {
-            playbackUrl = data.playbackUrl;
-            playbackSessionId = data.playbackSessionId || null;
-            const access = data.access || {};
-            accessLabel = access.displayLabel || accessLabel;
-            isPreview =
-              access.playbackMode === "preview" ||
-              access.accessType === "preview" ||
-              isPreview;
-            clipStartSeconds = normalizeNumber(access.previewStartSeconds) ?? clipStartSeconds;
-            clipEndSeconds = normalizeNumber(access.previewEndSeconds) ?? clipEndSeconds;
-          } else if (!playbackUrl) {
-            setError(data?.error || "Playback unavailable.");
-            return;
-          }
-        } catch {
-          if (!playbackUrl) {
-            setError("Playback unavailable.");
-            return;
-          }
+    if (songId || songSlug) {
+      try {
+        const res = await fetch("/api/playback/start", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ songId, songSlug }),
+        });
+        const data = await res.json().catch(() => null);
+        if (res.ok && data?.ok && data.playbackUrl) {
+          playbackUrl = data.playbackUrl;
+          playbackSessionId = data.playbackSessionId || null;
+          accessLabel = data.access?.displayLabel || accessLabel;
+          isPreview = data.access?.playbackMode === "preview" || data.access?.accessType === "preview" || isPreview;
+          clipStart = data.access?.previewStartSeconds ?? clipStart;
+          clipEnd = data.access?.previewEndSeconds ?? clipEnd;
         }
+      } catch {
+        // The older app experiences often pass an already signed file URL. Keep that working.
       }
+    }
 
-      if (!playbackUrl) {
-        setError("Playback unavailable. This track does not have an audio file yet.");
-        return;
+    if (!playbackUrl) {
+      setError("Playback unavailable for this item.");
+      return;
+    }
+
+    const active: ActiveTrack = {
+      ...nextTrack,
+      playbackUrl,
+      access: accessLabel || undefined,
+      isPreview,
+      clipStartSeconds: typeof clipStart === "number" ? clipStart : null,
+      clipEndSeconds: typeof clipEnd === "number" ? clipEnd : null,
+    };
+
+    activeRef.current = active;
+    sessionRef.current = playbackSessionId;
+    setQueue(nextQueue);
+    setIndex(nextIndex);
+    setTrack(active);
+
+    window.setTimeout(() => {
+      const audio = audioRef.current;
+      if (!audio) return;
+      if (typeof active.clipStartSeconds === "number") {
+        audio.currentTime = active.clipStartSeconds;
       }
-
-      const activeTrack: ActiveTrack = {
-        ...nextTrack,
-        playbackUrl,
-        access: accessLabel || nextTrack.access,
-        accessLabel,
-        isPreview,
-        clipStartSeconds,
-        clipEndSeconds,
-      };
-
-      sessionRef.current = playbackSessionId;
-      currentTrackRef.current = activeTrack;
-      queuedRef.current = nextQueue;
-      queueIndexRef.current = nextIndex;
-      setQueue(nextQueue);
-      setQueueIndex(nextIndex);
-      setTrack(activeTrack);
-
-      setTimeout(() => {
-        const audio = audioRef.current;
-        if (!audio) return;
-        if (typeof clipStartSeconds === "number") audio.currentTime = clipStartSeconds;
-        audio
-          .play()
-          .then(() => {
-            setIsPlaying(true);
-            broadcastPlayerState(activeTrack, true);
-          })
-          .catch(() => {
-            setIsPlaying(false);
-            broadcastPlayerState(activeTrack, false);
-          });
-      }, 50);
-    },
-    [broadcastPlayerState]
-  );
+      audio.play().then(() => {
+        setIsPlaying(true);
+        broadcast(active, true);
+      }).catch(() => {
+        setIsPlaying(false);
+        broadcast(active, false);
+      });
+    }, 40);
+  }, [broadcast]);
 
   const play = useCallback(() => {
     const audio = audioRef.current;
-    const activeTrack = currentTrackRef.current;
-    if (!audio || !activeTrack) return;
-
-    audio
-      .play()
-      .then(() => {
-        setIsPlaying(true);
-        broadcastPlayerState(activeTrack, true);
-      })
-      .catch(() => {
-        setIsPlaying(false);
-        broadcastPlayerState(activeTrack, false);
-      });
-  }, [broadcastPlayerState]);
+    const active = activeRef.current;
+    if (!audio || !active) return;
+    audio.play().then(() => {
+      setIsPlaying(true);
+      broadcast(active, true);
+    }).catch(() => {});
+  }, [broadcast]);
 
   const pause = useCallback(() => {
     const audio = audioRef.current;
-    const activeTrack = currentTrackRef.current;
-    if (!audio || !activeTrack) return;
+    const active = activeRef.current;
+    if (!audio) return;
     audio.pause();
     setIsPlaying(false);
-    broadcastPlayerState(activeTrack, false);
-  }, [broadcastPlayerState]);
+    broadcast(active, false);
+  }, [broadcast]);
 
-  const toggleCurrentTrack = useCallback(() => {
+  const toggle = useCallback(() => {
     const audio = audioRef.current;
     if (!audio) return;
     if (audio.paused) play();
     else pause();
   }, [pause, play]);
 
-  const seekByDelta = useCallback((delta: number) => {
-    const audio = audioRef.current;
-    const activeTrack = currentTrackRef.current;
-    if (!audio) return;
-
-    const start = normalizeNumber(activeTrack?.clipStartSeconds ?? activeTrack?.clipStart) || 0;
-    const end = normalizeNumber(activeTrack?.clipEndSeconds ?? activeTrack?.clipEnd);
-    const nextTime = Math.max(start, audio.currentTime + delta);
-    audio.currentTime = end ? Math.min(end, nextTime) : nextTime;
-    broadcastPlayerState(activeTrack, !audio.paused);
-  }, [broadcastPlayerState]);
-
   useEffect(() => {
-    function handleMessage(event: MessageEvent) {
+    function onMessage(event: MessageEvent) {
       const data = event.data;
       if (!data || typeof data !== "object") return;
 
@@ -264,85 +218,57 @@ export default function GlobalPlayer() {
         return;
       }
 
-      if (data.type === "CALIPH_PLAYER_LOAD_QUEUE") {
+      if (data.type === "CALIPH_PLAYER_LOAD_QUEUE" || data.type === "CALIPH_PLAYER_TOGGLE_TRACK") {
         const tracks = Array.isArray(data.tracks) ? (data.tracks as GlobalTrack[]) : [];
-        queuedRef.current = tracks;
-        queueIndexRef.current = typeof data.startIndex === "number" ? data.startIndex : 0;
-        setQueue(tracks);
-        setQueueIndex(queueIndexRef.current);
-        return;
-      }
-
-      if (data.type === "CALIPH_PLAYER_TOGGLE_TRACK") {
-        const tracks = Array.isArray(data.tracks) ? (data.tracks as GlobalTrack[]) : [];
-        const requestedIndex = typeof data.startIndex === "number" && data.startIndex >= 0 ? data.startIndex : 0;
-        const nextTrack = tracks[requestedIndex];
+        const nextIndex = typeof data.startIndex === "number" ? data.startIndex : 0;
+        const nextTrack = tracks[nextIndex];
         if (!nextTrack) return;
 
-        const activeTrack = currentTrackRef.current;
-        const activeSlug = getTrackSlug(activeTrack);
-        const nextSlug = getTrackSlug(nextTrack);
-        const sameClip = activeTrack?.clipId && nextTrack.clipId && activeTrack.clipId === nextTrack.clipId;
+        const currentSlug = trackSlug(activeRef.current);
+        const nextSlug = trackSlug(nextTrack);
 
-        if (activeTrack && ((activeSlug && nextSlug && activeSlug === nextSlug) || sameClip)) {
-          toggleCurrentTrack();
+        if (data.type === "CALIPH_PLAYER_TOGGLE_TRACK" && currentSlug && nextSlug && currentSlug === nextSlug) {
+          toggle();
           return;
         }
 
-        void startTrack(nextTrack, tracks, requestedIndex);
+        void startTrack(nextTrack, tracks, nextIndex);
         return;
       }
 
-      if (data.type === "CALIPH_PLAYER_PLAY") {
-        play();
-        return;
-      }
-
-      if (data.type === "CALIPH_PLAYER_PAUSE") {
-        pause();
-        return;
-      }
-
+      if (data.type === "CALIPH_PLAYER_PLAY") play();
+      if (data.type === "CALIPH_PLAYER_PAUSE") pause();
       if (data.type === "CALIPH_PLAYER_SEEK") {
-        seekByDelta(Number(data.delta || 0));
+        const audio = audioRef.current;
+        if (!audio) return;
+        const delta = Number(data.delta || 0);
+        audio.currentTime = Math.max(0, audio.currentTime + delta);
+        broadcast(activeRef.current, !audio.paused);
       }
     }
 
-    window.addEventListener("message", handleMessage);
-    return () => window.removeEventListener("message", handleMessage);
-  }, [pause, play, seekByDelta, startTrack, toggleCurrentTrack]);
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [broadcast, pause, play, startTrack, toggle]);
 
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio || !track) return;
+    const interval = window.setInterval(() => {
+      const audio = audioRef.current;
+      const active = activeRef.current;
+      if (!audio || !active) return;
 
-    const interval = setInterval(() => {
-      const activeTrack = currentTrackRef.current;
-      if (!activeTrack || audio.paused) return;
+      sendHeartbeat();
+      broadcast(active, !audio.paused);
 
-      broadcastPlayerState(activeTrack, true);
-
-      if (sessionRef.current) {
-        void fetch("/api/playback/heartbeat", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            playbackSessionId: sessionRef.current,
-            secondsPlayed: Math.floor(audio.currentTime),
-          }),
-        }).catch(() => {});
-      }
-
-      const clipEnd = normalizeNumber(activeTrack.clipEndSeconds ?? activeTrack.clipEnd);
-      if (typeof clipEnd === "number" && audio.currentTime >= clipEnd) {
+      if (typeof active.clipEndSeconds === "number" && audio.currentTime >= active.clipEndSeconds) {
         audio.pause();
         setIsPlaying(false);
-        broadcastPlayerState(activeTrack, false);
+        broadcast(active, false);
       }
-    }, 500);
+    }, 1000);
 
-    return () => clearInterval(interval);
-  }, [track, broadcastPlayerState]);
+    return () => window.clearInterval(interval);
+  }, [broadcast, sendHeartbeat]);
 
   async function handleEnded() {
     if (sessionRef.current) {
@@ -353,58 +279,47 @@ export default function GlobalPlayer() {
       }).catch(() => {});
     }
 
-    const nextIndex = queueIndexRef.current + 1;
-    const nextTrack = queuedRef.current[nextIndex] || queue[nextIndex];
-
+    const nextIndex = index + 1;
+    const nextTrack = queue[nextIndex];
     if (nextTrack) {
-      void startTrack(nextTrack, queuedRef.current.length ? queuedRef.current : queue, nextIndex);
+      void startTrack(nextTrack, queue, nextIndex);
       return;
     }
 
     setIsPlaying(false);
-    broadcastPlayerState(currentTrackRef.current, false);
+    broadcast(activeRef.current, false);
   }
 
   if (!track && !error) return null;
 
   return (
-    <div className="player glass">
-      {error ? (
-        <p className="small" style={{ color: "var(--danger)", margin: 0 }}>
-          {error}
-        </p>
-      ) : null}
-
+    <div className="caliph-global-player" data-source={track?.sourceApp || "music"}>
+      {error ? <p className="caliph-global-player-error">{error}</p> : null}
       {track ? (
         <>
-          <div className="player-row">
-            <div>
-              <strong>{getTrackTitle(track)}</strong>
-              <div className="small muted">
-                {track.artist || "Caliph"} · {track.accessLabel || track.access || (track.isPreview ? "Preview" : "Playing")}
-              </div>
+          <div className="caliph-global-player-main">
+            {track.coverUrl ? <img src={track.coverUrl} alt="" /> : <div className="caliph-global-player-art">♪</div>}
+            <div className="caliph-global-player-meta">
+              <strong>{trackTitle(track)}</strong>
+              <span>{track.artist || "Caliph"}{track.isPreview ? " · Preview" : track.access ? ` · ${track.access}` : ""}</span>
             </div>
-
-            <button className="btn" type="button" onClick={toggleCurrentTrack}>
-              {isPlaying ? "Pause" : "Play"}
+            <button type="button" onClick={toggle} aria-label={isPlaying ? "Pause" : "Play"}>
+              {isPlaying ? "⏸" : "▶"}
             </button>
           </div>
-
           <audio
             ref={audioRef}
             src={track.playbackUrl}
             controls
             controlsList="nodownload noplaybackrate"
-            style={{ width: "100%" }}
             onPlay={() => {
               setIsPlaying(true);
-              broadcastPlayerState(currentTrackRef.current, true);
+              broadcast(activeRef.current, true);
             }}
             onPause={() => {
               setIsPlaying(false);
-              broadcastPlayerState(currentTrackRef.current, false);
+              broadcast(activeRef.current, false);
             }}
-            onTimeUpdate={() => broadcastPlayerState(currentTrackRef.current, !audioRef.current?.paused)}
             onEnded={() => void handleEnded()}
           />
         </>

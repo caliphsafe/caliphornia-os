@@ -3,107 +3,67 @@
 import { useEffect, useState } from "react";
 import FriendsInboxClient from "@/components/FriendsInboxClient";
 
-type Conversation = {
-  id: string;
-  slug: string;
-  title: string;
-  avatar_letter?: string | null;
-  list_preview?: string | null;
-  last_activity_label?: string | null;
-  sort_order?: number | null;
-  can_open_conversation?: boolean;
-  locked_reason?: string | null;
-  final_track?: any;
-};
-
 export default function FriendsInboxLoader() {
-  const [conversations, setConversations] = useState<Conversation[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [state, setState] = useState<"loading" | "ready" | "error">("loading");
+  const [conversations, setConversations] = useState<any[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
-    let alive = true;
-
+    let mounted = true;
     async function load() {
-      setLoading(true);
-      setError("");
-
       try {
-        const res = await fetch("/api/apps/friends/conversations", {
-          cache: "no-store",
-        });
-        const data = await res.json();
-
-        if (!alive) return;
-
-        if (!res.ok || !data.ok) {
-          setError(data?.error || "Could not load fri.ends.");
-          setConversations([]);
+        const res = await fetch("/api/apps/friends/conversations", { cache: "no-store" });
+        const data = await res.json().catch(() => null);
+        if (!mounted) return;
+        if (!res.ok || !data?.ok) {
+          setError(data?.error || "Fri.ends could not load.");
+          setState("error");
           return;
         }
-
         setConversations(Array.isArray(data.conversations) ? data.conversations : []);
+        setState("ready");
       } catch {
-        if (!alive) return;
-        setError("Could not load fri.ends.");
-        setConversations([]);
-      } finally {
-        if (alive) setLoading(false);
+        if (!mounted) return;
+        setError("Fri.ends could not load.");
+        setState("error");
       }
     }
-
     void load();
-    return () => {
-      alive = false;
-    };
+    return () => { mounted = false; };
   }, []);
 
-  return (
-    <div className="app-shell friends-original-app-shell">
-      <section className="screen screen-inbox is-active" aria-label="Fri.ends inbox">
-        <div className="friends-original-topbar top-safe">
-          <a href="/home" className="friends-original-back-home" aria-label="Back home">
-            ‹
-          </a>
-
-          <div className="friends-original-title-wrap">
-            <div className="friends-original-title">fri.ends</div>
-            <div className="friends-original-subtitle">texts, voice notes, and songs</div>
+  if (state !== "ready") {
+    return (
+      <main className="friends-original-app-shell">
+        <section className="screen screen-inbox is-active">
+          <div className="friends-original-inbox-topbar top-safe">
+            <a href="/home" className="friends-original-back-btn">‹ Home</a>
+            <h1>fri.ends</h1>
           </div>
+          <div className="friends-original-thread-list">
+            <div className="friends-original-thread-row">
+              <div className="friends-original-thread-avatar group">{state === "loading" ? "F" : "!"}</div>
+              <div className="friends-original-thread-main">
+                <div className="friends-original-thread-title">{state === "loading" ? "Loading conversations..." : "Could not load Fri.ends"}</div>
+                <div className="friends-original-thread-preview">{state === "loading" ? "Reconnecting message threads." : error}</div>
+              </div>
+            </div>
+          </div>
+        </section>
+      </main>
+    );
+  }
 
-          <a href="/apps/nearby" className="friends-original-compose-btn" aria-label="Nearby Share">
-            ⌁
-          </a>
+  return (
+    <main className="friends-original-app-shell">
+      <section className="screen screen-inbox is-active" aria-label="Fri.ends inbox">
+        <div className="friends-original-inbox-topbar top-safe">
+          <a href="/home" className="friends-original-back-btn">‹ Home</a>
+          <h1>fri.ends</h1>
+          <a href="/apps/share" className="friends-original-thread-face-btn" aria-label="Share">⌁</a>
         </div>
-
-        {loading ? (
-          <main className="friends-original-thread-list" aria-label="Loading conversations">
-            <div className="friends-original-thread-row">
-              <div className="friends-original-thread-avatar group">F</div>
-              <div className="friends-original-thread-main">
-                <div className="friends-original-thread-topline">
-                  <div className="friends-original-thread-title">Loading fri.ends</div>
-                </div>
-                <div className="friends-original-thread-preview">Getting conversations ready...</div>
-              </div>
-            </div>
-          </main>
-        ) : error ? (
-          <main className="friends-original-thread-list" aria-label="Fri.ends error">
-            <div className="friends-original-thread-row">
-              <div className="friends-original-thread-avatar group">!</div>
-              <div className="friends-original-thread-main">
-                <div className="friends-original-thread-topline">
-                  <div className="friends-original-thread-title">fri.ends could not load</div>
-                </div>
-                <div className="friends-original-thread-preview">{error}</div>
-              </div>
-            </div>
-          </main>
-        ) : (
-          <FriendsInboxClient conversations={conversations} />
-        )}
+        <FriendsInboxClient conversations={conversations} />
       </section>
-    </div>
+    </main>
   );
 }

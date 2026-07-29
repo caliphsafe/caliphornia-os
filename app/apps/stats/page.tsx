@@ -1,3 +1,4 @@
+import type { CSSProperties } from "react";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import { readSession } from "@/lib/session";
@@ -14,136 +15,107 @@ function pct(value: number, max: number) {
   return `${Math.max(6, Math.min(100, Math.round((value / max) * 100)))}%`;
 }
 
-function titleCase(value: string) {
-  return value.replaceAll("_", " ").replace(/\b\w/g, (m) => m.toUpperCase());
+function safeNumber(value: unknown) {
+  const n = Number(value || 0);
+  return Number.isFinite(n) ? n : 0;
 }
 
-export default async function StatsPage({
-  searchParams,
-}: {
-  searchParams?: Promise<{ range?: string }>;
-}) {
+function label(value: string) {
+  return value.replaceAll("_", " ").replace(/\w/g, (m) => m.toUpperCase());
+}
+
+async function resolveUser(session: { email: string; username?: string; role?: string }): Promise<AppUser> {
+  try {
+    const existing = await getCurrentAppUser();
+    if (existing?.id) return existing;
+    return await getOrCreateAppUser(session.email, session.username || null);
+  } catch (error) {
+    console.error("STATS_USER_LOOKUP_FAILED", error);
+    return { id: "session-user", email: session.email, username: session.username || session.email.split("@")[0], role: session.role || "user" };
+  }
+}
+
+export default async function StatsPage({ searchParams }: { searchParams?: Promise<{ range?: string; mode?: string }> }) {
+  const params = await searchParams;
   const session = await readSession();
   if (!session?.email) redirect("/");
 
-  const params = await searchParams;
+  const user = await resolveUser(session);
   const range = params?.range || "30d";
+  const stats = user.id === "session-user" ? { my: {}, global: {} } : await getStats(user.id, range);
 
-  let user: AppUser = {
-    id: "session-user",
-    email: session.email,
-    username: session.username || session.email.split("@")[0],
-    role: session.role || "user",
-  };
+  const my = stats.my as Record<string, unknown>;
+  const global = stats.global as Record<string, unknown>;
+  const listening = safeNumber(my.songs_played);
+  const shares = safeNumber(my.qualified_shares || my.shares_started);
+  const kiiku = safeNumber(my.kiiku_available);
+  const ringMax = Math.max(10, listening, shares, kiiku);
 
-  try {
-    user = (await getCurrentAppUser()) || (await getOrCreateAppUser(session.email, session.username || null));
-  } catch (error) {
-    console.error("STATS_USER_LOOKUP_FAILED", error);
-  }
-
-  let stats = {
-    my: { songs_played: 0, shares_started: 0, qualified_shares: 0, kiiku_available: 0, kiiku_pending: 0 },
-    global: { songs_played: 0, nearby_shares: 0, new_accounts_from_sharing: 0, project_contributions: 0, kiiku_earned: 0 },
-  };
-
-  try {
-    if (user.id !== "session-user") stats = await getStats(user.id, range);
-  } catch (error) {
-    console.error("STATS_LOOKUP_FAILED", error);
-  }
-
-  const listening = Number(stats.my.songs_played || 0);
-  const shares = Number(stats.my.shares_started || 0);
-  const qualified = Number(stats.my.qualified_shares || 0);
-  const maxRing = Math.max(1, listening, shares, qualified, 10);
-  const myEntries = Object.entries(stats.my);
-  const globalEntries = Object.entries(stats.global);
+  const sparkValues = [12,22,16,30,18,42,25,35,20,46,34,55,38,48,30,64,44,58,39,70,50,60,44,76];
 
   return (
     <main className={styles.page}>
       <div className={styles.topChrome}>
-        <Link href="/home" className={styles.backPill} aria-label="Back home">‹</Link>
-        <div className={styles.userChip}>{user.username || user.email}</div>
+        <Link href="/home" className={styles.backPill} aria-label="Back"><img src="/apps/fartherhood/back.png" alt="" className={styles.backImg} /></Link>
+        <Link href="/apps/share" className={styles.userChip}>Share</Link>
       </div>
 
       <header className={styles.header}>
-        <div>
-          <h1 className={styles.title}>Activity</h1>
-          <p className={styles.date}>Caliphornia OS Stats</p>
-        </div>
+        <div><h1 className={styles.title}>Activity</h1><p className={styles.date}>Caliphornia OS Stats</p></div>
       </header>
 
       <nav className={styles.modeSwitch} aria-label="Stats range">
-        <Link className={`${styles.modeSwitchBtn} ${range === "today" ? styles.modeSwitchBtnActive : ""}`} href="?range=today">Today</Link>
-        <Link className={`${styles.modeSwitchBtn} ${range === "7d" ? styles.modeSwitchBtnActive : ""}`} href="?range=7d">7 Days</Link>
-        <Link className={`${styles.modeSwitchBtn} ${range === "30d" ? styles.modeSwitchBtnActive : ""}`} href="?range=30d">30 Days</Link>
-        <Link className={`${styles.modeSwitchBtn} ${range === "all" ? styles.modeSwitchBtnActive : ""}`} href="?range=all">All</Link>
+        {["today", "7d", "30d", "all"].map((item) => (
+          <Link key={item} href={`?range=${item}`} className={`${styles.modeSwitchBtn} ${range === item ? styles.modeSwitchBtnActive : ""}`}>{item === "7d" ? "7 Days" : item === "30d" ? "30 Days" : item === "all" ? "All" : "Today"}</Link>
+        ))}
       </nav>
 
       <section className={`${styles.card} ${styles.ringsCard}`}>
         <div>
           <h2 className={styles.cardTitle}>My Rings</h2>
-          <div className={styles.rings}>
-            <span className={`${styles.ring} ${styles.ringListening}`} style={{ "--listening": pct(listening, maxRing) } as any} />
-            <span className={`${styles.ring} ${styles.ringFavorites}`} style={{ "--favorites": pct(shares, maxRing) } as any} />
-            <span className={`${styles.ring} ${styles.ringReach}`} style={{ "--reach": pct(qualified, maxRing) } as any} />
+          <div className={styles.rings} aria-hidden="true">
+            <span className={`${styles.ring} ${styles.ringListening}`} style={{ "--listening": pct(listening, ringMax) } as CSSProperties} />
+            <span className={`${styles.ring} ${styles.ringFavorites}`} style={{ "--favorites": pct(shares, ringMax) } as CSSProperties} />
+            <span className={`${styles.ring} ${styles.ringReach}`} style={{ "--reach": pct(kiiku, ringMax) } as CSSProperties} />
             <span className={styles.ringsCenter} />
           </div>
         </div>
-
         <div className={styles.ringLegend}>
-          <div className={styles.legendRow}>
-            <span className={`${styles.legendDot} ${styles.listeningDot}`}></span>
-            <div><strong>{listening}</strong><span>Songs played</span></div>
-          </div>
-          <div className={styles.legendRow}>
-            <span className={`${styles.legendDot} ${styles.favoritesDot}`}></span>
-            <div><strong>{shares}</strong><span>Nearby shares started</span></div>
-          </div>
-          <div className={styles.legendRow}>
-            <span className={`${styles.legendDot} ${styles.reachDot}`}></span>
-            <div><strong>{qualified}</strong><span>Qualified shares</span></div>
-          </div>
+          <div className={styles.legendRow}><span className={`${styles.legendDot} ${styles.listeningDot}`} /><div><strong>{listening}</strong><span>Songs played</span></div></div>
+          <div className={styles.legendRow}><span className={`${styles.legendDot} ${styles.favoritesDot}`} /><div><strong>{shares}</strong><span>Shares and qualified listens</span></div></div>
+          <div className={styles.legendRow}><span className={`${styles.legendDot} ${styles.reachDot}`} /><div><strong>{kiiku}</strong><span>Available Kiiku</span></div></div>
         </div>
       </section>
 
       <section className={styles.twoColGrid}>
         <div className={styles.card}>
-          <div className={styles.cardHeaderMini}><p className={styles.miniLabel}>Kiiku Available</p><span className={styles.chev}>›</span></div>
-          <div className={styles.bigNumberPurple}>{stats.my.kiiku_available}</div>
-          <div className={styles.sparkWrap}>{Array.from({ length: 24 }).map((_, i) => <span key={i} className={styles.sparkBar} style={{ height: `${20 + ((i * 13) % 82)}%` }} />)}</div>
+          <div className={styles.cardHeaderMini}><p className={styles.miniLabel}>Global Plays</p><span className={styles.chev}>›</span></div>
+          <div className={styles.bigNumberBlue}>{safeNumber(global.songs_played)}</div>
+          <div className={styles.sparkWrap}>{sparkValues.map((v, i) => <span key={i} className={styles.sparkBarBlue} style={{ height: `${v}%` }} />)}</div>
           <div className={styles.sparkTimeline}><span>Start</span><span>Now</span></div>
         </div>
 
         <div className={styles.card}>
-          <div className={styles.cardHeaderMini}><p className={styles.miniLabel}>Global Plays</p><span className={styles.chev}>›</span></div>
-          <div className={styles.bigNumberBlue}>{stats.global.songs_played}</div>
-          <div className={styles.sparkWrap}>{Array.from({ length: 24 }).map((_, i) => <span key={i} className={`${styles.sparkBar} ${styles.sparkBarBlue}`} style={{ height: `${18 + ((i * 17) % 78)}%` }} />)}</div>
-          <div className={styles.sparkTimeline}><span>Community</span><span>Now</span></div>
+          <div className={styles.cardHeaderMini}><p className={styles.miniLabel}>Share Reach</p><span className={styles.chev}>›</span></div>
+          <div className={styles.bigNumberGreen}>{safeNumber(global.nearby_shares)}</div>
+          <p className={styles.emptyText}>Share replaces Nearby in the UI, while the protected one-play logic stays underneath.</p>
         </div>
       </section>
 
       <section className={`${styles.card} ${styles.fullCard}`}>
-        <h2 className={styles.cardTitle}>My Activity</h2>
+        <div className={styles.cardHeaderMini}><h2 className={styles.cardTitle}>My Activity</h2><span className={styles.chev}>›</span></div>
         <div className={styles.listStack}>
-          {myEntries.map(([key, value]) => (
-            <div key={key} className={styles.listRow}>
-              <strong>{titleCase(key)}</strong>
-              <span>{String(value)}</span>
-            </div>
+          {Object.entries(my).map(([key, value]) => (
+            <div className={styles.listRow} key={key}><div><strong>{label(key)}</strong><span>{key.includes("kiiku") ? "Kiiku wallet" : "Personal activity"}</span></div><strong>{String(value || 0)}</strong></div>
           ))}
         </div>
       </section>
 
       <section className={`${styles.card} ${styles.fullCard}`}>
-        <h2 className={styles.cardTitle}>Global Activity</h2>
+        <div className={styles.cardHeaderMini}><h2 className={styles.cardTitle}>Global Activity</h2><span className={styles.chev}>›</span></div>
         <div className={styles.listStack}>
-          {globalEntries.map(([key, value]) => (
-            <div key={key} className={styles.listRow}>
-              <strong>{titleCase(key)}</strong>
-              <span>{String(value)}</span>
-            </div>
+          {Object.entries(global).map(([key, value]) => (
+            <div className={styles.listRow} key={key}><div><strong>{label(key)}</strong><span>Community activity</span></div><strong>{String(value || 0)}</strong></div>
           ))}
         </div>
       </section>

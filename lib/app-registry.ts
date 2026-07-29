@@ -5,7 +5,7 @@ export const appRegistry: AppItem[] = [
   { id: "friends", name: "fri.ends", icon: "/icons/friends.png", href: "/apps/friends" },
   { id: "milia", name: "Milia", href: "/apps/milia", icon: "/icons/milia.png" },
   { id: "music", name: "Music", icon: "/icons/music.png", href: "/apps/music" },
-  { id: "nearby", name: "Nearby", icon: "/icons/nearby.svg", href: "/apps/nearby" },
+  { id: "share", name: "Share", icon: "/icons/share.svg", href: "/apps/share" },
   { id: "wallet", name: "Kiiku", icon: "/icons/wallet.svg", href: "/apps/wallet" },
   { id: "calendar", name: "Calendar", icon: "/icons/calendar.svg", href: "/apps/calendar" },
   { id: "stats", name: "Stats", href: "/apps/stats", icon: "/icons/stats.png" },

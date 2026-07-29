@@ -3,164 +3,73 @@
 import { useEffect, useState } from "react";
 import FriendsThreadClient from "@/components/FriendsThreadClient";
 
-type ApiState = {
-  loading: boolean;
-  error: string;
-  locked: boolean;
-  conversation: any | null;
-  messages: any[];
-  finalTrack: any | null;
-};
-
 export default function FriendsThreadLoader({ slug }: { slug: string }) {
-  const [state, setState] = useState<ApiState>({
-    loading: true,
-    error: "",
-    locked: false,
-    conversation: null,
-    messages: [],
-    finalTrack: null,
-  });
+  const [state, setState] = useState<"loading" | "ready" | "locked" | "error">("loading");
+  const [conversation, setConversation] = useState<any>(null);
+  const [messages, setMessages] = useState<any[]>([]);
+  const [finalTrack, setFinalTrack] = useState<any>(null);
+  const [error, setError] = useState("");
 
   useEffect(() => {
-    let alive = true;
-
+    let mounted = true;
     async function load() {
-      setState((prev) => ({ ...prev, loading: true, error: "" }));
-
       try {
-        const res = await fetch(`/api/apps/friends/conversations/${slug}`, {
-          cache: "no-store",
-        });
-        const data = await res.json();
-
-        if (!alive) return;
-
-        if (!res.ok || !data.ok) {
-          setState({
-            loading: false,
-            error: data?.error || "Could not load this conversation.",
-            locked: false,
-            conversation: null,
-            messages: [],
-            finalTrack: null,
-          });
+        const res = await fetch(`/api/apps/friends/conversations/${encodeURIComponent(slug)}`, { cache: "no-store" });
+        const data = await res.json().catch(() => null);
+        if (!mounted) return;
+        if (!res.ok || !data?.ok) {
+          setError(data?.error || "Conversation could not load.");
+          setState("error");
           return;
         }
-
-        setState({
-          loading: false,
-          error: "",
-          locked: Boolean(data.locked),
-          conversation: data.conversation || null,
-          messages: Array.isArray(data.messages) ? data.messages : [],
-          finalTrack: data.final_track || data.conversation?.final_track || null,
-        });
+        if (data.locked) {
+          setFinalTrack(data.final_track || null);
+          setState("locked");
+          return;
+        }
+        setConversation(data.conversation || null);
+        setMessages(Array.isArray(data.messages) ? data.messages : []);
+        setState("ready");
       } catch {
-        if (!alive) return;
-        setState({
-          loading: false,
-          error: "Could not load this conversation.",
-          locked: false,
-          conversation: null,
-          messages: [],
-          finalTrack: null,
-        });
+        if (!mounted) return;
+        setError("Conversation could not load.");
+        setState("error");
       }
     }
-
     void load();
-    return () => {
-      alive = false;
-    };
+    return () => { mounted = false; };
   }, [slug]);
 
-  function playLockedPreview() {
-    if (!state.finalTrack?.file) return;
+  if (state === "ready" && conversation) return <FriendsThreadClient conversation={conversation} messages={messages} />;
 
-    window.postMessage(
-      {
-        type: "CALIPH_PLAYER_TOGGLE_TRACK",
-        startIndex: 0,
-        tracks: [
-          {
-            slug: state.finalTrack.playlist_song_slug || state.finalTrack.slug,
-            title: state.finalTrack.title || "fri.ends preview",
-            artist: state.finalTrack.artist || "Caliph",
-            displayTitle: state.finalTrack.title || "fri.ends preview",
-            file: state.finalTrack.file,
-            playlistSongSlug: state.finalTrack.playlist_song_slug || state.finalTrack.slug,
-            analyticsSongSlug: state.finalTrack.analytics_song_slug || state.finalTrack.slug,
-            sourceApp: "friends",
-            conversationSlug: slug,
-            conversationRoute: `/apps/friends/${slug}`,
-            isPreview: true,
-            clipStartSeconds: state.finalTrack.clip_start_seconds ?? null,
-            clipEndSeconds: state.finalTrack.clip_end_seconds ?? null,
-          },
-        ],
-      },
-      "*"
-    );
+  function playPreview() {
+    if (!finalTrack?.file) return;
+    window.postMessage({ type: "CALIPH_PLAYER_TOGGLE_TRACK", tracks: [{ slug: finalTrack.playlist_song_slug || finalTrack.slug || slug, title: finalTrack.title || slug, artist: finalTrack.artist || "Caliph", file: finalTrack.file, playlistSongSlug: finalTrack.playlist_song_slug || finalTrack.slug || slug, analyticsSongSlug: finalTrack.analytics_song_slug || finalTrack.slug || slug, sourceApp: "friends", conversationSlug: slug, conversationRoute: `/apps/friends/${slug}`, isPreview: true, clipStartSeconds: finalTrack.clip_start_seconds ?? null, clipEndSeconds: finalTrack.clip_end_seconds ?? null }], startIndex: 0 }, "*");
   }
 
-  if (state.loading || state.error || state.locked || !state.conversation) {
-    return (
-      <div className="app-shell friends-original-app-shell">
-        <section className="screen screen-thread is-active" aria-label="Conversation status">
-          <div className="friends-original-thread-topbar top-safe">
-            <a href="/apps/friends" className="friends-original-back-btn" aria-label="Back to inbox">
-              <span className="friends-original-back-chevron" aria-hidden="true"></span>
-              <span className="friends-original-back-text">Fri.ends</span>
-            </a>
-          </div>
-
-          <main className="friends-original-messages-wrap">
-            <div className="friends-original-messages">
-              <div className="friends-original-timestamp">
-                {state.loading
-                  ? "Loading conversation..."
-                  : state.error || "Unlock Fri.ends to view the full conversation."}
+  return (
+    <div className="app-shell friends-original-app-shell">
+      <section className="screen screen-thread is-active" aria-label="Conversation status">
+        <div className="friends-original-thread-topbar top-safe">
+          <a href="/apps/friends" className="friends-original-back-btn">‹ Fri.ends</a>
+          <button className="friends-original-thread-header-card" type="button">
+            <div className="friends-original-thread-header-meta">
+              <div className="friends-original-thread-avatar friends-original-thread-avatar--header">F</div>
+              <div className="friends-original-thread-header-text">
+                <div className="friends-original-thread-header-title">{state === "loading" ? "Loading..." : state === "locked" ? "Locked conversation" : "Could not load"}</div>
+                <div className="friends-original-thread-header-subtitle">{state === "locked" ? "Play the preview or unlock Fri.ends." : error || "Reconnecting thread."}</div>
               </div>
-
-              {state.locked ? (
-                <div className="friends-original-message-row incoming">
-                  <div className="friends-original-message-group">
-                    <div className="friends-original-message-bubble">
-                      This conversation is locked. You can play the preview or unlock Fri.ends from the access window.
-                    </div>
-                    {state.finalTrack?.file ? (
-                      <button
-                        type="button"
-                        className="friends-original-audio-card"
-                        onClick={playLockedPreview}
-                      >
-                        <div className="friends-original-audio-card-top">
-                          <span className="friends-original-audio-play"></span>
-                          <div className="friends-original-wave-wrap">
-                            <div className="friends-original-waveform">
-                              {Array.from({ length: 28 }).map((_, i) => (
-                                <span key={i} style={{ height: `${8 + (i % 6) * 4}px` }} />
-                              ))}
-                            </div>
-                            <div className="friends-original-audio-duration">0:30</div>
-                          </div>
-                        </div>
-                        <div className="friends-original-audio-meta">
-                          <div className="friends-original-audio-file-name">Preview</div>
-                          <div className="friends-original-audio-kind">Voice note</div>
-                        </div>
-                      </button>
-                    ) : null}
-                  </div>
-                </div>
-              ) : null}
             </div>
-          </main>
-        </section>
-      </div>
-    );
-  }
-
-  return <FriendsThreadClient conversation={state.conversation} messages={state.messages} />;
+          </button>
+        </div>
+        <main className="friends-original-messages-wrap">
+          <div className="friends-original-messages">
+            <div className="friends-original-timestamp">{state === "locked" ? "Preview available" : state === "loading" ? "Loading messages" : "Error"}</div>
+            <div className="friends-original-message-row incoming"><div className="friends-original-message-group"><div className="friends-original-message-bubble">{state === "locked" ? "This thread is part of Fri.ends. Unlock the project to open the full conversation." : error || "Hold on while the thread reconnects."}</div></div></div>
+            {state === "locked" && finalTrack?.file ? <div className="friends-original-message-row incoming"><div className="friends-original-message-group"><button className="friends-original-audio-card" type="button" onClick={playPreview}><div className="friends-original-audio-card-top"><span className="friends-original-audio-play"></span><div className="friends-original-wave-wrap"><div className="friends-original-waveform">{Array.from({ length: 28 }).map((_, i) => <span key={i} style={{ height: `${8 + (i % 6) * 4}px` }} />)}</div><div className="friends-original-audio-duration">0:30</div></div></div><div className="friends-original-audio-meta"><div className="friends-original-audio-file-name">{finalTrack.title || "Preview"}</div><div className="friends-original-audio-kind">Preview voice note</div></div></button></div></div> : null}
+          </div>
+        </main>
+      </section>
+    </div>
+  );
 }
