@@ -755,3 +755,74 @@ body.has-global-player .cos-quick-actions {
 }
 
 
+/* Caliphornia OS — Home desktop width correction
+   Keep the wallpaper full-screen while preventing Home content from stretching. */
+
+.ios-home-page {
+  width: 100% !important;
+  min-height: 100dvh !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.ios-home-phone,
+.ios-home-surface {
+  width: min(100%, 980px) !important;
+  max-width: 980px !important;
+  min-height: 100dvh !important;
+  margin: 0 auto !important;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    clamp(18px, 4vw, 42px)
+    max(22px, env(safe-area-inset-bottom))
+    clamp(18px, 4vw, 42px) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+.ios-home-status,
+.ios-home-widget-row,
+.ios-home-grid,
+.ios-home-dock {
+  width: 100%;
+  max-width: 100%;
+}
+
+.ios-home-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  column-gap: clamp(18px, 4vw, 42px) !important;
+  row-gap: clamp(22px, 3vw, 34px) !important;
+}
+
+.ios-home-dock {
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+@media (max-width: 760px) {
+  .ios-home-phone,
+  .ios-home-surface {
+    width: 100% !important;
+    max-width: none !important;
+    padding:
+      max(16px, env(safe-area-inset-top))
+      max(16px, env(safe-area-inset-right))
+      max(20px, env(safe-area-inset-bottom))
+      max(16px, env(safe-area-inset-left)) !important;
+  }
+
+  .ios-home-grid {
+    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+    column-gap: 12px !important;
+    row-gap: 20px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .ios-home-grid {
+    column-gap: 8px !important;
+  }
+}
+
