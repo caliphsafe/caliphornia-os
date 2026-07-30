@@ -1,0 +1,23 @@
+Caliphornia OS 43 Build Patch
+Kiiku cleanup, onboarding, and Share stats
+
+Purpose:
+- Remove the old default Kiiku/access icon trigger from pages that still show it in the top-right chrome.
+- Keep access/unlock logic available for pages that intentionally pass their own AccessWindow button.
+- Move Kiiku education into the Account app where it belongs.
+- Add first-time onboarding tips across Caliphornia OS pages.
+- Add sharing analytics to the Stats app.
+
+Files included:
+- app/layout.tsx
+- components/OnboardingTips.tsx
+- components/AccessWindow.tsx
+- app/apps/account/page.tsx
+- app/apps/stats/page.tsx
+- components/StatsPageClient.tsx
+
+Notes:
+- Onboarding is localStorage based. It does not require a database migration.
+- Users can replay the current page guide with the small ? button.
+- Share stats use safe queries, so the Stats page will still load even if some new share tables are empty.
+- Do not upload package-lock.json.

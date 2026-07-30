@@ -55,7 +55,7 @@ function active(row: any) {
 async function safeRows(table: string, email: string, userId?: string) {
   try {
     let query = supabaseAdmin.from(table).select("*").order("created_at", { ascending: false });
-    if (userId) query = query.or(`user_id.eq.${userId},user_email.eq.${email},user_email_snapshot.eq.${email}`);
+    if (userId) query = query.or(`user_id.eq.${userId},sender_user_id.eq.${userId},user_email.eq.${email},sender_email_snapshot.eq.${email}`);
     else query = query.eq("user_email", email);
     const { data } = await query.limit(50);
     return data || [];
@@ -73,21 +73,24 @@ export default async function AccountSettingsPage() {
     (await getCurrentAppUser().catch(() => null)) ||
     (await getOrCreateAppUser(email, session.username || null));
 
-  const [access, wallet, projectRows, passRows, purchaseRows, shareRows] = await Promise.all([
+  const [access, wallet, projectRows, passRows, purchaseRows, shareRows, shareSessions] = await Promise.all([
     getUserAccess(email).catch(() => ({ hasAllAccess: false, hasMusicFull: false, isFounder: false, projectAccess: [] })),
     getKiikuWallet(user.id).catch(() => ({ available: 0, pending: 0, lifetimeEarned: 0, lifetimeSpent: 0 })),
     safeRows("user_project_access", email, user.id),
     safeRows("user_access_passes", email, user.id),
     safeRows("purchases", email, user.id),
     safeRows("sharing_allowances", email, user.id),
+    safeRows("nearby_share_sessions", email, user.id),
   ]);
 
   const ownedProjects = projectRows.filter(active);
   const activePasses = passRows.filter(active);
   const hasActivePass = Boolean(access.hasAllAccess || access.hasMusicFull || access.isFounder || activePasses.length);
   const billingProfile = purchaseRows.find((purchase: any) => purchase.stripe_customer_id);
-  const shareTotal = shareRows.reduce((sum: number, row: any) => sum + Number(row.total_allowed || 0), 0);
-  const shareRemaining = shareRows.reduce((sum: number, row: any) => sum + Number(row.remaining_count || 0), 0);
+  const shareTotal = shareRows.reduce((sum: number, row: any) => sum + Number(row.total_allowed || row.shares_included || 0), 0);
+  const shareRemaining = shareRows.reduce((sum: number, row: any) => sum + Number(row.remaining_count || row.shares_remaining || 0), 0);
+  const shareCreated = shareSessions.length;
+  const projectShares = shareSessions.filter((row: any) => row.share_scope === "project").length;
 
   return (
     <main className="settings-page">
@@ -138,6 +141,29 @@ export default async function AccountSettingsPage() {
             </div>
           </details>
 
+          <details open className="settings-group">
+            <summary>
+              <span className="settings-icon gold">K</span>
+              <span>
+                <strong>How Kiiku Works</strong>
+                <small>Participation credit, not cash</small>
+              </span>
+            </summary>
+            <div className="settings-panel">
+              <p className="settings-copy">
+                Kiiku is Caliphornia OS participation credit. You can earn it through approved actions like verified purchases, qualified sharing, claiming a shared listen, and future campaign rewards.
+              </p>
+              <div className="settings-row"><span>What it can do</span><strong>Unlock, reward, support</strong></div>
+              <div className="settings-row"><span>What it is not</span><strong>Cash, crypto, equity</strong></div>
+              <div className="settings-row"><span>Transfers</span><strong>Not transferable</strong></div>
+              <p className="settings-copy">
+                Kiiku has no cash value and cannot be redeemed for money. It only works inside Caliphornia OS as part of the music, access, sharing, and support experience.
+              </p>
+              <Link href="/apps/share" className="settings-action">Use Share to earn</Link>
+              <Link href="/apps/stats" className="settings-action secondary">See Kiiku and Share activity</Link>
+            </div>
+          </details>
+
           <details className="settings-group">
             <summary>
               <span className="settings-icon green">✓</span>
@@ -162,7 +188,7 @@ export default async function AccountSettingsPage() {
             </div>
           </details>
 
-          <details className="settings-group">
+          <details open className="settings-group">
             <summary>
               <span className="settings-icon cyan">⌁</span>
               <span>
@@ -173,8 +199,11 @@ export default async function AccountSettingsPage() {
             <div className="settings-panel">
               <div className="settings-row"><span>Available shares</span><strong>{shareRemaining}</strong></div>
               <div className="settings-row"><span>Total granted</span><strong>{shareTotal}</strong></div>
+              <div className="settings-row"><span>Shares started</span><strong>{shareCreated}</strong></div>
+              <div className="settings-row"><span>Project shares</span><strong>{projectShares}</strong></div>
+              <p className="settings-copy">Share lets someone near you receive one guest listen without signing in first. Song shares grant one play. Project shares grant one play per song.</p>
               <Link href="/apps/share" className="settings-action">Open Share</Link>
-              <Link href="/apps/stats" className="settings-action secondary">View Stats</Link>
+              <Link href="/apps/stats" className="settings-action secondary">View Share Stats</Link>
             </div>
           </details>
 
@@ -223,11 +252,12 @@ export default async function AccountSettingsPage() {
             <summary>
               <span className="settings-icon gray">?</span>
               <span>
-                <strong>Support</strong>
-                <small>Access or payment help</small>
+                <strong>Tips and Support</strong>
+                <small>Guides, access, or payment help</small>
               </span>
             </summary>
             <div className="settings-panel">
+              <p className="settings-copy">First-time tips now appear across Caliphornia OS. Tap the ? button on any page to replay that page guide.</p>
               <p className="settings-copy">If an unlock does not appear, email support with the account email above and the purchase you need help with.</p>
               <a href="mailto:caliph.safe@gmail.com" className="settings-action">caliph.safe@gmail.com</a>
             </div>

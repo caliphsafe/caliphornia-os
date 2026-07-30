@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { readSession } from "@/lib/session";
 import { supabaseAdmin } from "@/lib/supabase-admin";
-import StatsPageClient from "@/components/StatsPageClient";
+import StatsPageClient, { type ShareStatsPayload } from "@/components/StatsPageClient";
 
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
@@ -64,13 +64,63 @@ async function safeQuery<T>(factory: () => PromiseLike<{ data: T[] | null; error
   }
 }
 
+function labelFromUser(row: any, appUserMap: Map<string, string>) {
+  const email = String(row.sender_email_snapshot || row.user_email || "").toLowerCase();
+  return appUserMap.get(email) || row.metadata?.sender_label || email || "Caliphornia listener";
+}
+
+function titleFromShare(row: any) {
+  const metadataTitle = Array.isArray(row.metadata?.share_song_titles) ? row.metadata.share_song_titles[0] : null;
+  return row.song_title_snapshot || metadataTitle || row.project_name_snapshot || row.song_slug_snapshot || "Shared music";
+}
+
+function buildShareStats({
+  shareSessions,
+  shareEvents,
+  guestClaims,
+  appUserMap,
+  userEmail,
+  userId,
+}: {
+  shareSessions: any[];
+  shareEvents: any[];
+  guestClaims: any[];
+  appUserMap: Map<string, string>;
+  userEmail: string;
+  userId?: string | null;
+}): ShareStatsPayload {
+  const userSessions = shareSessions.filter((row) => {
+    const senderEmail = String(row.sender_email_snapshot || "").toLowerCase();
+    return senderEmail === userEmail || (userId && row.sender_user_id === userId);
+  });
+
+  const topSharerRows = countByLabel(shareSessions.map((row) => ({ label: labelFromUser(row, appUserMap) }))).slice(0, 10);
+  const mostSharedSongs = countByLabel(shareSessions.map((row) => ({ label: titleFromShare(row) }))).slice(0, 10);
+
+  const acceptedStatuses = new Set(["accepted", "completed", "qualified", "claimed"]);
+  const globalAccepted = shareSessions.filter((row) => acceptedStatuses.has(String(row.status || ""))).length || shareEvents.filter((row) => String(row.event_type || "").includes("accepted")).length;
+
+  return {
+    mySharesCreated: userSessions.length,
+    myProjectShares: userSessions.filter((row) => row.share_scope === "project").length,
+    mySongShares: userSessions.filter((row) => row.share_scope !== "project").length,
+    globalSharesCreated: shareSessions.length,
+    globalAcceptedShares: globalAccepted,
+    globalProjectShares: shareSessions.filter((row) => row.share_scope === "project").length,
+    globalSongShares: shareSessions.filter((row) => row.share_scope !== "project").length,
+    accountsFromShare: guestClaims.length,
+    topSharers: topSharerRows,
+    mostSharedSongs,
+  };
+}
+
 export default async function StatsPage() {
   const session = await readSession();
   if (!session?.email) redirect("/");
   const userEmail = session.email.trim().toLowerCase();
 
-  const [appUsers, globalStats, userStats, favorites, songs, userEventLogs, globalEventLogs, allUserStats] = await Promise.all([
-    safeQuery<any>(() => supabaseAdmin.from("app_users").select("email, username")),
+  const [appUsers, globalStats, userStats, favorites, songs, userEventLogs, globalEventLogs, allUserStats, shareSessions, shareEvents, guestClaims] = await Promise.all([
+    safeQuery<any>(() => supabaseAdmin.from("app_users").select("id, email, username")),
     safeQuery<any>(() => supabaseAdmin.from("global_song_stats").select("song_id, song_slug, play_count, unique_listener_count")),
     safeQuery<any>(() => supabaseAdmin.from("user_song_stats").select("song_id, song_slug, play_count, last_played_at").eq("user_email", userEmail)),
     safeQuery<any>(() => supabaseAdmin.from("user_favorite_songs").select("song_id, song_slug, created_at").eq("user_email", userEmail).neq("status", "removed")),
@@ -78,6 +128,9 @@ export default async function StatsPage() {
     safeQuery<any>(() => supabaseAdmin.from("event_logs").select("country, region, city").eq("user_email", userEmail).eq("event_type", "song_play")),
     safeQuery<any>(() => supabaseAdmin.from("event_logs").select("country, region, city").eq("event_type", "song_play")),
     safeQuery<any>(() => supabaseAdmin.from("user_song_stats").select("user_email, play_count")),
+    safeQuery<any>(() => supabaseAdmin.from("nearby_share_sessions").select("id,sender_user_id,sender_email_snapshot,song_slug_snapshot,song_title_snapshot,project_slug_snapshot,project_name_snapshot,share_scope,status,metadata,created_at")),
+    safeQuery<any>(() => supabaseAdmin.from("nearby_share_events").select("event_type,event_status,created_at")),
+    safeQuery<any>(() => supabaseAdmin.from("guest_account_claims").select("id,created_at")),
   ]);
 
   const appUser = appUsers.find((row) => String(row.email || "").toLowerCase() === userEmail);
@@ -161,6 +214,15 @@ export default async function StatsPage() {
     .sort((a, b) => b.count - a.count)
     .slice(0, 10);
 
+  const sharingStats = buildShareStats({
+    shareSessions,
+    shareEvents,
+    guestClaims,
+    appUserMap,
+    userEmail,
+    userId: appUser?.id || null,
+  });
+
   return (
     <StatsPageClient
       username={appUser?.username || session.username || ""}
@@ -176,6 +238,7 @@ export default async function StatsPage() {
       userAppRows={userAppRows}
       globalAppRows={globalAppRows}
       topListeners={topListeners}
+      sharingStats={sharingStats}
     />
   );
 }
