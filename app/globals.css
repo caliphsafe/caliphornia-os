@@ -826,3 +826,114 @@ body.has-global-player .cos-quick-actions {
   }
 }
 
+
+/* Caliphornia OS — true iPhone-width Home Screen on desktop */
+
+.ios-home-page {
+  width: 100% !important;
+  min-height: 100dvh !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  padding: 0 !important;
+  overflow-x: hidden !important;
+  background-size: cover !important;
+  background-position: center !important;
+}
+
+.ios-home-phone,
+.ios-home-surface {
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
+  min-height: 100dvh !important;
+  margin: 0 auto !important;
+  padding:
+    max(18px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(22px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left)) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+  overflow-x: hidden !important;
+}
+
+.ios-home-status,
+.ios-home-widget-row,
+.ios-home-grid,
+.ios-home-dock {
+  width: 100% !important;
+  max-width: 100% !important;
+}
+
+.ios-home-widget-row {
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, .95fr) !important;
+  gap: 10px !important;
+}
+
+.ios-home-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  column-gap: 8px !important;
+  row-gap: 20px !important;
+}
+
+.ios-app-icon {
+  min-width: 0 !important;
+}
+
+.ios-app-icon-tile {
+  width: clamp(54px, 15vw, 64px) !important;
+  height: clamp(54px, 15vw, 64px) !important;
+  margin-inline: auto !important;
+}
+
+.ios-app-icon-name,
+.ios-app-icon small {
+  max-width: 76px !important;
+  margin-inline: auto !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+  white-space: nowrap !important;
+}
+
+.ios-home-dock {
+  width: calc(100% - 4px) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+}
+
+.ios-dock-icon {
+  width: 56px !important;
+  height: 56px !important;
+  margin-inline: auto !important;
+}
+
+@media (min-width: 431px) {
+  .ios-home-page {
+    padding-left: 20px !important;
+    padding-right: 20px !important;
+  }
+
+  .ios-home-phone,
+  .ios-home-surface {
+    width: 430px !important;
+    max-width: 430px !important;
+  }
+}
+
+@media (max-width: 430px) {
+  .ios-home-page {
+    display: block !important;
+  }
+
+  .ios-home-phone,
+  .ios-home-surface {
+    width: 100% !important;
+    max-width: none !important;
+  }
+}
+
+
