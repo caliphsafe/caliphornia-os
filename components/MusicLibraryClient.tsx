@@ -1,8 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import PlayButton from "@/components/music/PlayButton";
-import ShareSongButton from "@/components/music/ShareSongButton";
 
 type MusicSong = {
   id: string;
@@ -12,152 +10,251 @@ type MusicSong = {
   projectName: string;
   projectSlug: string;
   appSlug: string;
+  coverUrl: string | null;
   durationLabel: string;
-  coverUrl?: string | null;
-  favorite: boolean;
-  favoriteId?: string | null;
-  favoriteOrder?: number | null;
   accessLabel: string;
+  canPlay: boolean;
+  isPreview: boolean;
+  isFavorite: boolean;
+  favoriteId: string | null;
+  favoriteOrder: number | null;
   shareable: boolean;
+  sharesRemaining: number;
 };
 
-export default function MusicLibraryClient({ userId, email }: { userId: string; email: string }) {
-  const [songs, setSongs] = useState<MusicSong[]>([]);
+type MusicData = {
+  ok: boolean;
+  songs: MusicSong[];
+  favorites: MusicSong[];
+  projects: Array<{ slug: string; name: string; count: number }>;
+  error?: string;
+};
+
+function sendToPlayer(song: MusicSong, queue: MusicSong[] = [song]) {
+  const startIndex = Math.max(0, queue.findIndex((item) => item.id === song.id));
+  window.postMessage(
+    {
+      type: "CALIPH_PLAYER_LOAD_QUEUE",
+      tracks: queue.map((item) => ({
+        id: item.id,
+        songId: item.id,
+        slug: item.slug,
+        songSlug: item.slug,
+        title: item.title,
+        artist: item.artist,
+        displayTitle: item.title,
+        playlistSongSlug: item.slug,
+        analyticsSongSlug: item.slug,
+        sourceApp: item.appSlug || "music",
+        coverUrl: item.coverUrl,
+      })),
+      startIndex,
+    },
+    "*"
+  );
+}
+
+function compact(value: number) {
+  return new Intl.NumberFormat("en-US", { notation: "compact" }).format(value || 0);
+}
+
+export default function MusicLibraryClient({ userId }: { userId: string }) {
+  const [data, setData] = useState<MusicData>({ ok: false, songs: [], favorites: [], projects: [] });
   const [loading, setLoading] = useState(true);
-  const [mode, setMode] = useState<"library" | "favorites" | "projects" | "shared">("library");
+  const [view, setView] = useState<"listen" | "library" | "favorites" | "projects" | "shareable">("listen");
   const [query, setQuery] = useState("");
-  const [status, setStatus] = useState("");
+  const [selectedProject, setSelectedProject] = useState("all");
+  const [nowPlaying, setNowPlaying] = useState<MusicSong | null>(null);
+  const [shareStatus, setShareStatus] = useState("");
+  const [saving, setSaving] = useState("");
 
   async function load() {
     setLoading(true);
-    const data = await fetch("/api/music/catalog", { cache: "no-store" }).then((res) => res.json()).catch(() => ({ ok: false }));
-    if (data?.ok) setSongs(data.songs || []);
-    else setStatus(data.error || "Could not load Music.");
+    const result = await fetch("/api/music/library", { cache: "no-store" })
+      .then((res) => res.json())
+      .catch(() => ({ ok: false, songs: [], favorites: [], projects: [], error: "Could not load Music." }));
+    setData({ ok: Boolean(result.ok), songs: result.songs || [], favorites: result.favorites || [], projects: result.projects || [], error: result.error });
     setLoading(false);
   }
 
-  useEffect(() => { void load(); }, []);
+  useEffect(() => {
+    void load();
+  }, []);
 
-  const filtered = useMemo(() => {
-    const clean = query.trim().toLowerCase();
-    let rows = [...songs];
-    if (mode === "favorites") rows = rows.filter((song) => song.favorite).sort((a, b) => Number(a.favoriteOrder || 9999) - Number(b.favoriteOrder || 9999));
-    if (mode === "shared") rows = rows.filter((song) => song.shareable);
-    if (clean) rows = rows.filter((song) => [song.title, song.artist, song.projectName, song.slug].join(" ").toLowerCase().includes(clean));
-    return rows;
-  }, [songs, query, mode]);
+  const filteredSongs = useMemo(() => {
+    const source =
+      view === "favorites"
+        ? data.favorites
+        : view === "shareable"
+          ? data.songs.filter((song) => song.shareable)
+          : data.songs;
 
-  const favorites = songs.filter((song) => song.favorite).sort((a, b) => Number(a.favoriteOrder || 9999) - Number(b.favoriteOrder || 9999));
-  const projectGroups = useMemo(() => {
-    const map = new Map<string, MusicSong[]>();
-    songs.forEach((song) => {
-      const key = song.projectName || song.projectSlug || "Caliphornia OS";
-      map.set(key, [...(map.get(key) || []), song]);
+    const q = query.trim().toLowerCase();
+    return source.filter((song) => {
+      const matchesProject = selectedProject === "all" || song.projectSlug === selectedProject || song.appSlug === selectedProject;
+      const matchesQuery = !q || `${song.title} ${song.artist} ${song.projectName}`.toLowerCase().includes(q);
+      return matchesProject && matchesQuery;
     });
-    return Array.from(map.entries()).sort((a, b) => a[0].localeCompare(b[0]));
-  }, [songs]);
+  }, [data.songs, data.favorites, view, query, selectedProject]);
 
-  async function moveFavorite(song: MusicSong, direction: "up" | "down") {
-    const index = favorites.findIndex((item) => item.id === song.id);
-    const swapIndex = direction === "up" ? index - 1 : index + 1;
-    if (index < 0 || swapIndex < 0 || swapIndex >= favorites.length) return;
-    const next = [...favorites];
-    [next[index], next[swapIndex]] = [next[swapIndex], next[index]];
-    const order = next.map((item, idx) => ({ songId: item.id, favoriteId: item.favoriteId, order: idx + 1 }));
-    setSongs((current) => current.map((item) => {
-      const found = order.find((row) => row.songId === item.id);
-      return found ? { ...item, favoriteOrder: found.order } : item;
-    }));
-    await fetch("/api/music/favorites/reorder", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ order }) }).catch(() => null);
-  }
+  const featured = filteredSongs[0] || data.songs[0] || null;
+  const favoriteQueue = data.favorites.length ? data.favorites : data.songs;
 
   async function toggleFavorite(song: MusicSong) {
-    const data = await fetch("/api/playlists/toggle-favorite", {
+    setSaving(song.id);
+    const result = await fetch("/api/playlists/toggle-favorite", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ songId: song.id, songSlug: song.slug }),
     }).then((res) => res.json()).catch(() => ({ ok: false }));
-    if (data?.ok) await load();
+    setSaving("");
+    if (result.ok) await load();
   }
 
-  function SongCard({ song, favoriteTools = false }: { song: MusicSong; favoriteTools?: boolean }) {
-    return (
-      <article className="music-app-song-card">
-        <div className="music-app-cover">
-          {song.coverUrl ? <img src={song.coverUrl} alt="" /> : <span>{song.title?.[0] || "♪"}</span>}
-        </div>
-        <div className="music-app-song-main">
-          <div className="music-app-song-top">
-            <div>
-              <strong>{song.title}</strong>
-              <small>{song.artist || "Caliph"} · {song.projectName || song.appSlug || "Caliphornia OS"}</small>
-            </div>
-            <span>{song.accessLabel}</span>
-          </div>
-          <div className="music-app-song-actions">
-            <PlayButton songId={song.id} songSlug={song.slug} title={song.title} artist={song.artist} showShare={false} />
-            <button className="music-mini-button" onClick={() => toggleFavorite(song)}>{song.favorite ? "Remove" : "Favorite"}</button>
-            {song.shareable ? <ShareSongButton songId={song.id} songSlug={song.slug} title={song.title} /> : null}
-            {favoriteTools ? <button className="music-mini-button" onClick={() => moveFavorite(song, "up")}>Move Up</button> : null}
-            {favoriteTools ? <button className="music-mini-button" onClick={() => moveFavorite(song, "down")}>Move Down</button> : null}
-          </div>
-        </div>
-      </article>
-    );
+  async function moveFavorite(song: MusicSong, direction: "up" | "down") {
+    const favorites = [...data.favorites];
+    const index = favorites.findIndex((item) => item.id === song.id);
+    if (index < 0) return;
+    const swapIndex = direction === "up" ? index - 1 : index + 1;
+    if (swapIndex < 0 || swapIndex >= favorites.length) return;
+    const swapped = [...favorites];
+    [swapped[index], swapped[swapIndex]] = [swapped[swapIndex], swapped[index]];
+    setData((current) => ({ ...current, favorites: swapped }));
+    await fetch("/api/music/favorites/reorder", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songIds: swapped.map((item) => item.id) }),
+    }).catch(() => {});
+    await load();
+  }
+
+  async function startShare(song: MusicSong) {
+    setShareStatus("Starting nearby Share...");
+    const result = await fetch("/api/share/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ shareScope: "song", songId: song.id, songSlug: song.slug }),
+    }).then((res) => res.json()).catch(() => ({ ok: false, error: "Could not start Share." }));
+
+    if (result.ok) {
+      setShareStatus(`${song.title} is ready nearby. The receiver opens Caliphornia OS and taps Receive.`);
+    } else {
+      setShareStatus(result.error || "Could not start Share.");
+    }
+  }
+
+  function playSong(song: MusicSong, queue = filteredSongs) {
+    setNowPlaying(song);
+    sendToPlayer(song, queue.length ? queue : [song]);
   }
 
   return (
-    <main className="music-app-page cos-uniform-page">
-      <section className="music-app-shell cos-uniform-shell">
-        <header className="music-app-hero">
-          <div>
-            <p>Caliphornia Music</p>
-            <h1>Library</h1>
-            <span>{email}</span>
+    <main className="apple-music-page cos-uniform-page">
+      <section className="apple-music-shell cos-uniform-shell">
+        <header className="apple-music-topbar cos-page-topbar">
+          <a href="/home" className="apple-music-pill">‹ Home</a>
+          <div className="apple-music-top-actions">
+            <a href="/apps/share" className="apple-music-pill">Share</a>
+            <a href="/apps/account" className="apple-music-pill">Account</a>
           </div>
-          <a href="/home">Home</a>
         </header>
 
-        <section className="music-app-now-card">
+        <section className="apple-music-hero">
           <div>
-            <span>Central Music App</span>
-            <strong>All songs, favorites, playlists, playback, and Share live here.</strong>
+            <p>Caliphornia Music</p>
+            <h1>Listen Now</h1>
+            <span>{data.songs.length} songs · {data.favorites.length} favorites · {data.projects.length} projects</span>
           </div>
-          <div className="music-app-kpis">
-            <div><span>Songs</span><strong>{songs.length}</strong></div>
-            <div><span>Favorites</span><strong>{favorites.length}</strong></div>
-            <div><span>Shareable</span><strong>{songs.filter((song) => song.shareable).length}</strong></div>
-          </div>
+          {featured ? (
+            <button className="apple-music-hero-art" onClick={() => playSong(featured)} aria-label={`Play ${featured.title}`}>
+              {featured.coverUrl ? <img src={featured.coverUrl} alt="" /> : <span>♪</span>}
+            </button>
+          ) : null}
         </section>
 
-        <section className="music-app-controls">
-          <div className="music-app-tabs">
-            <button className={mode === "library" ? "active" : ""} onClick={() => setMode("library")}>Songs</button>
-            <button className={mode === "favorites" ? "active" : ""} onClick={() => setMode("favorites")}>Favorites</button>
-            <button className={mode === "projects" ? "active" : ""} onClick={() => setMode("projects")}>Projects</button>
-            <button className={mode === "shared" ? "active" : ""} onClick={() => setMode("shared")}>Share</button>
-          </div>
-          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search songs, artists, projects" />
-        </section>
-
-        {status ? <div className="music-app-status">{status}</div> : null}
-        {loading ? <div className="music-app-status">Loading your Music...</div> : null}
-
-        {mode !== "projects" ? (
-          <section className="music-app-list">
-            {filtered.map((song) => <SongCard key={song.id} song={song} favoriteTools={mode === "favorites"} />)}
-            {!loading && !filtered.length ? <div className="music-app-empty">No songs in this view yet.</div> : null}
+        {featured ? (
+          <section className="apple-music-now-card">
+            <div className="apple-music-art-lg">
+              {featured.coverUrl ? <img src={featured.coverUrl} alt="" /> : <span>♪</span>}
+            </div>
+            <div>
+              <p>Recommended</p>
+              <h2>{featured.title}</h2>
+              <span>{featured.artist} · {featured.projectName || featured.appSlug || "Caliphornia OS"}</span>
+              <div className="apple-music-action-row">
+                <button onClick={() => playSong(featured)}>▶ Play</button>
+                <button onClick={() => toggleFavorite(featured)}>{featured.isFavorite ? "♥ Saved" : "♡ Favorite"}</button>
+                <button onClick={() => startShare(featured)}>⌁ Share</button>
+              </div>
+            </div>
           </section>
-        ) : (
-          <section className="music-app-projects">
-            {projectGroups.map(([project, rows]) => (
-              <details key={project} open className="music-app-project-group">
-                <summary><strong>{project}</strong><span>{rows.length} songs</span></summary>
-                <div className="music-app-list">{rows.map((song) => <SongCard key={song.id} song={song} />)}</div>
-              </details>
+        ) : null}
+
+        <section className="apple-music-search-row">
+          <input value={query} onChange={(event) => setQuery(event.target.value)} placeholder="Search songs, artists, projects" />
+          <select value={selectedProject} onChange={(event) => setSelectedProject(event.target.value)}>
+            <option value="all">All Projects</option>
+            {data.projects.map((project) => <option key={project.slug} value={project.slug}>{project.name}</option>)}
+          </select>
+        </section>
+
+        <nav className="apple-music-tabs" aria-label="Music sections">
+          <button className={view === "listen" ? "active" : ""} onClick={() => setView("listen")}>Listen Now</button>
+          <button className={view === "library" ? "active" : ""} onClick={() => setView("library")}>Songs</button>
+          <button className={view === "favorites" ? "active" : ""} onClick={() => setView("favorites")}>Favorites</button>
+          <button className={view === "projects" ? "active" : ""} onClick={() => setView("projects")}>Projects</button>
+          <button className={view === "shareable" ? "active" : ""} onClick={() => setView("shareable")}>Shareable</button>
+        </nav>
+
+        {shareStatus ? <div className="apple-music-share-status">{shareStatus}</div> : null}
+        {loading ? <div className="apple-music-empty">Loading your Music app...</div> : null}
+        {!loading && data.error ? <div className="apple-music-empty">{data.error}</div> : null}
+
+        {view === "projects" ? (
+          <section className="apple-music-project-grid">
+            {data.projects.map((project) => (
+              <button key={project.slug} onClick={() => { setSelectedProject(project.slug); setView("library"); }}>
+                <span>Project</span>
+                <strong>{project.name}</strong>
+                <small>{compact(project.count)} songs</small>
+              </button>
             ))}
           </section>
+        ) : (
+          <section className="apple-music-list">
+            {filteredSongs.map((song, index) => (
+              <article className={`apple-music-row ${nowPlaying?.id === song.id ? "is-playing" : ""}`} key={song.id}>
+                <button className="apple-music-row-art" onClick={() => playSong(song)}>
+                  {song.coverUrl ? <img src={song.coverUrl} alt="" /> : <span>{index + 1}</span>}
+                </button>
+                <button className="apple-music-row-main" onClick={() => playSong(song)}>
+                  <strong>{song.title}</strong>
+                  <span>{song.artist} · {song.projectName || song.appSlug || "Caliphornia"}</span>
+                  <small>{song.accessLabel}{song.durationLabel ? ` · ${song.durationLabel}` : ""}</small>
+                </button>
+                <div className="apple-music-row-actions">
+                  <button title="Play" onClick={() => playSong(song)}>▶</button>
+                  <button title="Favorite" disabled={saving === song.id} onClick={() => toggleFavorite(song)}>{song.isFavorite ? "♥" : "♡"}</button>
+                  <button title="Share nearby" onClick={() => startShare(song)}>⌁</button>
+                  {view === "favorites" ? (
+                    <>
+                      <button title="Move up" onClick={() => moveFavorite(song, "up")}>↑</button>
+                      <button title="Move down" onClick={() => moveFavorite(song, "down")}>↓</button>
+                    </>
+                  ) : null}
+                </div>
+              </article>
+            ))}
+            {!loading && !filteredSongs.length ? <div className="apple-music-empty">No songs found in this view yet.</div> : null}
+          </section>
         )}
+
+        {view === "favorites" ? (
+          <section className="apple-music-note-card">
+            <strong>Edit your Favorites playlist</strong>
+            <span>Use the up and down arrows to reorder songs. The global player will follow this order when you play from Favorites.</span>
+          </section>
+        ) : null}
       </section>
     </main>
   );

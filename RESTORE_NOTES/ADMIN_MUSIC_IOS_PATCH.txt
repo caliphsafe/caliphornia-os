@@ -1,0 +1,28 @@
+Caliphornia OS 43 Build Patch: Admin + iOS Music + Share Controls
+
+Upload these files to the same paths in GitHub. Do not upload package-lock.json.
+
+Run this Supabase SQL after upload:
+- supabase/migrations/011_admin_music_ios_controls.sql
+
+What this patch changes:
+1. Music becomes a full iOS-style app with Listen Now, Songs, Favorites, Projects, and Shareable views.
+2. Favorites become an editable playlist with up/down ordering.
+3. Each Music song has Play, Favorite, and Share controls.
+4. PlayButton-based project song lists also gain a Share button.
+5. Milia song cards gain a small Share button beside Play.
+6. GlobalPlayer now has a Share playing button inside the player.
+7. The separate old Share playing bridge is hidden so sharing is integrated into the player.
+8. Admin appears as a normal Home Screen app icon only for caliph.safe@gmail.com, admins, and owners.
+9. Dashboard becomes a more intuitive Control Center.
+10. Accounts admin can create accounts, update roles/status, grant full access, grant song/project/app access, add Kiiku, create invite links, and create blast emails.
+11. Music admin can edit song status, audio paths, shareability, lock state, app/project mapping, and create new song records.
+12. Onboarding tooltips now use normalized per-page localStorage keys so they auto-show only once per page per browser.
+
+Blast emails:
+- If EMAIL_PROVIDER_WEBHOOK_URL is set, the app posts the blast to that provider.
+- If it is not set, the blast is saved as queued in admin_email_blasts.
+
+Invite links:
+- Admin creates /invite/<token> links.
+- Invite links accept email and username, create or update app_users, set role, and sign the user in.

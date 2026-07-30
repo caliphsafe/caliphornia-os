@@ -5,19 +5,20 @@ import { supabaseAdmin } from "@/lib/supabase-admin";
 export async function POST(req: NextRequest) {
   try {
     const user = await requireCurrentAppUser();
-    const body = await req.json();
-    const order = Array.isArray(body.order) ? body.order : [];
-    for (const row of order) {
-      const favoriteOrder = Number(row.order || 0);
-      if (!favoriteOrder) continue;
-      let query = supabaseAdmin.from("user_favorite_songs").update({ favorite_order: favoriteOrder }).eq("user_id", user.id);
-      if (row.favoriteId) query = query.eq("id", row.favoriteId);
-      else if (row.songId) query = query.eq("song_id", row.songId);
-      else continue;
-      await query;
+    const body = await req.json().catch(() => ({}));
+    const songIds = Array.isArray(body.songIds) ? body.songIds.map(String).filter(Boolean) : [];
+    if (!songIds.length) return NextResponse.json({ ok: true });
+
+    for (let index = 0; index < songIds.length; index += 1) {
+      await supabaseAdmin
+        .from("user_favorite_songs")
+        .update({ favorite_order: index + 1 })
+        .eq("user_id", user.id)
+        .eq("song_id", songIds[index]);
     }
+
     return NextResponse.json({ ok: true });
-  } catch {
-    return NextResponse.json({ ok: false, error: "Could not reorder favorites." }, { status: 500 });
+  } catch (error: any) {
+    return NextResponse.json({ ok: false, error: error?.message || "Could not reorder favorites." }, { status: 500 });
   }
 }

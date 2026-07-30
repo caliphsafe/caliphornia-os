@@ -1,33 +1,5 @@
-.global-song-share-bridge {
-  position: fixed;
-  left: 50%;
-  bottom: calc(104px + env(safe-area-inset-bottom, 0px));
-  z-index: 1999;
-  transform: translateX(-50%);
-  display: inline-flex;
-  gap: 8px;
-  align-items: center;
-  max-width: min(720px, calc(100vw - 20px));
-  padding: 7px;
-  border-radius: 999px;
-  color: white;
-  background: rgba(8, 10, 14, .62);
-  border: 1px solid rgba(255,255,255,.12);
-  box-shadow: 0 18px 52px rgba(0,0,0,.34);
-  backdrop-filter: blur(18px) saturate(150%);
-  -webkit-backdrop-filter: blur(18px) saturate(150%);
-}
-.global-song-share-bridge button {
-  min-height: 36px;
-  border: 0;
-  border-radius: 999px;
-  padding: 0 12px;
-  color: #03111d;
-  background: linear-gradient(180deg, #a7ebff, #64d2ff);
-  font-weight: 900;
-  cursor: pointer;
-}
-.global-song-share-bridge span { color: rgba(255,255,255,.68); font-size: 12px; font-weight: 750; padding-right: 8px; }
+.global-song-share-bridge { display: none; }
+.music-inline-share { color: #64d2ff; background: rgba(100,210,255,.16) !important; }
 .cos-onboarding-help {
   position: fixed;
   right: max(12px, calc((100vw - 760px) / 2 + 12px));
@@ -72,7 +44,6 @@
 .ios-home-widget.admin-card { background: linear-gradient(160deg, rgba(100,210,255,.22), rgba(255,255,255,.08)); }
 .access-window-trigger:empty { display: none !important; }
 @media (max-width: 680px) {
-  .global-song-share-bridge { bottom: calc(174px + env(safe-area-inset-bottom, 0px)); width: calc(100vw - 20px); justify-content: center; border-radius: 22px; }
-  .global-song-share-bridge span { display: none; }
   .cos-onboarding-help { right: 10px; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); }
+  body.has-global-player .cos-onboarding-help { bottom: calc(112px + env(safe-area-inset-bottom, 0px)); }
 }

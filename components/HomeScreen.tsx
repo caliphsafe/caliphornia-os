@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { appRegistry } from "@/lib/app-registry";
+import { appRegistry, type AppItem } from "@/lib/app-registry";
 import type { AppUser } from "@/types/domain";
 
 function displayName(user: AppUser) {
@@ -10,19 +10,30 @@ function todayLabel() {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
-    day: "numeric",
+    day: "numeric"
   }).format(new Date());
 }
 
-function canSeeAdmin(user: AppUser) {
+function isAdminUser(user: AppUser) {
   const role = String(user.role || "").toLowerCase();
-  return role === "admin" || role === "owner" || String(user.email || "").toLowerCase() === "caliph.safe@gmail.com";
+  const email = String(user.email || "").toLowerCase();
+  return role === "admin" || role === "owner" || email === "caliph.safe@gmail.com";
 }
 
+const adminApp: AppItem = {
+  id: "admin",
+  name: "Admin",
+  subtitle: "Control",
+  icon: "/icons/admin.svg",
+  href: "/dashboard",
+  passLabel: "Settings"
+};
+
 export default function HomeScreen({ user }: { user: AppUser }) {
+  const adminEnabled = isAdminUser(user);
+  const baseHomeApps = appRegistry.filter((app) => !app.dock);
+  const homeApps = adminEnabled ? [...baseHomeApps, adminApp] : baseHomeApps;
   const dockApps = appRegistry.filter((app) => app.dock);
-  const homeApps = appRegistry.filter((app) => !app.dock);
-  const showAdmin = canSeeAdmin(user);
 
   return (
     <main className="ios-home-page">
@@ -36,7 +47,6 @@ export default function HomeScreen({ user }: { user: AppUser }) {
           <div className="ios-home-actions">
             <Link href="/apps/share">Share</Link>
             <Link href="/apps/account">Account</Link>
-            {showAdmin ? <Link href="/dashboard">Admin</Link> : null}
           </div>
         </header>
 
@@ -50,13 +60,6 @@ export default function HomeScreen({ user }: { user: AppUser }) {
             <strong>Send a song nearby</strong>
           </Link>
         </section>
-
-        {showAdmin ? (
-          <Link href="/dashboard" className="ios-home-widget admin-card">
-            <span>Admin Control</span>
-            <strong>Manage songs, accounts, Kiiku, Share, invites, and blasts.</strong>
-          </Link>
-        ) : null}
 
         <section className="ios-home-grid" aria-label="Apps">
           {homeApps.map((app) => (
