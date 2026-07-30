@@ -16,11 +16,27 @@ import {
   type ShareSongRow,
 } from "@/lib/share/share-access";
 
-async function getSiteUrl(req: NextRequest) {
-  const envUrl = process.env.NEXT_PUBLIC_SITE_URL;
-  const origin = req.headers.get("origin");
-  const base = envUrl || origin || "http://localhost:3000";
-  return /^https?:\/\//i.test(base) ? base.replace(/\/$/, "") : `https://${base}`;
+function roundedCoord(value: unknown) {
+  const n = Number(value);
+  if (!Number.isFinite(n)) return null;
+  return Math.round(n * 10000) / 10000;
+}
+
+function cleanLocation(input: any) {
+  const lat = roundedCoord(input?.latitude ?? input?.lat);
+  const lng = roundedCoord(input?.longitude ?? input?.lng);
+  if (lat == null || lng == null) return null;
+
+  return {
+    lat,
+    lng,
+    accuracy:
+      Number.isFinite(Number(input?.accuracy)) && Number(input?.accuracy) > 0
+        ? Math.round(Number(input.accuracy))
+        : null,
+    captured_at: new Date().toISOString(),
+    precision: "rounded_4_decimal_places",
+  };
 }
 
 async function findSong(body: any) {
@@ -30,6 +46,7 @@ async function findSong(body: any) {
     .from("songs")
     .select("id,slug,title,artist_name,project_id,app_id,source_app_slug,is_shareable,is_locked,is_free_full_play,requires_project_access,requires_all_access,release_at,status")
     .limit(1);
+
   query = songId ? query.eq("id", songId) : query.eq("slug", songSlug);
   const result = await query.maybeSingle();
   return result.data as ShareSongRow | null;
@@ -42,6 +59,7 @@ async function projectForSong(song: ShareSongRow) {
       .select("id,slug,name,status")
       .eq("id", song.project_id)
       .maybeSingle();
+
     if (result.data) return result.data as ShareProjectRow;
   }
 
@@ -51,6 +69,7 @@ async function projectForSong(song: ShareSongRow) {
       .select("id,slug,name,status")
       .eq("slug", song.source_app_slug)
       .maybeSingle();
+
     if (result.data) return result.data as ShareProjectRow;
   }
 
@@ -59,6 +78,7 @@ async function projectForSong(song: ShareSongRow) {
 
 async function projectUnlockProductKey(project?: ShareProjectRow | null) {
   if (!project?.id) return null;
+
   const result = await supabaseAdmin
     .from("commerce_products")
     .select("product_key,product_type,project_id,status")
@@ -67,6 +87,7 @@ async function projectUnlockProductKey(project?: ShareProjectRow | null) {
     .in("product_type", ["project_unlock", "project", "album", "album_unlock"])
     .limit(1)
     .maybeSingle();
+
   return result.data?.product_key || null;
 }
 
@@ -75,8 +96,19 @@ export async function POST(req: NextRequest) {
     const user = await requireCurrentAppUser();
     const body = await req.json();
     const scope = normalize(body.shareScope || body.scope || "song") === "project" ? "project" : "song";
+    const senderLocation = cleanLocation(body.location || body);
     const access = await loadUserShareAccess(user);
-    const siteUrl = await getSiteUrl(req);
+
+    if (!senderLocation) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error:
+            "Allow location to start a proximity Share. The receiver will only see it when they are near you.",
+        },
+        { status: 400 }
+      );
+    }
 
     let project: ShareProjectRow | null = null;
     let songs: ShareSongRow[] = [];
@@ -114,12 +146,17 @@ export async function POST(req: NextRequest) {
       }
     } else {
       const song = await findSong(body);
-      if (!song?.id) return NextResponse.json({ ok: false, error: "Song not found." }, { status: 404 });
+
+      if (!song?.id) {
+        return NextResponse.json({ ok: false, error: "Song not found." }, { status: 404 });
+      }
+
       if (song.is_shareable === false) {
         return NextResponse.json({ ok: false, error: "This song is not shareable yet." }, { status: 403 });
       }
 
       project = await projectForSong(song);
+
       if (!hasSongAccess(song, project, access)) {
         return NextResponse.json(
           {
@@ -139,6 +176,7 @@ export async function POST(req: NextRequest) {
     const { token, tokenHash } = createTokenPair();
     const phrase = createPhrase();
     const expiresAt = new Date(Date.now() + 5 * 60 * 1000).toISOString();
+
     let allowanceId: string | null = null;
 
     try {
@@ -165,7 +203,7 @@ export async function POST(req: NextRequest) {
         fallback_phrase_hash: sha256(phrase),
         status: "searching",
         share_scope: scope,
-        share_method_snapshot: "share_app",
+        share_method_snapshot: "main_page_proximity",
         song_slug_snapshot: scope === "song" ? primarySong.slug : null,
         song_title_snapshot: scope === "song" ? primarySong.title : displayTitle,
         project_slug_snapshot: project?.slug || primarySong.source_app_slug || null,
@@ -175,12 +213,14 @@ export async function POST(req: NextRequest) {
         location_data_delete_at: expiresAt,
         metadata: {
           sender_label: user.username ? `${user.username}'s device` : "Caliphornia listener",
+          sender_location: senderLocation,
           share_song_ids: songs.map((song) => song.id),
           share_song_slugs: songs.map((song) => song.slug),
           share_song_titles: songs.map((song) => song.title || song.slug),
           share_count: songs.length,
+          receiver_flow: "main_page_proximity",
           receiver_instruction:
-            "Open the private Share link. No account is needed for the guest listen.",
+            "The receiver opens the Caliphornia OS main page near you. A Receive button appears automatically when their device is close.",
         },
       })
       .select("id")
@@ -200,7 +240,10 @@ export async function POST(req: NextRequest) {
       actor_user_id: user.id,
       event_type: scope === "project" ? "project_share_created" : "song_share_created",
       event_status: "ok",
-      metadata: { song_count: songs.length },
+      metadata: {
+        song_count: songs.length,
+        receiver_flow: "main_page_proximity",
+      },
     });
 
     return NextResponse.json({
@@ -212,9 +255,9 @@ export async function POST(req: NextRequest) {
       title: displayTitle,
       songCount: songs.length,
       expiresAt,
-      receiveUrl: `${siteUrl}/unlock?share=${encodeURIComponent(token)}`,
+      receiverMode: "main_page_proximity",
       receiverInstruction:
-        "Send this Share link to the recipient. It opens the public unlock screen and activates their guest listen without requiring an account.",
+        "Keep this Share screen open. The receiver opens the Caliphornia OS main page near you, allows location, and taps the Receive button that appears.",
     });
   } catch (error: any) {
     return NextResponse.json(

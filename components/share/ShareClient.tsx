@@ -44,16 +44,62 @@ type ShareStats = {
   accountsCreated?: number;
 };
 
+type LocationPayload = {
+  latitude: number;
+  longitude: number;
+  accuracy: number | null;
+};
+
 function statusCopy(step: string) {
-  if (step === "idle") return "Choose a song or full project, then create a Share link. The receiver does not need an account to open it.";
-  if (step === "searching") return "Creating a private guest listening link.";
-  if (step === "sending") return "Share is live. Send the link below. It opens the public unlock screen and activates the guest listen.";
-  if (step === "received") return "Transfer accepted. The guest listening link is ready.";
+  if (step === "idle") {
+    return "Choose a song or full project, then start a proximity Share.";
+  }
+
+  if (step === "searching") {
+    return "Starting proximity Share. Keep this screen open.";
+  }
+
+  if (step === "sending") {
+    return "Share is live. The receiver opens the Caliphornia OS main page near you. A Receive button appears when their device is close.";
+  }
+
+  if (step === "received") {
+    return "Transfer accepted. The guest player is ready.";
+  }
+
   return "Share is ready.";
 }
 
 function plural(value: number, singular: string, pluralText: string) {
   return value === 1 ? singular : pluralText;
+}
+
+function getPosition(): Promise<LocationPayload> {
+  return new Promise((resolve, reject) => {
+    if (!("geolocation" in navigator)) {
+      reject(new Error("Location is required for proximity Share on this device."));
+      return;
+    }
+
+    navigator.geolocation.getCurrentPosition(
+      (position) => {
+        resolve({
+          latitude: position.coords.latitude,
+          longitude: position.coords.longitude,
+          accuracy:
+            typeof position.coords.accuracy === "number"
+              ? Math.round(position.coords.accuracy)
+              : null,
+        });
+      },
+      () => reject(new Error("Allow location to start a proximity Share.")),
+      {
+        enableHighAccuracy: true,
+        timeout: 9000,
+        maximumAge: 15000,
+      }
+    );
+  });
 }
 
 export default function ShareClient() {
@@ -63,7 +109,7 @@ export default function ShareClient() {
   const [shareScope, setShareScope] = useState<"song" | "project">("song");
   const [shareSessionId, setShareSessionId] = useState("");
   const [phrase, setPhrase] = useState("");
-  const [receiveUrl, setReceiveUrl] = useState("");
+  const [receiverInstruction, setReceiverInstruction] = useState("");
   const [guestToken, setGuestToken] = useState("");
   const [guestSessionId, setGuestSessionId] = useState("");
   const [candidates, setCandidates] = useState<Candidate[]>([]);
@@ -73,6 +119,7 @@ export default function ShareClient() {
   const [error, setError] = useState("");
   const [loadingLibrary, setLoadingLibrary] = useState(true);
   const [stats, setStats] = useState<ShareStats>({});
+  const [receiverLocation, setReceiverLocation] = useState<LocationPayload | null>(null);
   const pollRef = useRef<number | null>(null);
 
   const selectedProject = useMemo(
@@ -81,6 +128,7 @@ export default function ShareClient() {
   );
 
   const shareableSongs = selectedProject?.songs.filter((song) => song.shareable) || [];
+
   const selectedSong = useMemo(
     () => shareableSongs.find((song) => song.slug === selectedSongSlug) || shareableSongs[0] || null,
     [shareableSongs, selectedSongSlug]
@@ -95,12 +143,13 @@ export default function ShareClient() {
     const params = new URLSearchParams(window.location.search);
     if (params.get("mode") === "receive") {
       setMode("receive");
-      void startReceive();
     }
 
     let active = true;
+
     async function load() {
       setLoadingLibrary(true);
+
       try {
         const [libraryRes, statsRes] = await Promise.all([
           fetch("/api/share/library", { cache: "no-store" }),
@@ -108,13 +157,21 @@ export default function ShareClient() {
         ]);
 
         const libraryData = await libraryRes.json();
+
         if (active && Array.isArray(libraryData?.projects)) {
           setProjects(libraryData.projects);
+
           const firstShareableProject =
-            libraryData.projects.find((project: ShareProject) => project.shareable) || libraryData.projects[0];
+            libraryData.projects.find((project: ShareProject) => project.shareable) ||
+            libraryData.projects[0];
+
           if (firstShareableProject?.id) {
             setSelectedProjectId(firstShareableProject.id);
-            const firstSong = firstShareableProject.songs?.find((song: ShareSong) => song.shareable);
+
+            const firstSong = firstShareableProject.songs?.find(
+              (song: ShareSong) => song.shareable
+            );
+
             if (firstSong?.slug) setSelectedSongSlug(firstSong.slug);
           }
         }
@@ -123,6 +180,7 @@ export default function ShareClient() {
           const statsData = await statsRes.json().catch(() => null);
           const my = statsData?.stats?.my || {};
           const global = statsData?.stats?.global || {};
+
           if (active) {
             setStats({
               songsPlayed: Number(my.songs_played || 0),
@@ -132,7 +190,7 @@ export default function ShareClient() {
             });
           }
         }
-      } catch (err) {
+      } catch {
         if (active) setError("Could not load your Share library yet.");
       } finally {
         if (active) setLoadingLibrary(false);
@@ -140,6 +198,7 @@ export default function ShareClient() {
     }
 
     load();
+
     return () => {
       active = false;
     };
@@ -153,14 +212,17 @@ export default function ShareClient() {
 
   function selectProject(project: ShareProject) {
     setSelectedProjectId(project.id);
+
     const firstSong = project.songs.find((song) => song.shareable);
     setSelectedSongSlug(firstSong?.slug || "");
+
     if (!project.shareable && shareScope === "project") setShareScope("song");
   }
 
   async function startShare() {
     setError("");
     setGuestUrl("");
+    setShareSessionId("");
 
     if (!selectedProject) {
       setError("Choose a project first.");
@@ -180,6 +242,8 @@ export default function ShareClient() {
     setStep("searching");
 
     try {
+      const location = await getPosition();
+
       const res = await fetch("/api/share/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -188,13 +252,22 @@ export default function ShareClient() {
           projectId: selectedProject.id,
           projectSlug: selectedProject.slug,
           songSlug: selectedSong?.slug,
+          location,
         }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data?.ok) throw new Error(data?.error || "Could not start Share.");
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || "Could not start Share.");
+      }
+
       setShareSessionId(data.shareSessionId || "");
       setPhrase(data.phrase || "");
-      setReceiveUrl(data.receiveUrl || "/apps/share?mode=receive");
+      setReceiverInstruction(
+        data.receiverInstruction ||
+          "The receiver opens the Caliphornia OS main page near you, allows location, and taps Receive."
+      );
       setStep("sending");
     } catch (err) {
       setStep("idle");
@@ -209,30 +282,53 @@ export default function ShareClient() {
     setStep("searching");
 
     try {
+      const location = await getPosition();
+      setReceiverLocation(location);
+
       const res = await fetch("/api/nearby/receive/start", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ deviceLabel: "Caliphornia listener" }),
+        body: JSON.stringify({ deviceLabel: "Caliphornia listener", location }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data?.ok) throw new Error(data?.error || "Could not start receiver.");
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || "Could not start receiver.");
+      }
+
       setGuestToken(data.guestToken || "");
       setGuestSessionId(data.guestSessionId || "");
-      await pollCandidates(data.guestToken);
+
+      await pollCandidates(data.guestToken, location);
+
       if (pollRef.current) window.clearInterval(pollRef.current);
-      pollRef.current = window.setInterval(() => pollCandidates(data.guestToken), 3000);
+      pollRef.current = window.setInterval(
+        () => pollCandidates(data.guestToken, location),
+        3000
+      );
     } catch (err) {
       setStep("idle");
       setError(err instanceof Error ? err.message : "Could not start receiver.");
     }
   }
 
-  async function pollCandidates(token = guestToken) {
-    if (!token) return;
+  async function pollCandidates(token = guestToken, location = receiverLocation) {
+    if (!token || !location) return;
+
     try {
-      const res = await fetch(`/api/nearby/receive/candidates?guestToken=${encodeURIComponent(token)}`, {
+      const params = new URLSearchParams({
+        guestToken: token,
+        lat: String(location.latitude),
+        lng: String(location.longitude),
+      });
+
+      if (location.accuracy != null) params.set("accuracy", String(location.accuracy));
+
+      const res = await fetch(`/api/nearby/receive/candidates?${params.toString()}`, {
         cache: "no-store",
       });
+
       const data = await res.json();
       if (data?.ok && Array.isArray(data.candidates)) setCandidates(data.candidates);
     } catch {}
@@ -240,17 +336,25 @@ export default function ShareClient() {
 
   async function acceptCandidate(candidate: Candidate) {
     setError("");
+
     try {
       const res = await fetch("/api/nearby/receive/confirm", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ guestToken, shareSessionId: candidate.id }),
+        body: JSON.stringify({ guestToken, shareSessionId: candidate.id, location: receiverLocation }),
       });
+
       const data = await res.json();
-      if (!res.ok || !data?.ok) throw new Error(data?.error || "Could not accept Share.");
+
+      if (!res.ok || !data?.ok) {
+        throw new Error(data?.error || "Could not accept Share.");
+      }
+
       setGuestUrl(data.guestUrl || "");
       setStep("received");
+
       if (pollRef.current) window.clearInterval(pollRef.current);
+      window.location.href = data.guestUrl || `/guest/${encodeURIComponent(guestToken)}`;
     } catch (err) {
       setError(err instanceof Error ? err.message : "Could not accept Share.");
     }
@@ -263,19 +367,22 @@ export default function ShareClient() {
     }
 
     setError("");
+
     const res = await fetch("/api/checkout/access", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ productKey }),
     });
+
     const data = await res.json();
+
     if (data?.ok && data.url) window.location.href = data.url;
     else setError(data?.error || "Checkout could not be opened.");
   }
 
   return (
     <main className="share-page cos-uniform-page">
-      <section className="share-phone cos-uniform-shell cos-native-actions-page">
+      <section className="share-phone cos-uniform-shell">
         <header className="share-topbar cos-page-topbar">
           <a href="/home" className="share-pill">‹ Home</a>
           <div className="share-top-actions">
@@ -294,16 +401,16 @@ export default function ShareClient() {
           <div className="airdrop-rings"><i /><i /><i /></div>
           <div className="airdrop-device sender"><span>♪</span><strong>You</strong></div>
           <div className="airdrop-beam"><span /></div>
-          <div className="airdrop-device receiver"><span>⌁</span><strong>Listener</strong></div>
+          <div className="airdrop-device receiver"><span>⌁</span><strong>Nearby</strong></div>
           <div className="share-transfer-label">
-            <span>{shareScope === "project" ? "Project handoff" : "Song handoff"}</span>
+            <span>{shareScope === "project" ? "Project proximity Share" : "Song proximity Share"}</span>
             <strong>{selectedTitle}</strong>
           </div>
         </section>
 
         <section className="share-tabs">
           <button className={mode === "send" ? "active" : ""} onClick={() => setMode("send")}>Send</button>
-          <button className={mode === "receive" ? "active" : ""} onClick={() => startReceive()}>Live Receive</button>
+          <button className={mode === "receive" ? "active" : ""} onClick={() => startReceive()}>Receive</button>
         </section>
 
         {mode === "send" ? (
@@ -418,16 +525,22 @@ export default function ShareClient() {
 
               {shareSessionId ? (
                 <div className="share-output">
-                  <span>Tell the recipient</span>
+                  <span>Share is live nearby</span>
                   <strong>{phrase || "READY"}</strong>
                   <small>
-                    Send this link to the recipient. They do not need an account. It opens the public unlock screen and activates the guest listen.
+                    {receiverInstruction ||
+                      "The receiver opens the Caliphornia OS main page near you, allows location, and taps Receive when it appears."}
                   </small>
-                  <a className="share-copy-link" href={receiveUrl || "/unlock"} target="_blank" rel="noreferrer">
-                    {receiveUrl || "/unlock"}
-                  </a>
                 </div>
-              ) : null}
+              ) : (
+                <div className="share-output subtle">
+                  <span>How the receiver gets it</span>
+                  <strong>No link needed</strong>
+                  <small>
+                    They open the Caliphornia OS main page near you. If they allow location, the Receive button appears automatically.
+                  </small>
+                </div>
+              )}
             </section>
           </section>
         ) : (
@@ -441,13 +554,13 @@ export default function ShareClient() {
             </div>
 
             <div className="share-instruction-card">
-              <strong>How to receive</strong>
+              <strong>Main-page Receive</strong>
               <p>
-                This live receiver is for people who already have access to Caliphornia OS. New listeners should use the public Share link from the sender. No account is needed for that link.
+                A receiver does not need an account. They can open the Caliphornia OS main page, stand near you, allow location, and tap Receive when the nearby Share appears.
               </p>
             </div>
 
-            {!guestSessionId ? <button className="share-main-button" onClick={startReceive}>Start Receive</button> : null}
+            {!guestSessionId ? <button className="share-main-button" onClick={startReceive}>Start Receive on this device</button> : null}
 
             <div className="candidate-list">
               {candidates.length ? candidates.map((candidate) => (
@@ -458,6 +571,7 @@ export default function ShareClient() {
                 </button>
               )) : <div className="share-empty">No nearby shares yet. Keep this open while the sender starts Share.</div>}
             </div>
+
             {guestUrl ? <a href={guestUrl} className="share-main-link">Open guest player</a> : null}
           </section>
         )}

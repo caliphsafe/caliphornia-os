@@ -1,0 +1,31 @@
+Caliphornia OS Proximity Share 43 Patch
+
+Purpose:
+- Remove the link-first receiver flow.
+- Allow a receiver with no account to open the Caliphornia OS main page and receive based on proximity.
+- Keep Share as a location-consented web proximity experience, not true native AirDrop.
+
+How it works:
+1. Sender signs in and opens /apps/share.
+2. Sender chooses a song or full project.
+3. Sender starts Share and allows location.
+4. Receiver opens the public Caliphornia OS main page, no account needed.
+5. If receiver allows location and is close to the sender, a Nearby Share Receive card appears.
+6. Receiver taps Receive and is routed to /guest/[token].
+7. Song shares grant 1 guest listen.
+8. Project shares grant 1 guest listen per song.
+
+Files included:
+- app/page.tsx
+- components/share/ProximityReceivePrompt.tsx
+- components/share/ShareClient.tsx
+- components/GlobalQuickActions.tsx
+- app/api/share/start/route.ts
+- app/api/nearby/receive/start/route.ts
+- app/api/nearby/receive/candidates/route.ts
+- app/api/nearby/receive/confirm/route.ts
+
+Notes:
+- Browser location permission is required on both sender and receiver.
+- The backend stores rounded coordinates only in metadata and the share session expires quickly.
+- Do not include package-lock.json.
