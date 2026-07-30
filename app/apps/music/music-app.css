@@ -1,0 +1,50 @@
+.music-app-page {
+  min-height: 100dvh;
+  padding: calc(18px + env(safe-area-inset-top, 0px)) 14px 140px;
+  color: white;
+  background:
+    radial-gradient(circle at 50% -10%, rgba(255, 45, 85, .22), transparent 30%),
+    radial-gradient(circle at 86% 82%, rgba(100, 210, 255, .18), transparent 28%),
+    linear-gradient(180deg, #111015, #050508 58%, #000);
+}
+.music-app-shell { width: min(760px, 100%); margin: 0 auto; display: grid; gap: 14px; }
+.music-app-hero { display: flex; justify-content: space-between; align-items: flex-start; gap: 14px; padding: 20px; border-radius: 32px; background: linear-gradient(180deg, rgba(255,255,255,.12), rgba(255,255,255,.06)); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 28px 80px rgba(0,0,0,.32); backdrop-filter: blur(22px); -webkit-backdrop-filter: blur(22px); }
+.music-app-hero p, .music-app-now-card span { margin: 0 0 8px; color: #ff375f; text-transform: uppercase; letter-spacing: .14em; font-size: 11px; font-weight: 900; }
+.music-app-hero h1 { margin: 0; font-size: clamp(54px, 12vw, 98px); line-height: .82; letter-spacing: -.085em; }
+.music-app-hero span { display: block; margin-top: 8px; color: rgba(255,255,255,.58); font-weight: 700; }
+.music-app-hero a { min-height: 44px; border-radius: 999px; padding: 0 14px; display: inline-flex; align-items: center; justify-content: center; color: white; background: rgba(255,255,255,.1); border: 1px solid rgba(255,255,255,.12); font-weight: 850; }
+.music-app-now-card { display: grid; grid-template-columns: 1fr auto; gap: 14px; align-items: center; padding: 18px; border-radius: 30px; background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.11); }
+.music-app-now-card strong { display: block; max-width: 480px; font-size: 24px; line-height: 1.05; letter-spacing: -.045em; }
+.music-app-kpis { display: grid; grid-template-columns: repeat(3, 80px); gap: 8px; }
+.music-app-kpis div { padding: 10px; border-radius: 20px; background: rgba(255,255,255,.08); text-align: center; }
+.music-app-kpis span { margin: 0; color: rgba(255,255,255,.55); font-size: 10px; }
+.music-app-kpis strong { font-size: 24px; }
+.music-app-controls { display: grid; gap: 10px; }
+.music-app-tabs { display: flex; gap: 8px; padding: 6px; border-radius: 999px; background: rgba(255,255,255,.08); border: 1px solid rgba(255,255,255,.09); overflow: auto; }
+.music-app-tabs button { min-height: 38px; border: 0; border-radius: 999px; padding: 0 14px; color: rgba(255,255,255,.72); background: transparent; font-weight: 850; cursor: pointer; white-space: nowrap; }
+.music-app-tabs button.active { color: #08090d; background: #fff; }
+.music-app-controls input { width: 100%; min-height: 52px; border-radius: 20px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.24); color: white; padding: 0 16px; outline: none; }
+.music-app-list, .music-app-projects { display: grid; gap: 10px; }
+.music-app-song-card, .music-app-project-group, .music-app-status, .music-app-empty { border-radius: 28px; background: rgba(255,255,255,.09); border: 1px solid rgba(255,255,255,.11); box-shadow: 0 24px 60px rgba(0,0,0,.24), inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.music-app-song-card { display: grid; grid-template-columns: 72px 1fr; gap: 12px; padding: 12px; }
+.music-app-cover { width: 72px; height: 72px; border-radius: 20px; overflow: hidden; display: grid; place-items: center; background: linear-gradient(145deg, rgba(255,55,95,.42), rgba(100,210,255,.22)); font-size: 30px; font-weight: 900; }
+.music-app-cover img { width: 100%; height: 100%; object-fit: cover; }
+.music-app-song-main { min-width: 0; display: grid; gap: 10px; }
+.music-app-song-top { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.music-app-song-top strong { display: block; font-size: 18px; letter-spacing: -.035em; }
+.music-app-song-top small { display: block; margin-top: 4px; color: rgba(255,255,255,.58); font-weight: 700; }
+.music-app-song-top span { border-radius: 999px; padding: 6px 9px; color: #ffc1ce; background: rgba(255,55,95,.14); font-size: 11px; font-weight: 850; white-space: nowrap; }
+.music-app-song-actions, .music-actions-row { display: flex; flex-wrap: wrap; gap: 7px; align-items: center; }
+.music-mini-button, .music-share-button, .music-actions-row .btn { min-height: 38px; border: 0; border-radius: 999px; padding: 0 12px; color: white; background: rgba(255,255,255,.11); font-size: 12px; font-weight: 850; cursor: pointer; }
+.music-actions-row .btn.primary { color: #08090d; background: white; }
+.music-actions-row .btn.is-saved, .music-mini-button.is-saved { color: #f8d477; }
+.music-share-wrap { display: inline-flex; flex-direction: column; gap: 4px; align-items: flex-start; }
+.music-share-button { background: rgba(100,210,255,.18); color: #9be6ff; }
+.music-share-message { max-width: 260px; color: rgba(255,255,255,.64); font-size: 11px; line-height: 1.25; }
+.music-share-message.error { color: #ff8c8c; }
+.music-app-project-group { padding: 12px; }
+.music-app-project-group summary { display: flex; justify-content: space-between; align-items: center; cursor: pointer; padding: 8px; }
+.music-app-project-group summary strong { font-size: 22px; letter-spacing: -.04em; }
+.music-app-project-group summary span { color: rgba(255,255,255,.58); font-weight: 800; }
+.music-app-status, .music-app-empty { padding: 16px; color: rgba(255,255,255,.68); }
+@media (max-width: 620px) { .music-app-page { padding-left: 10px; padding-right: 10px; } .music-app-now-card { grid-template-columns: 1fr; } .music-app-kpis { grid-template-columns: repeat(3, 1fr); } .music-app-song-card { grid-template-columns: 58px 1fr; } .music-app-cover { width: 58px; height: 58px; border-radius: 16px; } .music-app-song-top { display: grid; } }

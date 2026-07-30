@@ -1,0 +1,21 @@
+Caliphornia OS 43 Build Patch: Admin + Music + Share
+
+What this patch does:
+- Expands admin control into a real control center.
+- Adds account admin tools: create account, update role, grant Kiiku, grant access.
+- Adds song admin tools: create/edit songs, audio paths, lock/share flags, status, project assignment.
+- Adds experience/admin surfaces for apps, projects and products.
+- Adds invite link and blast email admin records.
+- Adds the Admin link to the Home Screen for caliph.safe@gmail.com and role admin/owner users.
+- Restores Music as a central music app with Songs, Favorites, Projects and Share views.
+- Lets favorites behave like a playlist with editable order.
+- Adds share buttons to Music song rows.
+- Adds a global Share Playing control so songs can be shared from individual apps once playing.
+- Adds Share stats to the Stats app: top sharers, most shared songs, accepted transfers and accounts from Share.
+
+Supabase:
+Run supabase/migrations/010_admin_music_share_controls.sql after uploading these files.
+
+Vercel:
+No package-lock.json is included.
+If you want email blasts to actually send, set EMAIL_PROVIDER_WEBHOOK_URL and EMAIL_FROM in Vercel. Without those, blast records are saved/queued for review.

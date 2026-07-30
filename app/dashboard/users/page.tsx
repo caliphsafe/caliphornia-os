@@ -1,2 +1,5 @@
-import AdminTable from "@/components/admin/AdminTable";
-export default function Page() { return <main className="shell stack"><header className="topbar"><div><span className="eyebrow">Admin</span><h1 className="h1">Users</h1></div><a className="btn" href="/dashboard">Dashboard</a></header><section className="glass card stack"><p className="muted">Review accounts, entitlements, libraries, and ledgers.</p><AdminTable table="app_users" /></section></main>; }
+import { redirect } from "next/navigation";
+
+export default function UsersRedirectPage() {
+  redirect("/dashboard/accounts");
+}

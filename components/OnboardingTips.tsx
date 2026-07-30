@@ -1,408 +1,62 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { usePathname } from "next/navigation";
 
-type Tip = {
-  title: string;
-  body: string;
-  actionLabel?: string;
-  actionHref?: string;
+const pageTips: Record<string, string[]> = {
+  "/home": ["This is your Caliphornia OS Home Screen.", "Open Music for your full library.", "Open Share to send songs to nearby listeners."],
+  "/apps/music": ["Music is your central library.", "Favorite songs to build an editable playlist.", "Tap Share on any song to start a nearby transfer."],
+  "/apps/share": ["Share sends songs or projects to nearby listeners.", "The receiver only opens Caliphornia OS and taps Receive when they are close."],
+  "/apps/account": ["Account is your Settings app.", "Review Kiiku, access, shares, billing, and support in one place."],
+  "/apps/stats": ["Stats shows your listening and global activity.", "Use the Share tab to see top sharers and most shared songs."],
+  "/dashboard": ["Admin Control manages songs, apps, accounts, Kiiku, invites, blasts, payments, and Share."],
 };
 
-const TIP_SETS: Array<{ match: RegExp; key: string; tips: Tip[] }> = [
-  {
-    key: "root",
-    match: /^\/$/,
-    tips: [
-      {
-        title: "Welcome to Caliphornia OS",
-        body:
-          "This is the public entry screen. You can sign in, or receive a nearby Share if someone close to you is sending music.",
-      },
-      {
-        title: "Receiving music nearby",
-        body:
-          "When a sender starts Share near you, a Receive card can appear here. Tap it to accept one guest listen without making an account first.",
-      },
-    ],
-  },
-  {
-    key: "home",
-    match: /^\/home$/,
-    tips: [
-      {
-        title: "Your OS home screen",
-        body:
-          "Tap an app icon to enter a project or tool. The dock keeps Music, Stats, Share, and Account close by.",
-      },
-      {
-        title: "Unlocks follow you",
-        body:
-          "Any songs, projects, passes, Kiiku, and shares stay connected to this account as you move through the OS.",
-        actionLabel: "Open Account",
-        actionHref: "/apps/account",
-      },
-    ],
-  },
-  {
-    key: "share",
-    match: /^\/apps\/share/,
-    tips: [
-      {
-        title: "Share is proximity-first",
-        body:
-          "Choose a song or project, start Share, and stay close. A nearby receiver can accept from the main Caliphornia OS page.",
-      },
-      {
-        title: "Project shares",
-        body:
-          "When you share a full project, the receiver gets one guest listen for each song included in that project.",
-        actionLabel: "View sharing stats",
-        actionHref: "/apps/stats",
-      },
-    ],
-  },
-  {
-    key: "account",
-    match: /^\/apps\/(account|wallet)/,
-    tips: [
-      {
-        title: "Account and Wallet are one app",
-        body:
-          "Profile, Kiiku, access, billing, purchases, and shares now live together in the Apple Settings-style Account app.",
-      },
-      {
-        title: "Kiiku stays internal",
-        body:
-          "Kiiku is participation credit inside Caliphornia OS. It helps unlock and reward listening behavior, but it is not cash or crypto.",
-      },
-    ],
-  },
-  {
-    key: "music",
-    match: /^\/apps\/music/,
-    tips: [
-      {
-        title: "Music library",
-        body:
-          "Songs you save, unlock, or claim from Share collect here. The global player follows you across the OS.",
-      },
-    ],
-  },
-  {
-    key: "stats",
-    match: /^\/apps\/stats/,
-    tips: [
-      {
-        title: "Activity-style Stats",
-        body:
-          "Stats shows your listening, favorites, app activity, places, rankings, and now sharing performance.",
-      },
-      {
-        title: "Sharing changes the system",
-        body:
-          "Share stats show top sharers, most shared songs, project shares, accepted transfers, and new accounts created from sharing.",
-      },
-    ],
-  },
-  {
-    key: "calendar",
-    match: /^\/apps\/calendar/,
-    tips: [
-      {
-        title: "Release calendar",
-        body:
-          "Dots mark songs, projects, merch, videos, and app moments. Tap a marked date to open the release sheet.",
-      },
-    ],
-  },
-  {
-    key: "fartherhood",
-    match: /^\/apps\/fartherhood/,
-    tips: [
-      {
-        title: "FarTHErHOOD Notes",
-        body:
-          "This project behaves like a Notes app: songs, lyrics, thoughts, and story layers sit inside the project world.",
-      },
-    ],
-  },
-  {
-    key: "friends",
-    match: /^\/apps\/friends/,
-    tips: [
-      {
-        title: "fri.ends Messages",
-        body:
-          "This project behaves like a text thread. Conversations, audio bubbles, and final songs connect inside the Messages-style world.",
-      },
-    ],
-  },
-  {
-    key: "milia",
-    match: /^\/apps\/milia/,
-    tips: [
-      {
-        title: "Milia Weather",
-        body:
-          "Milia uses a Weather-style interface where songs feel like emotional forecasts tied to places and conditions.",
-      },
-    ],
-  },
-  {
-    key: "guest",
-    match: /^\/guest/,
-    tips: [
-      {
-        title: "Guest listening",
-        body:
-          "You received a shared listen. Finish the play, then enter your email only if you want to keep it in your Music library.",
-      },
-    ],
-  },
-];
-
-const DEFAULT_TIPS: Tip[] = [
-  {
-    title: "Caliphornia OS",
-    body:
-      "Use the app controls, Share, Account, and the global player to move through this release world.",
-  },
-];
-
-function storageKey(key: string) {
-  return `caliphornia:onboarding:v2:${key}`;
+function tipsFor(pathname: string) {
+  const exact = pageTips[pathname];
+  if (exact) return exact;
+  if (pathname.startsWith("/dashboard")) return pageTips["/dashboard"];
+  if (pathname.startsWith("/apps/friends")) return ["Fri.ends works like Messages.", "Tap songs or audio bubbles to play.", "Use Share playing to send the current song nearby."];
+  if (pathname.startsWith("/apps/fartherhood")) return ["FarTHErHOOD works like Notes.", "Open notes and songs from the project surface.", "Use Share playing to send the current song nearby."];
+  if (pathname.startsWith("/apps/milia")) return ["Milia works like Weather.", "Open memories and tracks from the forecast cards.", "Use Share playing to send the current song nearby."];
+  return ["Explore Caliphornia OS.", "Music, Share, Stats, Kiiku, and account access are connected across the platform."];
 }
 
 export default function OnboardingTips() {
-  const pathname = usePathname() || "/";
-  const tipSet = useMemo(() => {
-    return TIP_SETS.find((item) => item.match.test(pathname)) || {
-      key: "default",
-      tips: DEFAULT_TIPS,
-    };
-  }, [pathname]);
-
+  const [pathname, setPathname] = useState("");
+  const [open, setOpen] = useState(false);
   const [index, setIndex] = useState(0);
-  const [isOpen, setIsOpen] = useState(false);
-  const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    setMounted(true);
-    setIndex(0);
+    const path = window.location.pathname;
+    setPathname(path);
+    const key = `caliph:onboarded:${path}`;
+    if (!localStorage.getItem(key)) setOpen(true);
+  }, []);
 
-    try {
-      const seen = window.localStorage.getItem(storageKey(tipSet.key));
-      setIsOpen(!seen);
-    } catch {
-      setIsOpen(false);
-    }
-  }, [tipSet.key]);
-
-  const tips = tipSet.tips;
+  const tips = useMemo(() => tipsFor(pathname), [pathname]);
   const current = tips[index] || tips[0];
-  const hasNext = index < tips.length - 1;
 
   function close() {
-    try {
-      window.localStorage.setItem(storageKey(tipSet.key), "seen");
-    } catch {}
-    setIsOpen(false);
-  }
-
-  function resetAll() {
-    try {
-      Object.keys(window.localStorage)
-        .filter((key) => key.startsWith("caliphornia:onboarding:"))
-        .forEach((key) => window.localStorage.removeItem(key));
-    } catch {}
+    localStorage.setItem(`caliph:onboarded:${pathname}`, "1");
+    setOpen(false);
     setIndex(0);
-    setIsOpen(true);
   }
 
-  if (!mounted) return null;
+  if (!pathname) return null;
 
   return (
     <>
-      <style>{`
-        .cos-help-button {
-          position: fixed;
-          left: max(12px, calc((100vw - var(--cos-app-max, 760px)) / 2 + 12px));
-          bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-          z-index: 2600;
-          width: 42px;
-          height: 42px;
-          border: 1px solid rgba(255,255,255,.14);
-          border-radius: 999px;
-          color: white;
-          background: rgba(12,14,20,.68);
-          box-shadow: 0 18px 46px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
-          backdrop-filter: blur(18px) saturate(150%);
-          -webkit-backdrop-filter: blur(18px) saturate(150%);
-          font-weight: 900;
-          cursor: pointer;
-        }
-        .cos-onboarding-card {
-          position: fixed;
-          left: 50%;
-          top: calc(env(safe-area-inset-top, 0px) + 16px);
-          z-index: 2700;
-          width: min(420px, calc(100vw - 24px));
-          transform: translateX(-50%);
-          border-radius: 28px;
-          padding: 16px;
-          color: #fff;
-          background: linear-gradient(180deg, rgba(34,36,42,.94), rgba(9,10,14,.96));
-          border: 1px solid rgba(255,255,255,.14);
-          box-shadow: 0 28px 90px rgba(0,0,0,.48), inset 0 1px 0 rgba(255,255,255,.08);
-          backdrop-filter: blur(26px) saturate(150%);
-          -webkit-backdrop-filter: blur(26px) saturate(150%);
-        }
-        .cos-onboarding-topline {
-          display: flex;
-          align-items: center;
-          justify-content: space-between;
-          gap: 12px;
-          margin-bottom: 10px;
-        }
-        .cos-onboarding-topline span {
-          color: #9ddcff;
-          font-size: 11px;
-          letter-spacing: .16em;
-          text-transform: uppercase;
-          font-weight: 900;
-        }
-        .cos-onboarding-topline button {
-          width: 34px;
-          height: 34px;
-          border: 0;
-          border-radius: 999px;
-          color: white;
-          background: rgba(255,255,255,.10);
-          font-size: 24px;
-          cursor: pointer;
-        }
-        .cos-onboarding-card h2 {
-          margin: 0;
-          font-size: 26px;
-          line-height: 1;
-          letter-spacing: -.05em;
-        }
-        .cos-onboarding-card p {
-          margin: 10px 0 0;
-          color: rgba(255,255,255,.72);
-          font-size: 14px;
-          line-height: 1.45;
-        }
-        .cos-onboarding-progress {
-          display: flex;
-          gap: 5px;
-          margin-top: 14px;
-        }
-        .cos-onboarding-progress i {
-          width: 7px;
-          height: 7px;
-          border-radius: 999px;
-          background: rgba(255,255,255,.22);
-        }
-        .cos-onboarding-progress i.active {
-          width: 22px;
-          background: #9ddcff;
-        }
-        .cos-onboarding-actions {
-          display: flex;
-          gap: 8px;
-          margin-top: 14px;
-        }
-        .cos-onboarding-actions a, .cos-onboarding-actions button {
-          flex: 1;
-          min-height: 44px;
-          border: 0;
-          border-radius: 999px;
-          display: inline-flex;
-          align-items: center;
-          justify-content: center;
-          color: #06111c;
-          background: linear-gradient(180deg, #fff, #9ddcff);
-          font-weight: 900;
-          cursor: pointer;
-          text-decoration: none;
-        }
-        .cos-onboarding-actions a + button {
-          color: white;
-          background: rgba(255,255,255,.12);
-        }
-        .cos-onboarding-reset {
-          margin-top: 10px;
-          border: 0;
-          background: transparent;
-          color: rgba(255,255,255,.54);
-          font-size: 12px;
-          font-weight: 800;
-          cursor: pointer;
-        }
-        body.has-global-player .cos-help-button {
-          bottom: calc(112px + env(safe-area-inset-bottom, 0px));
-        }
-        @media (max-width: 680px) {
-          .cos-help-button {
-            left: 10px;
-            bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-          }
-          body.has-global-player .cos-help-button {
-            bottom: calc(106px + env(safe-area-inset-bottom, 0px));
-          }
-          .cos-onboarding-card {
-            top: calc(env(safe-area-inset-top, 0px) + 10px);
-          }
-        }
-      `}</style>
-      <button
-        type="button"
-        className="cos-help-button"
-        onClick={() => setIsOpen(true)}
-        aria-label="Open Caliphornia OS guide"
-      >
-        ?
-      </button>
-
-      {isOpen ? (
-        <div className="cos-onboarding-card" role="dialog" aria-live="polite">
-          <div className="cos-onboarding-topline">
-            <span>Guide</span>
-            <button type="button" onClick={close} aria-label="Close guide">
-              ×
-            </button>
+      <button type="button" className="cos-onboarding-help" onClick={() => setOpen(true)} aria-label="Show page tips">?</button>
+      {open ? (
+        <div className="cos-onboarding-card">
+          <div>
+            <span>First-time tip</span>
+            <strong>{current}</strong>
           </div>
-
-          <h2>{current.title}</h2>
-          <p>{current.body}</p>
-
-          <div className="cos-onboarding-progress">
-            {tips.map((_, dotIndex) => (
-              <i key={dotIndex} className={dotIndex === index ? "active" : ""} />
-            ))}
-          </div>
-
           <div className="cos-onboarding-actions">
-            {current.actionHref ? (
-              <a href={current.actionHref}>{current.actionLabel || "Open"}</a>
-            ) : null}
-            {hasNext ? (
-              <button type="button" onClick={() => setIndex((value) => value + 1)}>
-                Next
-              </button>
-            ) : (
-              <button type="button" onClick={close}>
-                Got it
-              </button>
-            )}
+            <button type="button" onClick={() => setIndex((value) => Math.max(0, value - 1))} disabled={index === 0}>Back</button>
+            {index < tips.length - 1 ? <button type="button" onClick={() => setIndex((value) => value + 1)}>Next</button> : <button type="button" onClick={close}>Done</button>}
           </div>
-
-          <button type="button" className="cos-onboarding-reset" onClick={resetAll}>
-            Replay tips everywhere
-          </button>
         </div>
       ) : null}
     </>
