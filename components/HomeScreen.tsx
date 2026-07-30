@@ -60,21 +60,13 @@ export default function HomeScreen({ user }: { user: AppUser }) {
           </Link>
         </header>
 
-        <section className="ios-home-widget-row">
+        <section className="ios-home-widget-row" aria-label="Today">
           <div className="ios-home-widget large">
             <span>{todayLabel()}</span>
             <strong>
               Music, apps, access, Kiiku, and sharing in one world.
             </strong>
           </div>
-
-          <Link
-            href="/apps/share"
-            className="ios-home-widget share-card"
-          >
-            <span>Share</span>
-            <strong>Send a song nearby</strong>
-          </Link>
         </section>
 
         <section className="ios-home-grid" aria-label="Apps">
@@ -88,7 +80,6 @@ export default function HomeScreen({ user }: { user: AppUser }) {
                 <img src={app.icon} alt="" />
               </span>
               <span className="ios-app-icon-name">{app.name}</span>
-              <small>{app.subtitle || app.passLabel}</small>
             </Link>
           ))}
         </section>
@@ -104,7 +95,6 @@ export default function HomeScreen({ user }: { user: AppUser }) {
                 <img src={app.icon} alt="" />
               </span>
               <span>{app.name}</span>
-              <small>{app.passLabel}</small>
             </Link>
           ))}
         </nav>

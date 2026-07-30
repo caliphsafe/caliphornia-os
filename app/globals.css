@@ -136,13 +136,13 @@ body.modal-lock { overflow: hidden; }
 .ios-home-widget-row {
   width: 100%;
   display: grid;
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, .95fr);
-  gap: 10px;
-  margin: 0 0 22px;
+  grid-template-columns: minmax(0, 1fr);
+  margin: 0 0 28px;
 }
 
 .ios-home-widget {
-  min-height: 126px;
+  width: 100%;
+  min-height: 148px;
   padding: 16px;
   display: grid;
   align-content: space-between;
@@ -170,20 +170,17 @@ body.modal-lock { overflow: hidden; }
   font-size: 1.35rem;
 }
 
-.ios-home-widget.share-card {
-  background: linear-gradient(160deg, rgba(248,212,119,.28), rgba(255,255,255,.08));
-}
-
 .ios-home-grid {
   width: 100%;
   align-self: start;
   display: grid;
-  grid-template-columns: repeat(4, minmax(0,1fr));
-  column-gap: 8px;
-  row-gap: 28px;
+  grid-template-columns: repeat(3, minmax(0,1fr));
+  column-gap: 18px;
+  row-gap: 30px;
   align-items: start;
-  margin: 0 0 30px;
-  padding: 0 4px;
+  justify-items: center;
+  margin: 0 0 34px;
+  padding: 0 8px;
 }
 
 .ios-app-icon,
@@ -284,9 +281,6 @@ body.modal-lock { overflow: hidden; }
     margin-bottom: 24px;
   }
 
-  .ios-home-widget-row {
-    grid-template-columns: minmax(0, 1.65fr) minmax(0, .95fr);
-  }
 }
 
 /* Original global music player */
@@ -331,8 +325,8 @@ body.has-global-player .friends-original-message-composer { bottom: calc(104px +
 .friends-original-locked-card h1 { margin-top:0; }
 .friends-original-locked-card button,.friends-original-locked-card a { min-height:44px; border:0; border-radius:999px; display:inline-flex; align-items:center; justify-content:center; padding:0 16px; color:white; background:#0a84ff; margin-right:8px; cursor:pointer; }
 
-@media (max-width:760px){ .grid.two,.grid.three{grid-template-columns:1fr}.shell{padding:14px;padding-bottom:100px}.music-inline-player{align-items:stretch}.music-inline-controls{gap:4px}.music-inline-btn{width:34px;height:34px}.music-inline-btn-main{width:44px;height:44px}.ios-home-page{padding:10px}.ios-home-phone{min-height:calc(100dvh - 20px)}.ios-home-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 10px}.ios-home-widget-row{grid-template-columns:1fr .8fr}.ios-home-actions a{font-size:.72rem;padding:8px 10px}}
-@media (max-width:420px){ .ios-home-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ios-home-widget-row{grid-template-columns:1fr}.music-inline-player{padding:9px}.music-inline-player-left{grid-template-columns:50px 1fr}.music-inline-cover,.music-inline-cover-fallback{width:50px;height:50px;border-radius:14px}.music-inline-controls .music-inline-btn:not(.music-inline-btn-main):first-child{display:none} }
+@media (max-width:760px){ .grid.two,.grid.three{grid-template-columns:1fr}.shell{padding:14px;padding-bottom:100px}.music-inline-player{align-items:stretch}.music-inline-controls{gap:4px}.music-inline-btn{width:34px;height:34px}.music-inline-btn-main{width:44px;height:44px}.ios-home-page{padding:10px}.ios-home-phone{min-height:calc(100dvh - 20px)}.ios-home-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:30px 18px}.ios-home-actions a{font-size:.72rem;padding:8px 10px}}
+@media (max-width:420px){ .ios-home-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.music-inline-player{padding:9px}.music-inline-player-left{grid-template-columns:50px 1fr}.music-inline-cover,.music-inline-cover-fallback{width:50px;height:50px;border-radius:14px}.music-inline-controls .music-inline-btn:not(.music-inline-btn-main):first-child{display:none} }
 
 /* Caliphornia OS uniform app dimensions and global quick actions */
 :root {
