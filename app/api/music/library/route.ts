@@ -6,28 +6,67 @@ import { resolveEffectiveAccess } from "@/lib/access/effective-access";
 export const dynamic = "force-dynamic";
 export const revalidate = 0;
 
-async function signedCover(path?: string | null) {
-  if (!path) return null;
+type UnknownRow = Record<string, any>;
+
+function text(...values: unknown[]) {
+  for (const value of values) {
+    if (typeof value === "string" && value.trim()) return value.trim();
+  }
+  return "";
+}
+
+function statusIsVisible(value: unknown) {
+  const status = String(value || "").toLowerCase();
+  return !["archived", "deleted", "removed"].includes(status);
+}
+
+async function signedCover(row: UnknownRow) {
+  const directUrl = text(
+    row.cover_url,
+    row.coverUrl,
+    row.artwork_url,
+    row.image_url,
+  );
+
+  if (directUrl.startsWith("http://") || directUrl.startsWith("https://")) {
+    return directUrl;
+  }
+
+  const rawPath = text(
+    row.cover_image_path,
+    row.cover_path,
+    row.artwork_path,
+    row.image_path,
+  );
+
+  if (!rawPath) return null;
 
   try {
-    const clean = String(path).replace(/^\/+/, "");
+    const clean = rawPath.replace(/^\/+/, "");
     const objectPath = clean.startsWith("cover-art/")
-      ? clean.replace(/^cover-art\//, "")
+      ? clean.slice("cover-art/".length)
       : clean;
 
     const { data, error } = await supabaseAdmin.storage
       .from("cover-art")
       .createSignedUrl(objectPath, 60 * 60);
 
-    if (error || !data?.signedUrl) return null;
-    return data.signedUrl;
+    return error ? null : data?.signedUrl || null;
   } catch {
     return null;
   }
 }
 
-function titleForProject(row: any) {
-  return row?.name || row?.title || row?.slug || "Caliphornia OS";
+function projectTitle(project: UnknownRow | null, song: UnknownRow) {
+  return (
+    text(
+      project?.name,
+      project?.title,
+      song.project_name,
+      song.album_name,
+      song.source_app_slug,
+    ) || "Caliphornia OS"
+  );
 }
 
 export async function GET() {
@@ -35,92 +74,125 @@ export async function GET() {
     const user = await requireCurrentAppUser();
 
     /*
-     * Do not order by songs.position here. Older Caliphornia databases do not
-     * consistently have that field, causing the entire Music library request
-     * to fail and return zero songs.
+     * The working Music implementation depended on the songs table itself.
+     * Read full rows so optional/newer columns cannot make the whole query fail.
      */
-    const [songsRes, favoritesRes, projectsRes] = await Promise.all([
-      supabaseAdmin
-        .from("songs")
-        .select(
-          "id,slug,title,artist,artist_name,project_id,app_id,source_app_slug,cover_image_path,cover_path,duration_label,status,is_shareable,created_at",
-        )
-        .neq("status", "archived")
-        .order("created_at", { ascending: true }),
+    const songsResult = await supabaseAdmin
+      .from("songs")
+      .select("*");
+
+    if (songsResult.error) {
+      throw new Error(songsResult.error.message);
+    }
+
+    const rawSongs = (songsResult.data || []).filter(
+      (song: UnknownRow) =>
+        Boolean(text(song.id)) &&
+        Boolean(text(song.slug, song.song_slug)) &&
+        statusIsVisible(song.status),
+    );
+
+    /*
+     * Favorites and projects improve presentation, but must never prevent songs
+     * from appearing. Each enhancement is loaded independently and safely.
+     */
+    const [favoritesResult, projectsResult] = await Promise.all([
       supabaseAdmin
         .from("user_favorite_songs")
-        .select(
-          "id,user_id,user_email,song_id,song_slug,status,favorite_order,created_at",
-        )
+        .select("*")
         .or(`user_id.eq.${user.id},user_email.eq.${user.email}`)
-        .neq("status", "removed")
-        .order("favorite_order", { ascending: true, nullsFirst: false })
-        .order("created_at", { ascending: true }),
+        .then(
+          (result) => result,
+          () => ({ data: [], error: null }),
+        ),
       supabaseAdmin
         .from("projects")
-        .select("id,slug,name,title,status")
-        .neq("status", "archived"),
+        .select("*")
+        .then(
+          (result) => result,
+          () => ({ data: [], error: null }),
+        ),
     ]);
 
-    if (songsRes.error) throw new Error(songsRes.error.message);
-    if (favoritesRes.error) throw new Error(favoritesRes.error.message);
-    if (projectsRes.error) throw new Error(projectsRes.error.message);
+    const favoriteRows = (favoritesResult.data || []).filter(
+      (row: UnknownRow) => statusIsVisible(row.status),
+    );
+    const projects = (projectsResult.data || []).filter(
+      (row: UnknownRow) => statusIsVisible(row.status),
+    );
 
-    const favoriteRows = favoritesRes.data || [];
-    const favoriteBySongId = new Map(
+    const favoriteById = new Map(
       favoriteRows
-        .filter((row: any) => row.song_id)
-        .map((row: any) => [row.song_id, row]),
+        .filter((row: UnknownRow) => text(row.song_id))
+        .map((row: UnknownRow) => [text(row.song_id), row]),
     );
     const favoriteBySlug = new Map(
       favoriteRows
-        .filter((row: any) => row.song_slug)
-        .map((row: any) => [row.song_slug, row]),
+        .filter((row: UnknownRow) => text(row.song_slug))
+        .map((row: UnknownRow) => [text(row.song_slug), row]),
     );
 
-    const projectRows = projectsRes.data || [];
-    const projectMapById = new Map(
-      projectRows.map((project: any) => [project.id, project]),
+    const projectById = new Map(
+      projects
+        .filter((row: UnknownRow) => text(row.id))
+        .map((row: UnknownRow) => [text(row.id), row]),
     );
-    const projectMapBySlug = new Map(
-      projectRows.map((project: any) => [project.slug, project]),
+    const projectBySlug = new Map(
+      projects
+        .filter((row: UnknownRow) => text(row.slug))
+        .map((row: UnknownRow) => [text(row.slug), row]),
     );
 
     const songs = await Promise.all(
-      (songsRes.data || []).map(async (song: any) => {
+      rawSongs.map(async (song: UnknownRow) => {
+        const id = text(song.id);
+        const slug = text(song.slug, song.song_slug);
         const project =
-          projectMapById.get(song.project_id) ||
-          projectMapBySlug.get(song.source_app_slug) ||
+          projectById.get(text(song.project_id)) ||
+          projectBySlug.get(text(song.source_app_slug, song.project_slug)) ||
           null;
         const favorite =
-          favoriteBySongId.get(song.id) ||
-          favoriteBySlug.get(song.slug) ||
+          favoriteById.get(id) ||
+          favoriteBySlug.get(slug) ||
           null;
 
         const access = await resolveEffectiveAccess({
           userId: user.id,
           userEmail: user.email,
-          songId: song.id,
-          songSlug: song.slug,
+          songId: id,
+          songSlug: slug,
           requestedAction: "play",
         }).catch(() => null);
 
+        const appSlug = text(
+          song.source_app_slug,
+          song.app_slug,
+          project?.slug,
+          "music",
+        );
+
         return {
-          id: song.id,
-          slug: song.slug,
-          title: song.title || song.slug || "Song",
-          artist: song.artist_name || song.artist || "Caliph",
-          projectName: titleForProject(project),
+          id,
+          slug,
+          title: text(song.title, song.name, slug) || "Song",
+          artist:
+            text(
+              song.artist_name,
+              song.artist,
+              song.artist_display_name,
+            ) || "Caliph",
+          projectName: projectTitle(project, song),
           projectSlug:
-            project?.slug || song.source_app_slug || "music",
-          appSlug:
-            song.source_app_slug || project?.slug || "music",
-          coverUrl: await signedCover(
-            song.cover_image_path || song.cover_path,
+            text(project?.slug, song.project_slug, appSlug) || "music",
+          appSlug,
+          coverUrl: await signedCover(song),
+          durationLabel: text(
+            song.duration_label,
+            song.duration,
+            song.length_label,
           ),
-          durationLabel: song.duration_label || "",
           accessLabel:
-            access?.displayLabel ||
+            text(access?.displayLabel) ||
             (access?.playbackMode === "preview"
               ? "Preview"
               : "Available"),
@@ -128,29 +200,40 @@ export async function GET() {
           isPreview: access
             ? access.playbackMode === "preview"
             : false,
-          isFavorite: Boolean(favorite?.id),
-          favoriteId: favorite?.id || null,
-          favoriteOrder:
-            typeof favorite?.favorite_order === "number"
-              ? favorite.favorite_order
-              : null,
+          isFavorite: Boolean(favorite),
+          favoriteId: text(favorite?.id) || null,
+          favoriteOrder: Number.isFinite(Number(favorite?.favorite_order))
+            ? Number(favorite.favorite_order)
+            : null,
           shareable:
             song.is_shareable !== false &&
+            song.shareable !== false &&
             Boolean(
               access?.sharingEligible ||
                 access?.allowed ||
-                favorite?.id,
+                favorite ||
+                song.is_free_full_play,
             ),
           sharesRemaining: Number(access?.sharesRemaining || 0),
+          sortOrder: Number.isFinite(Number(song.position))
+            ? Number(song.position)
+            : Number.isFinite(Number(song.track_number))
+              ? Number(song.track_number)
+              : 999999,
+          createdAt: text(song.created_at),
         };
       }),
     );
 
-    const activeSongs = songs.filter(
-      (song) => Boolean(song.id && song.slug),
-    );
+    songs.sort((a, b) => {
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
+      if (a.createdAt && b.createdAt) {
+        return a.createdAt.localeCompare(b.createdAt);
+      }
+      return a.title.localeCompare(b.title);
+    });
 
-    const favorites = activeSongs
+    const favorites = songs
       .filter((song) => song.isFavorite)
       .sort((a, b) => {
         const aOrder = a.favoriteOrder ?? 999999;
@@ -159,27 +242,27 @@ export async function GET() {
         return a.title.localeCompare(b.title);
       });
 
-    const projectCount = new Map<
+    const projectCounts = new Map<
       string,
       { slug: string; name: string; count: number }
     >();
 
-    for (const song of activeSongs) {
-      const slug = song.projectSlug || song.appSlug || "music";
-      const current = projectCount.get(slug) || {
-        slug,
-        name: song.projectName || slug,
+    for (const song of songs) {
+      const key = song.projectSlug || song.appSlug || "music";
+      const current = projectCounts.get(key) || {
+        slug: key,
+        name: song.projectName || key,
         count: 0,
       };
       current.count += 1;
-      projectCount.set(slug, current);
+      projectCounts.set(key, current);
     }
 
     return NextResponse.json({
       ok: true,
-      songs: activeSongs,
+      songs,
       favorites,
-      projects: Array.from(projectCount.values()).sort((a, b) =>
+      projects: Array.from(projectCounts.values()).sort((a, b) =>
         a.name.localeCompare(b.name),
       ),
     });
