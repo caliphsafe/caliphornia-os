@@ -53,11 +53,11 @@ export const appRegistry: AppItem[] = [
   {
     id: "share",
     name: "Share",
-    subtitle: "AirDrop",
+    subtitle: "AirDrop-style",
     icon: "/icons/share.svg",
     href: "/apps/share",
     dock: true,
-    passLabel: "Nearby"
+    passLabel: "Songs + Projects"
   },
   {
     id: "stats",
@@ -75,6 +75,6 @@ export const appRegistry: AppItem[] = [
     href: "/apps/account",
     icon: "/icons/account.svg",
     dock: true,
-    passLabel: "Wallet"
+    passLabel: "Settings"
   }
 ];

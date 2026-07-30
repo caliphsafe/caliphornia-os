@@ -101,3 +101,146 @@ body.has-global-player .friends-original-message-composer { bottom: calc(104px +
 
 @media (max-width:760px){ .grid.two,.grid.three{grid-template-columns:1fr}.shell{padding:14px;padding-bottom:100px}.music-inline-player{align-items:stretch}.music-inline-controls{gap:4px}.music-inline-btn{width:34px;height:34px}.music-inline-btn-main{width:44px;height:44px}.ios-home-page{padding:10px}.ios-home-phone{min-height:calc(100dvh - 20px)}.ios-home-grid{grid-template-columns:repeat(4,minmax(0,1fr));gap:18px 10px}.ios-home-widget-row{grid-template-columns:1fr .8fr}.ios-home-actions a{font-size:.72rem;padding:8px 10px}}
 @media (max-width:420px){ .ios-home-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ios-home-widget-row{grid-template-columns:1fr}.music-inline-player{padding:9px}.music-inline-player-left{grid-template-columns:50px 1fr}.music-inline-cover,.music-inline-cover-fallback{width:50px;height:50px;border-radius:14px}.music-inline-controls .music-inline-btn:not(.music-inline-btn-main):first-child{display:none} }
+
+/* Caliphornia OS uniform app dimensions and global quick actions */
+:root {
+  --cos-app-max: 760px;
+  --cos-phone-max: 520px;
+  --cos-page-gutter: 14px;
+  --cos-page-padding: 18px;
+  --cos-floating-top: calc(env(safe-area-inset-top, 0px) + 12px);
+}
+
+.cos-uniform-page {
+  width: 100%;
+  overflow-x: hidden;
+}
+
+.cos-uniform-shell,
+.apple-cal-screen,
+.wallet-settings-shell,
+.settings-shell,
+.settings-phone,
+.share-phone,
+.guest-share-phone {
+  width: min(var(--cos-app-max), 100%) !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.cos-page-topbar,
+.apple-cal-topbar,
+.share-topbar,
+.wallet-settings-topbar,
+.settings-topbar {
+  max-width: var(--cos-app-max);
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.cos-quick-actions {
+  position: fixed;
+  top: var(--cos-floating-top);
+  right: max(12px, calc((100vw - var(--cos-app-max)) / 2 + 12px));
+  z-index: 1800;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px;
+  border-radius: 999px;
+  background: rgba(14, 16, 22, .58);
+  border: 1px solid rgba(255,255,255,.13);
+  box-shadow: 0 20px 56px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
+  backdrop-filter: blur(22px) saturate(150%);
+  -webkit-backdrop-filter: blur(22px) saturate(150%);
+}
+
+.cos-quick-action {
+  min-height: 38px;
+  min-width: 38px;
+  display: inline-grid;
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 7px;
+  padding: 0 11px;
+  border-radius: 999px;
+  color: rgba(255,255,255,.92);
+  background: rgba(255,255,255,.06);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 850;
+}
+
+.cos-quick-action.share { background: rgba(100,210,255,.16); }
+.cos-quick-action.account { background: rgba(255,255,255,.08); }
+.cos-quick-action-icon { font-size: 16px; line-height: 1; }
+.cos-quick-action-label { display: inline-block; }
+
+/* Keep global quick actions out of the way on compact project screens. */
+@media (max-width: 680px) {
+  .cos-quick-actions {
+    top: auto;
+    right: 10px;
+    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
+    flex-direction: column;
+    border-radius: 24px;
+  }
+
+  body:not(.has-global-player) .cos-quick-actions {
+    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .cos-quick-action {
+    grid-template-columns: 1fr;
+    justify-items: center;
+    gap: 2px;
+    min-width: 58px;
+    padding: 7px 8px;
+    font-size: 10px;
+  }
+}
+
+/* Extra bottom clearance for fixed composers, panels, dock bars and restored player. */
+body.has-global-player .apple-cal-floating-actions,
+body.has-global-player .bottom-chrome,
+body.has-global-player .friends-original-message-composer,
+body.has-global-player .share-stats-card,
+body.has-global-player .wallet-settings-shell,
+body.has-global-player .settings-shell,
+body.has-global-player .settings-phone {
+  margin-bottom: 96px;
+}
+
+/* Guest Share player */
+.guest-share-page {
+  min-height: 100dvh;
+  padding: var(--cos-page-padding) var(--cos-page-gutter) 140px;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(100,210,255,.22), transparent 30%),
+    linear-gradient(180deg, #0b1220, #03050a 60%, #000);
+  color: white;
+  overflow-x: hidden;
+}
+
+.guest-share-phone { display: grid; gap: 14px; }
+.guest-share-topbar { display: flex; justify-content: space-between; align-items: center; gap: 10px; position: sticky; top: var(--cos-floating-top); z-index: 40; pointer-events: none; }
+.guest-share-pill { pointer-events: auto; min-height: 44px; padding: 0 14px; border-radius: 999px; display: inline-flex; align-items: center; justify-content: center; color: white; background: rgba(255,255,255,.12); border: 1px solid rgba(255,255,255,.12); text-decoration: none; font-weight: 850; backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.guest-share-hero { padding-top: 24px; }
+.guest-share-hero p { margin: 0 0 8px; color: #64d2ff; font-size: 12px; text-transform: uppercase; letter-spacing: .16em; font-weight: 900; }
+.guest-share-hero h1 { margin: 0; font-size: clamp(44px, 9vw, 76px); line-height: .9; letter-spacing: -.075em; }
+.guest-share-hero span { display: block; margin-top: 12px; color: rgba(255,255,255,.68); font-size: 17px; line-height: 1.45; }
+.guest-share-playlist { display: grid; gap: 10px; }
+.guest-share-playlist button, .guest-player-card, .guest-claim-card { border-radius: 28px; padding: 16px; color: white; background: rgba(255,255,255,.10); border: 1px solid rgba(255,255,255,.11); box-shadow: 0 20px 54px rgba(0,0,0,.28), inset 0 1px 0 rgba(255,255,255,.06); backdrop-filter: blur(18px); -webkit-backdrop-filter: blur(18px); }
+.guest-share-playlist button { text-align: left; cursor: pointer; }
+.guest-share-playlist button.active { border-color: rgba(100,210,255,.55); background: rgba(100,210,255,.14); }
+.guest-share-playlist button:disabled { opacity: .5; cursor: not-allowed; }
+.guest-share-playlist span, .guest-share-playlist small, .guest-claim-card p, .guest-claim-card span { display: block; color: rgba(255,255,255,.62); }
+.guest-share-playlist strong { display: block; margin: 5px 0; font-size: 20px; letter-spacing: -.03em; }
+.guest-player-card audio { width: 100%; }
+.guest-claim-card { display: grid; gap: 10px; }
+.guest-claim-card p { margin: 0; color: #64d2ff; text-transform: uppercase; letter-spacing: .12em; font-size: 11px; font-weight: 900; }
+.guest-claim-card h2 { margin: 0; font-size: 30px; line-height: 1; letter-spacing: -.055em; }
+.guest-claim-card input { width: 100%; min-height: 52px; border-radius: 18px; border: 1px solid rgba(255,255,255,.12); background: rgba(0,0,0,.24); color: white; padding: 0 14px; outline: none; }
+.guest-claim-card button { min-height: 52px; border: 0; border-radius: 18px; color: white; background: rgba(255,255,255,.12); font-weight: 900; cursor: pointer; }
+.guest-claim-card button.primary { color: #04111d; background: linear-gradient(180deg, #9be6ff, #64d2ff); }
+.guest-message { border-radius: 16px; padding: 12px; background: rgba(255,255,255,.08); color: rgba(255,255,255,.76); }

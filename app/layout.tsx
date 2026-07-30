@@ -3,6 +3,7 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session";
 import GlobalPlayer from "@/components/GlobalPlayer";
+import GlobalQuickActions from "@/components/GlobalQuickActions";
 
 export const metadata: Metadata = {
   title: "Caliphornia OS",
@@ -19,7 +20,8 @@ export default async function RootLayout({
     <html lang="en">
       <body>
         {children}
-        {session?.email ? <GlobalPlayer email={session.email} /> : null}
+        {session ? <GlobalQuickActions /> : null}
+        {session ? <GlobalPlayer email={session.email} /> : null}
       </body>
     </html>
   );
