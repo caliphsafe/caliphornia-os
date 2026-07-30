@@ -1,0 +1,10 @@
+Delete these obsolete files from the repository before redeploying:
+
+app/invite/[token]/page.tsx
+app/api/invite/accept/route.ts
+components/InviteAcceptClient.tsx
+
+Do not rename [token] to another dynamic parameter.
+The only invite page must be:
+
+app/invite/[code]/page.tsx
