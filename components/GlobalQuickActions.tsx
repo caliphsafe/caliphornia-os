@@ -3,10 +3,13 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-const HIDDEN_PREFIXES = [
-  "/guest",
-  "/unlock",
-  "/dashboard",
+const HIDDEN_PREFIXES = ["/guest", "/unlock", "/dashboard"];
+
+const links = [
+  { href: "/home", label: "Home", icon: "⌂" },
+  { href: "/apps/music", label: "Music", icon: "♪" },
+  { href: "/apps/share", label: "Share", icon: "⌁" },
+  { href: "/apps/account", label: "Account", icon: "◎" },
 ];
 
 export default function GlobalQuickActions() {
@@ -20,42 +23,32 @@ export default function GlobalQuickActions() {
     return null;
   }
 
-  const onShare = pathname.startsWith("/apps/share");
-  const onAccount = pathname.startsWith("/apps/account");
-
   return (
     <footer className="cos-app-utility-footer">
       <nav
         className="cos-app-utility-nav"
-        aria-label="Caliphornia OS app navigation"
+        aria-label="Caliphornia OS navigation"
       >
-        <Link href="/home" className="cos-app-utility-link">
-          <span aria-hidden="true">⌂</span>
-          <strong>Home</strong>
-        </Link>
+        {links.map((link) => {
+          const active =
+            link.href === "/home"
+              ? pathname === "/home"
+              : pathname.startsWith(link.href);
 
-        <Link href="/apps/music" className="cos-app-utility-link">
-          <span aria-hidden="true">♪</span>
-          <strong>Music</strong>
-        </Link>
-
-        <Link
-          href="/apps/share"
-          className={`cos-app-utility-link${onShare ? " active" : ""}`}
-          aria-current={onShare ? "page" : undefined}
-        >
-          <span aria-hidden="true">⌁</span>
-          <strong>Share</strong>
-        </Link>
-
-        <Link
-          href="/apps/account"
-          className={`cos-app-utility-link${onAccount ? " active" : ""}`}
-          aria-current={onAccount ? "page" : undefined}
-        >
-          <span aria-hidden="true">◎</span>
-          <strong>Account</strong>
-        </Link>
+          return (
+            <Link
+              href={link.href}
+              key={link.href}
+              className={`cos-app-utility-link${
+                active ? " active" : ""
+              }`}
+              aria-current={active ? "page" : undefined}
+            >
+              <span aria-hidden="true">{link.icon}</span>
+              <strong>{link.label}</strong>
+            </Link>
+          );
+        })}
       </nav>
     </footer>
   );

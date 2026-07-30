@@ -10,14 +10,19 @@ function todayLabel() {
   return new Intl.DateTimeFormat("en-US", {
     weekday: "long",
     month: "long",
-    day: "numeric"
+    day: "numeric",
   }).format(new Date());
 }
 
 function isAdminUser(user: AppUser) {
   const role = String(user.role || "").toLowerCase();
   const email = String(user.email || "").toLowerCase();
-  return role === "admin" || role === "owner" || email === "caliph.safe@gmail.com";
+
+  return (
+    role === "admin" ||
+    role === "owner" ||
+    email === "caliph.safe@gmail.com"
+  );
 }
 
 const adminApp: AppItem = {
@@ -26,36 +31,47 @@ const adminApp: AppItem = {
   subtitle: "Control",
   icon: "/icons/admin.svg",
   href: "/dashboard",
-  passLabel: "Settings"
+  passLabel: "Settings",
 };
 
 export default function HomeScreen({ user }: { user: AppUser }) {
   const adminEnabled = isAdminUser(user);
   const baseHomeApps = appRegistry.filter((app) => !app.dock);
-  const homeApps = adminEnabled ? [...baseHomeApps, adminApp] : baseHomeApps;
+  const homeApps = adminEnabled
+    ? [...baseHomeApps, adminApp]
+    : baseHomeApps;
   const dockApps = appRegistry.filter((app) => app.dock);
 
   return (
     <main className="ios-home-page">
-      <section className="ios-home-phone">
+      <div className="ios-home-surface">
         <header className="ios-home-status">
           <div>
             <p>Caliphornia OS</p>
             <h1>{displayName(user)}</h1>
           </div>
 
-          <div className="ios-home-actions">
-            <Link href="/apps/share">Share</Link>
-            <Link href="/apps/account">Account</Link>
-          </div>
+          <Link
+            href="/apps/account"
+            className="ios-home-profile-button"
+            aria-label="Open Account"
+          >
+            {displayName(user).slice(0, 1).toUpperCase()}
+          </Link>
         </header>
 
         <section className="ios-home-widget-row">
           <div className="ios-home-widget large">
             <span>{todayLabel()}</span>
-            <strong>Music, apps, access, Kiiku, and sharing in one world.</strong>
+            <strong>
+              Music, apps, access, Kiiku, and sharing in one world.
+            </strong>
           </div>
-          <Link href="/apps/share" className="ios-home-widget share-card">
+
+          <Link
+            href="/apps/share"
+            className="ios-home-widget share-card"
+          >
             <span>Share</span>
             <strong>Send a song nearby</strong>
           </Link>
@@ -63,7 +79,11 @@ export default function HomeScreen({ user }: { user: AppUser }) {
 
         <section className="ios-home-grid" aria-label="Apps">
           {homeApps.map((app) => (
-            <Link href={app.href} className="ios-app-icon" key={app.id}>
+            <Link
+              href={app.href}
+              className="ios-app-icon"
+              key={app.id}
+            >
               <span className="ios-app-icon-tile">
                 <img src={app.icon} alt="" />
               </span>
@@ -75,7 +95,11 @@ export default function HomeScreen({ user }: { user: AppUser }) {
 
         <nav className="ios-home-dock" aria-label="Dock">
           {dockApps.map((app) => (
-            <Link href={app.href} className="ios-dock-app" key={app.id}>
+            <Link
+              href={app.href}
+              className="ios-dock-app"
+              key={app.id}
+            >
               <span className="ios-dock-icon">
                 <img src={app.icon} alt="" />
               </span>
@@ -84,7 +108,7 @@ export default function HomeScreen({ user }: { user: AppUser }) {
             </Link>
           ))}
         </nav>
-      </section>
+      </div>
     </main>
   );
 }
