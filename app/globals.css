@@ -32,30 +32,262 @@ body.modal-lock { overflow: hidden; }
 .btn.primary { background: linear-gradient(135deg,#fff,#b6e9ff); color: #06111c; font-weight: 800; }
 .input { width: 100%; min-height: 48px; border-radius: 18px; border: 1px solid var(--line); background: rgba(255,255,255,.09); color: var(--text); padding: 12px 14px; outline: none; }
 
-/* iOS Home */
-.ios-home-page { min-height:100dvh; padding:18px; color:#fff; display:grid; background: radial-gradient(circle at 50% 0%, rgba(157,220,255,.35), transparent 30%), radial-gradient(circle at 18% 84%, rgba(248,212,119,.24), transparent 28%), radial-gradient(circle at 85% 70%, rgba(127,92,255,.24), transparent 28%), linear-gradient(180deg,#111827 0%,#05060a 54%,#02030a 100%); overflow:hidden; }
-.ios-home-phone { width:min(460px,100%); min-height:calc(100dvh - 36px); margin:0 auto; border-radius:44px; border:1px solid rgba(255,255,255,.16); background:linear-gradient(180deg, rgba(255,255,255,.08), rgba(255,255,255,.035)); box-shadow:0 44px 140px rgba(0,0,0,.48); backdrop-filter:blur(28px); -webkit-backdrop-filter:blur(28px); padding:18px 16px 16px; display:grid; grid-template-rows:auto auto 1fr auto; gap:18px; overflow:hidden; position:relative; }
-.ios-home-phone::before { content:""; position:absolute; top:10px; left:50%; transform:translateX(-50%); width:116px; height:28px; border-radius:999px; background:rgba(0,0,0,.58); border:1px solid rgba(255,255,255,.08); }
-.ios-home-status { padding-top:42px; display:flex; align-items:flex-start; justify-content:space-between; gap:12px; position:relative; z-index:1; }
-.ios-home-status p { margin:0; font-size:.72rem; letter-spacing:.16em; text-transform:uppercase; font-weight:800; color:rgba(157,220,255,.92); }
-.ios-home-status h1 { margin:6px 0 0; font-size:1.8rem; line-height:1; letter-spacing:-.055em; }
-.ios-home-actions { display:flex; gap:8px; flex-wrap:wrap; justify-content:flex-end; }
-.ios-home-actions a { border-radius:999px; padding:9px 12px; color:rgba(248,250,252,.88); background:rgba(255,255,255,.11); border:1px solid rgba(255,255,255,.14); font-size:.78rem; font-weight:800; }
-.ios-home-widget-row { display:grid; grid-template-columns:1.15fr .85fr; gap:12px; }
-.ios-home-widget { min-height:126px; border-radius:28px; padding:16px; display:grid; align-content:space-between; background:linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.07)); border:1px solid rgba(255,255,255,.16); box-shadow:0 24px 60px rgba(0,0,0,.26); backdrop-filter:blur(20px); -webkit-backdrop-filter:blur(20px); }
-.ios-home-widget span { color:rgba(248,250,252,.72); font-size:.8rem; font-weight:800; }
-.ios-home-widget strong { font-size:1.1rem; line-height:1.12; letter-spacing:-.03em; }
-.ios-home-widget.large strong { font-size:1.35rem; }
-.ios-home-widget.share-card { background:linear-gradient(160deg, rgba(248,212,119,.28), rgba(255,255,255,.08)); }
-.ios-home-grid { align-self:start; display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:22px 14px; padding:10px 4px 0; }
-.ios-app-icon,.ios-dock-app { display:grid; justify-items:center; gap:6px; min-width:0; text-align:center; }
-.ios-app-icon-tile,.ios-dock-icon { display:grid; place-items:center; overflow:hidden; background:linear-gradient(145deg,rgba(255,255,255,.30),rgba(255,255,255,.08)); border:1px solid rgba(255,255,255,.18); box-shadow:0 18px 42px rgba(0,0,0,.30); }
-.ios-app-icon-tile { width:64px; height:64px; border-radius:20px; }
-.ios-dock-icon { width:54px; height:54px; border-radius:18px; }
-.ios-app-icon img,.ios-dock-app img { width:100%; height:100%; object-fit:cover; }
-.ios-app-icon-name,.ios-dock-app span:not(.ios-dock-icon) { font-size:.74rem; color:rgba(248,250,252,.88); line-height:1.1; max-width:76px; overflow:hidden; text-overflow:ellipsis; }
-.ios-app-icon small,.ios-dock-app small { font-size:.62rem; color:rgba(248,250,252,.52); line-height:1; }
-.ios-home-dock { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:10px; padding:10px; border-radius:32px; background:rgba(255,255,255,.13); border:1px solid rgba(255,255,255,.16); box-shadow:0 24px 80px rgba(0,0,0,.34); backdrop-filter:blur(26px); -webkit-backdrop-filter:blur(26px); }
+/* iOS Home — canonical Caliphornia OS Home Screen */
+.ios-home-page {
+  width: 100%;
+  min-height: 100dvh;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  margin: 0;
+  padding: 0 20px;
+  color: #fff;
+  overflow-x: hidden;
+  background:
+    radial-gradient(circle at 50% 0%, rgba(157,220,255,.35), transparent 30%),
+    radial-gradient(circle at 18% 84%, rgba(248,212,119,.24), transparent 28%),
+    radial-gradient(circle at 85% 70%, rgba(127,92,255,.24), transparent 28%),
+    linear-gradient(180deg,#111827 0%,#05060a 54%,#02030a 100%);
+  background-size: cover;
+  background-position: center;
+}
+
+.ios-home-phone,
+.ios-home-surface {
+  width: min(100%, 430px);
+  max-width: 430px;
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left));
+  display: grid;
+  grid-template-rows: auto auto 1fr auto;
+  gap: 18px;
+  overflow-x: hidden;
+  position: relative;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  background: transparent;
+}
+
+.ios-home-status {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  position: relative;
+  z-index: 1;
+  margin-bottom: 28px;
+}
+
+.ios-home-status p {
+  margin: 0;
+  color: rgba(157,220,255,.92);
+  font-size: .72rem;
+  font-weight: 800;
+  letter-spacing: .16em;
+  text-transform: uppercase;
+}
+
+.ios-home-status h1 {
+  margin: 6px 0 0;
+  font-size: 1.8rem;
+  line-height: .95;
+  letter-spacing: -.055em;
+}
+
+.ios-home-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.ios-home-actions a {
+  padding: 9px 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  border-radius: 999px;
+  color: rgba(248,250,252,.88);
+  background: rgba(255,255,255,.11);
+  font-size: .78rem;
+  font-weight: 800;
+}
+
+.ios-home-profile-button {
+  width: 40px;
+  height: 40px;
+  flex: 0 0 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid rgba(255,255,255,.18);
+  border-radius: 50%;
+  color: #fff;
+  background: rgba(255,255,255,.16);
+  text-decoration: none;
+  font-weight: 900;
+  backdrop-filter: blur(18px);
+  -webkit-backdrop-filter: blur(18px);
+}
+
+.ios-home-widget-row {
+  width: 100%;
+  display: grid;
+  grid-template-columns: minmax(0, 1.65fr) minmax(0, .95fr);
+  gap: 10px;
+  margin: 0 0 22px;
+}
+
+.ios-home-widget {
+  min-height: 126px;
+  padding: 16px;
+  display: grid;
+  align-content: space-between;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 28px;
+  background: linear-gradient(160deg, rgba(255,255,255,.16), rgba(255,255,255,.07));
+  box-shadow: 0 24px 60px rgba(0,0,0,.26);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+.ios-home-widget span {
+  color: rgba(248,250,252,.72);
+  font-size: .8rem;
+  font-weight: 800;
+}
+
+.ios-home-widget strong {
+  font-size: 1.1rem;
+  line-height: 1.12;
+  letter-spacing: -.03em;
+}
+
+.ios-home-widget.large strong {
+  font-size: 1.35rem;
+}
+
+.ios-home-widget.share-card {
+  background: linear-gradient(160deg, rgba(248,212,119,.28), rgba(255,255,255,.08));
+}
+
+.ios-home-grid {
+  width: 100%;
+  align-self: start;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  column-gap: 8px;
+  row-gap: 28px;
+  align-items: start;
+  margin: 0 0 30px;
+  padding: 0 4px;
+}
+
+.ios-app-icon,
+.ios-dock-app {
+  min-width: 0;
+  display: grid;
+  justify-items: center;
+  gap: 6px;
+  text-align: center;
+}
+
+.ios-app-icon-tile,
+.ios-dock-icon {
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  border: 1px solid rgba(255,255,255,.18);
+  background: linear-gradient(145deg,rgba(255,255,255,.30),rgba(255,255,255,.08));
+  box-shadow: 0 18px 42px rgba(0,0,0,.30);
+}
+
+.ios-app-icon-tile {
+  width: clamp(54px, 15vw, 64px);
+  height: clamp(54px, 15vw, 64px);
+  margin-inline: auto;
+  border-radius: 20px;
+}
+
+.ios-dock-icon {
+  width: 56px;
+  height: 56px;
+  margin-inline: auto;
+  border-radius: 18px;
+}
+
+.ios-app-icon img,
+.ios-dock-app img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ios-app-icon-name,
+.ios-dock-app span:not(.ios-dock-icon) {
+  max-width: 76px;
+  margin-top: 4px;
+  overflow: hidden;
+  color: rgba(248,250,252,.88);
+  font-size: .74rem;
+  line-height: 1.1;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* Home shows app names only. */
+.ios-app-icon small,
+.ios-dock-app small,
+.ios-app-icon-description,
+.ios-app-description,
+.ios-home-app-description,
+.ios-home-app-subtitle,
+.ios-app-subtitle,
+.ios-dock-description,
+.ios-dock-subtitle,
+[data-home-app-description],
+[data-app-subtitle] {
+  display: none;
+}
+
+.ios-home-dock {
+  width: calc(100% - 4px);
+  margin: 0 auto;
+  padding: 12px 10px 14px;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0,1fr));
+  gap: 4px;
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 32px;
+  background: rgba(255,255,255,.13);
+  box-shadow: 0 24px 80px rgba(0,0,0,.34);
+  backdrop-filter: blur(26px);
+  -webkit-backdrop-filter: blur(26px);
+}
+
+@media (max-width: 430px) {
+  .ios-home-page {
+    display: block;
+    padding: 0;
+  }
+
+  .ios-home-phone,
+  .ios-home-surface {
+    width: 100%;
+    max-width: none;
+  }
+
+  .ios-home-status {
+    margin-bottom: 24px;
+  }
+
+  .ios-home-widget-row {
+    grid-template-columns: minmax(0, 1.65fr) minmax(0, .95fr);
+  }
+}
 
 /* Original global music player */
 .music-inline-player-shell { position:fixed; left:50%; bottom:calc(12px + env(safe-area-inset-bottom,0px)); width:min(720px, calc(100vw - 20px)); transform:translateX(-50%); z-index:2000; pointer-events:none; }
@@ -136,68 +368,6 @@ body.has-global-player .friends-original-message-composer { bottom: calc(104px +
   max-width: var(--cos-app-max);
   margin-left: auto;
   margin-right: auto;
-}
-
-.cos-quick-actions {
-  position: fixed;
-  top: var(--cos-floating-top);
-  right: max(12px, calc((100vw - var(--cos-app-max)) / 2 + 12px));
-  z-index: 1800;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 6px;
-  border-radius: 999px;
-  background: rgba(14, 16, 22, .58);
-  border: 1px solid rgba(255,255,255,.13);
-  box-shadow: 0 20px 56px rgba(0,0,0,.34), inset 0 1px 0 rgba(255,255,255,.08);
-  backdrop-filter: blur(22px) saturate(150%);
-  -webkit-backdrop-filter: blur(22px) saturate(150%);
-}
-
-.cos-quick-action {
-  min-height: 38px;
-  min-width: 38px;
-  display: inline-grid;
-  grid-template-columns: auto auto;
-  align-items: center;
-  gap: 7px;
-  padding: 0 11px;
-  border-radius: 999px;
-  color: rgba(255,255,255,.92);
-  background: rgba(255,255,255,.06);
-  text-decoration: none;
-  font-size: 12px;
-  font-weight: 850;
-}
-
-.cos-quick-action.share { background: rgba(100,210,255,.16); }
-.cos-quick-action.account { background: rgba(255,255,255,.08); }
-.cos-quick-action-icon { font-size: 16px; line-height: 1; }
-.cos-quick-action-label { display: inline-block; }
-
-/* Keep global quick actions out of the way on compact project screens. */
-@media (max-width: 680px) {
-  .cos-quick-actions {
-    top: auto;
-    right: 10px;
-    bottom: calc(94px + env(safe-area-inset-bottom, 0px));
-    flex-direction: column;
-    border-radius: 24px;
-  }
-
-  body:not(.has-global-player) .cos-quick-actions {
-    bottom: calc(16px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .cos-quick-action {
-    grid-template-columns: 1fr;
-    justify-items: center;
-    gap: 2px;
-    min-width: 58px;
-    padding: 7px 8px;
-    font-size: 10px;
-  }
 }
 
 /* Extra bottom clearance for fixed composers, panels, dock bars and restored player. */
@@ -397,201 +567,6 @@ body.has-global-player .settings-phone {
   margin-bottom: 5px;
 }
 
-/* Keep global shortcuts from colliding with native app chrome. */
-.cos-quick-actions {
-  top: auto;
-  bottom: calc(22px + env(safe-area-inset-bottom, 0px));
-}
-
-body.has-global-player .cos-quick-actions {
-  bottom: calc(118px + env(safe-area-inset-bottom, 0px));
-}
-
-.cos-quick-actions.is-friends,
-.cos-quick-actions.is-fartherhood,
-.cos-quick-actions.is-calendar,
-.cos-quick-actions.is-stats,
-.cos-quick-actions.is-milia,
-.cos-quick-actions.is-music {
-  right: max(10px, calc((100vw - var(--cos-app-max)) / 2 + 10px));
-}
-
-@media (max-width: 680px) {
-  .cos-quick-actions,
-  body:not(.has-global-player) .cos-quick-actions {
-    bottom: calc(18px + env(safe-area-inset-bottom, 0px));
-  }
-
-  body.has-global-player .cos-quick-actions {
-    bottom: calc(112px + env(safe-area-inset-bottom, 0px));
-  }
-}
-
-
-/* Caliphornia OS app utility navigation — normal document flow, never overlay */
-.cos-quick-actions {
-  display: none !important;
-}
-
-.cos-app-utility-footer {
-  position: relative;
-  inset: auto;
-  z-index: 1;
-  width: 100%;
-  padding:
-    18px
-    max(14px, env(safe-area-inset-right))
-    max(22px, env(safe-area-inset-bottom))
-    max(14px, env(safe-area-inset-left));
-  background: #050509;
-}
-
-.cos-app-utility-nav {
-  width: min(760px, 100%);
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
-  gap: 8px;
-  padding: 8px;
-  border: 1px solid rgba(255,255,255,.1);
-  border-radius: 24px;
-  background: rgba(255,255,255,.07);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,.06);
-}
-
-.cos-app-utility-link {
-  min-width: 0;
-  min-height: 58px;
-  padding: 8px 6px;
-  border-radius: 17px;
-  display: grid;
-  place-items: center;
-  align-content: center;
-  gap: 4px;
-  color: rgba(255,255,255,.68);
-  text-decoration: none;
-  font-size: 11px;
-  letter-spacing: .01em;
-}
-
-.cos-app-utility-link span {
-  font-size: 20px;
-  line-height: 1;
-}
-
-.cos-app-utility-link strong {
-  font-size: 11px;
-  font-weight: 800;
-}
-
-.cos-app-utility-link:hover,
-.cos-app-utility-link.active {
-  color: #fff;
-  background: rgba(255,255,255,.12);
-}
-
-@media (max-width: 520px) {
-  .cos-app-utility-footer {
-    padding-top: 12px;
-  }
-
-  .cos-app-utility-nav {
-    border-radius: 21px;
-    gap: 5px;
-    padding: 6px;
-  }
-
-  .cos-app-utility-link {
-    min-height: 54px;
-    border-radius: 15px;
-  }
-}
-
-
-/* ===== Caliphornia OS 43: true Home Screen ===== */
-.ios-home-page {
-  min-height: 100dvh !important;
-  width: 100% !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  display: block !important;
-  overflow-x: hidden;
-  background: transparent !important;
-}
-
-.ios-home-phone,
-.ios-home-surface {
-  width: 100% !important;
-  min-height: 100dvh !important;
-  max-width: none !important;
-  margin: 0 !important;
-  padding:
-    max(18px, env(safe-area-inset-top))
-    max(18px, env(safe-area-inset-right))
-    max(22px, env(safe-area-inset-bottom))
-    max(18px, env(safe-area-inset-left)) !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: inherit !important;
-}
-
-.ios-home-profile-button {
-  width: 40px;
-  height: 40px;
-  flex: 0 0 40px;
-  display: grid;
-  place-items: center;
-  border-radius: 50%;
-  color: #fff;
-  text-decoration: none;
-  font-weight: 900;
-  background: rgba(255,255,255,.16);
-  border: 1px solid rgba(255,255,255,.18);
-  backdrop-filter: blur(18px);
-  -webkit-backdrop-filter: blur(18px);
-}
-
-/* ===== Help is fully opt-in and unobtrusive ===== */
-.cos-onboarding-help {
-  position: fixed !important;
-  top: max(10px, env(safe-area-inset-top)) !important;
-  right: max(10px, env(safe-area-inset-right)) !important;
-  left: auto !important;
-  bottom: auto !important;
-  width: 28px !important;
-  height: 28px !important;
-  min-width: 28px !important;
-  min-height: 28px !important;
-  padding: 0 !important;
-  border-radius: 50% !important;
-  font-size: 13px !important;
-  line-height: 1 !important;
-  z-index: 80 !important;
-  opacity: .72;
-  color: #fff;
-  background: rgba(20,20,24,.56);
-  border: 1px solid rgba(255,255,255,.16);
-  backdrop-filter: blur(14px);
-  -webkit-backdrop-filter: blur(14px);
-}
-
-.cos-onboarding-help:hover,
-.cos-onboarding-help:focus-visible {
-  opacity: 1;
-}
-
-.cos-onboarding-card {
-  position: fixed !important;
-  top: max(46px, calc(env(safe-area-inset-top) + 38px)) !important;
-  right: max(10px, env(safe-area-inset-right)) !important;
-  left: auto !important;
-  bottom: auto !important;
-  width: min(300px, calc(100vw - 20px)) !important;
-  z-index: 90 !important;
-  padding: 14px !important;
-  border-radius: 20px !important;
-}
 
 /* ===== One universal navigation design ===== */
 .cos-quick-actions {
@@ -752,385 +727,4 @@ body.has-global-player .cos-quick-actions {
   padding-inline: 3px !important;
   font-size: clamp(9px, 2.6vw, 12px) !important;
   white-space: nowrap !important;
-}
-
-
-/* Caliphornia OS — Home desktop width correction
-   Keep the wallpaper full-screen while preventing Home content from stretching. */
-
-.ios-home-page {
-  width: 100% !important;
-  min-height: 100dvh !important;
-  background-size: cover !important;
-  background-position: center !important;
-}
-
-.ios-home-phone,
-.ios-home-surface {
-  width: min(100%, 980px) !important;
-  max-width: 980px !important;
-  min-height: 100dvh !important;
-  margin: 0 auto !important;
-  padding:
-    max(18px, env(safe-area-inset-top))
-    clamp(18px, 4vw, 42px)
-    max(22px, env(safe-area-inset-bottom))
-    clamp(18px, 4vw, 42px) !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-.ios-home-status,
-.ios-home-widget-row,
-.ios-home-grid,
-.ios-home-dock {
-  width: 100%;
-  max-width: 100%;
-}
-
-.ios-home-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  column-gap: clamp(18px, 4vw, 42px) !important;
-  row-gap: clamp(22px, 3vw, 34px) !important;
-}
-
-.ios-home-dock {
-  margin-left: auto !important;
-  margin-right: auto !important;
-}
-
-@media (max-width: 760px) {
-  .ios-home-phone,
-  .ios-home-surface {
-    width: 100% !important;
-    max-width: none !important;
-    padding:
-      max(16px, env(safe-area-inset-top))
-      max(16px, env(safe-area-inset-right))
-      max(20px, env(safe-area-inset-bottom))
-      max(16px, env(safe-area-inset-left)) !important;
-  }
-
-  .ios-home-grid {
-    grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-    column-gap: 12px !important;
-    row-gap: 20px !important;
-  }
-}
-
-@media (max-width: 430px) {
-  .ios-home-grid {
-    column-gap: 8px !important;
-  }
-}
-
-
-/* Caliphornia OS — true iPhone-width Home Screen on desktop */
-
-.ios-home-page {
-  width: 100% !important;
-  min-height: 100dvh !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: flex-start !important;
-  padding: 0 !important;
-  overflow-x: hidden !important;
-  background-size: cover !important;
-  background-position: center !important;
-}
-
-.ios-home-phone,
-.ios-home-surface {
-  width: min(100%, 430px) !important;
-  max-width: 430px !important;
-  min-height: 100dvh !important;
-  margin: 0 auto !important;
-  padding:
-    max(18px, env(safe-area-inset-top))
-    max(16px, env(safe-area-inset-right))
-    max(22px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left)) !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-  overflow-x: hidden !important;
-}
-
-.ios-home-status,
-.ios-home-widget-row,
-.ios-home-grid,
-.ios-home-dock {
-  width: 100% !important;
-  max-width: 100% !important;
-}
-
-.ios-home-widget-row {
-  grid-template-columns: minmax(0, 1.65fr) minmax(0, .95fr) !important;
-  gap: 10px !important;
-}
-
-.ios-home-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  column-gap: 8px !important;
-  row-gap: 20px !important;
-}
-
-.ios-app-icon {
-  min-width: 0 !important;
-}
-
-.ios-app-icon-tile {
-  width: clamp(54px, 15vw, 64px) !important;
-  height: clamp(54px, 15vw, 64px) !important;
-  margin-inline: auto !important;
-}
-
-.ios-app-icon-name,
-.ios-app-icon small {
-  max-width: 76px !important;
-  margin-inline: auto !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-  white-space: nowrap !important;
-}
-
-.ios-home-dock {
-  width: calc(100% - 4px) !important;
-  margin-left: auto !important;
-  margin-right: auto !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 4px !important;
-}
-
-.ios-dock-icon {
-  width: 56px !important;
-  height: 56px !important;
-  margin-inline: auto !important;
-}
-
-@media (min-width: 431px) {
-  .ios-home-page {
-    padding-left: 20px !important;
-    padding-right: 20px !important;
-  }
-
-  .ios-home-phone,
-  .ios-home-surface {
-    width: 430px !important;
-    max-width: 430px !important;
-  }
-}
-
-@media (max-width: 430px) {
-  .ios-home-page {
-    display: block !important;
-  }
-
-  .ios-home-phone,
-  .ios-home-surface {
-    width: 100% !important;
-    max-width: none !important;
-  }
-}
-
-
-/* =========================================================
-   CALIPHORNIA OS — HOME SCREEN SPACING + LABEL CLEANUP
-   Place at the END of app/globals.css
-   ========================================================= */
-
-/* Keep the Home Screen at true iPhone width on desktop. */
-.ios-home-page {
-  width: 100% !important;
-  min-height: 100dvh !important;
-  display: flex !important;
-  justify-content: center !important;
-  align-items: flex-start !important;
-  overflow-x: hidden !important;
-}
-
-.ios-home-phone,
-.ios-home-surface {
-  width: min(100%, 430px) !important;
-  max-width: 430px !important;
-  min-height: 100dvh !important;
-  margin: 0 auto !important;
-  padding:
-    max(24px, env(safe-area-inset-top))
-    max(16px, env(safe-area-inset-right))
-    max(24px, env(safe-area-inset-bottom))
-    max(16px, env(safe-area-inset-left)) !important;
-  border: 0 !important;
-  border-radius: 0 !important;
-  box-shadow: none !important;
-  background: transparent !important;
-}
-
-/* Add clear space between the user's name/header and the card row. */
-.ios-home-header,
-.ios-home-identity,
-.ios-home-profile,
-.ios-home-user-row,
-.ios-home-title-row {
-  margin-bottom: 22px !important;
-}
-
-.ios-home-header + *,
-.ios-home-identity + *,
-.ios-home-profile + *,
-.ios-home-user-row + *,
-.ios-home-title-row + * {
-  margin-top: 0 !important;
-}
-
-/* Specifically protect the visible user name from touching the cards below. */
-.ios-home-user-name,
-.ios-home-name,
-.ios-home-greeting,
-.ios-home-title,
-.ios-home-profile-name {
-  display: block !important;
-  margin: 0 0 24px !important;
-  line-height: 0.95 !important;
-}
-
-/* Preserve spacing around the top widget/card row. */
-.ios-home-widget-row,
-.ios-home-cards,
-.ios-home-feature-row {
-  margin-top: 0 !important;
-  margin-bottom: 22px !important;
-}
-
-/* Make app rows feel balanced after removing descriptions. */
-.ios-home-grid {
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  column-gap: 8px !important;
-  row-gap: 28px !important;
-  align-items: start !important;
-}
-
-.ios-app-icon,
-.ios-home-app,
-.ios-home-app-link {
-  min-width: 0 !important;
-  text-align: center !important;
-}
-
-.ios-app-icon-name,
-.ios-home-app-name,
-.ios-app-name {
-  display: block !important;
-  margin-top: 10px !important;
-  line-height: 1.1 !important;
-  font-size: 14px !important;
-  font-weight: 500 !important;
-  white-space: nowrap !important;
-  overflow: hidden !important;
-  text-overflow: ellipsis !important;
-}
-
-/* Remove every secondary app description/subtitle on Home. */
-.ios-app-icon small,
-.ios-app-icon-description,
-.ios-app-description,
-.ios-home-app-description,
-.ios-home-app-subtitle,
-.ios-app-subtitle,
-.ios-dock-description,
-.ios-dock-subtitle,
-.ios-home-dock small,
-.ios-home-grid small,
-[data-home-app-description],
-[data-app-subtitle] {
-  display: none !important;
-}
-
-/* Tighten app blocks now that descriptions are gone. */
-.ios-app-icon,
-.ios-home-app,
-.ios-home-app-link {
-  padding-bottom: 0 !important;
-  margin-bottom: 0 !important;
-}
-
-/* Give the final app row enough separation from the dock. */
-.ios-home-grid {
-  margin-bottom: 30px !important;
-}
-
-/* Keep dock labels clean: app name only. */
-.ios-home-dock {
-  width: calc(100% - 4px) !important;
-  margin: 0 auto !important;
-  padding: 12px 10px 14px !important;
-  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
-  gap: 4px !important;
-}
-
-.ios-home-dock .ios-app-icon-name,
-.ios-home-dock .ios-home-app-name,
-.ios-home-dock .ios-app-name {
-  margin-top: 8px !important;
-  font-size: 13px !important;
-}
-
-/* Mobile remains full width. */
-@media (max-width: 430px) {
-  .ios-home-page {
-    display: block !important;
-  }
-
-  .ios-home-phone,
-  .ios-home-surface {
-    width: 100% !important;
-    max-width: none !important;
-  }
-
-  .ios-home-header,
-  .ios-home-identity,
-  .ios-home-profile,
-  .ios-home-user-row,
-  .ios-home-title-row {
-    margin-bottom: 20px !important;
-  }
-
-  .ios-home-user-name,
-  .ios-home-name,
-  .ios-home-greeting,
-  .ios-home-title,
-  .ios-home-profile-name {
-    margin-bottom: 22px !important;
-  }
-}
-
-/* Caliphornia OS — add vertical space below the user name */
-
-.ios-home-title,
-.ios-home-name,
-.ios-home-user-name,
-.ios-home-profile-name,
-.ios-home-greeting {
-  display: block;
-  margin-bottom: 28px !important;
-}
-
-/* Prevent the card row from pulling upward */
-.ios-home-title + *,
-.ios-home-name + *,
-.ios-home-user-name + *,
-.ios-home-profile-name + *,
-.ios-home-greeting + * {
-  margin-top: 0 !important;
-}
-
-/* Extra protection for the top header area */
-.ios-home-header,
-.ios-home-title-row,
-.ios-home-profile,
-.ios-home-identity {
-  padding-bottom: 28px !important;
 }
