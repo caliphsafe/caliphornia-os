@@ -226,3 +226,18 @@
   .airdrop-beam { left: 108px; right: 108px; }
   .share-transfer-label { left: 14px; right: 14px; bottom: 14px; }
 }
+
+.share-copy-link {
+  display: block;
+  margin-top: 12px;
+  padding: 12px;
+  border-radius: 16px;
+  color: #e8f9ff;
+  background: rgba(0,0,0,.24);
+  border: 1px solid rgba(255,255,255,.10);
+  text-decoration: none;
+  overflow-wrap: anywhere;
+  font-size: 13px;
+  line-height: 1.35;
+  font-weight: 850;
+}

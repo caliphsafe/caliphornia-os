@@ -45,9 +45,9 @@ type ShareStats = {
 };
 
 function statusCopy(step: string) {
-  if (step === "idle") return "Choose a song or full project, then keep this screen open while the receiver taps Receive.";
-  if (step === "searching") return "Finding a listening handoff. Stay close and keep Share open.";
-  if (step === "sending") return "Share is live. The receiver should open Caliphornia OS, go to Share, tap Receive, then accept your transfer.";
+  if (step === "idle") return "Choose a song or full project, then create a Share link. The receiver does not need an account to open it.";
+  if (step === "searching") return "Creating a private guest listening link.";
+  if (step === "sending") return "Share is live. Send the link below. It opens the public unlock screen and activates the guest listen.";
   if (step === "received") return "Transfer accepted. The guest listening link is ready.";
   return "Share is ready.";
 }
@@ -275,7 +275,7 @@ export default function ShareClient() {
 
   return (
     <main className="share-page cos-uniform-page">
-      <section className="share-phone cos-uniform-shell">
+      <section className="share-phone cos-uniform-shell cos-native-actions-page">
         <header className="share-topbar cos-page-topbar">
           <a href="/home" className="share-pill">‹ Home</a>
           <div className="share-top-actions">
@@ -303,7 +303,7 @@ export default function ShareClient() {
 
         <section className="share-tabs">
           <button className={mode === "send" ? "active" : ""} onClick={() => setMode("send")}>Send</button>
-          <button className={mode === "receive" ? "active" : ""} onClick={() => startReceive()}>Receive</button>
+          <button className={mode === "receive" ? "active" : ""} onClick={() => startReceive()}>Live Receive</button>
         </section>
 
         {mode === "send" ? (
@@ -421,8 +421,11 @@ export default function ShareClient() {
                   <span>Tell the recipient</span>
                   <strong>{phrase || "READY"}</strong>
                   <small>
-                    Open <b>{receiveUrl || "/apps/share?mode=receive"}</b>, tap Receive, then accept the transfer that appears.
+                    Send this link to the recipient. They do not need an account. It opens the public unlock screen and activates the guest listen.
                   </small>
+                  <a className="share-copy-link" href={receiveUrl || "/unlock"} target="_blank" rel="noreferrer">
+                    {receiveUrl || "/unlock"}
+                  </a>
                 </div>
               ) : null}
             </section>
@@ -440,7 +443,7 @@ export default function ShareClient() {
             <div className="share-instruction-card">
               <strong>How to receive</strong>
               <p>
-                Ask the sender to start Share. You open Caliphornia OS, go to Share, tap Receive, then choose the transfer when it appears below.
+                This live receiver is for people who already have access to Caliphornia OS. New listeners should use the public Share link from the sender. No account is needed for that link.
               </p>
             </div>
 

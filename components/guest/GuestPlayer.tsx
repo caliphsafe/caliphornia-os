@@ -112,7 +112,7 @@ export default function GuestPlayer({ token }: { token: string }) {
       <section className="guest-share-phone">
         <header className="guest-share-topbar">
           <a href="/" className="guest-share-pill">Caliphornia OS</a>
-          <a href="/apps/share" className="guest-share-pill">Open Share</a>
+          <a href="/" className="guest-share-pill">Open Caliphornia OS</a>
         </header>
 
         <section className="guest-share-hero">

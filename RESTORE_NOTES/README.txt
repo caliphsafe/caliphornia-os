@@ -1,54 +1,31 @@
-Caliphornia OS Share System 43 Build Patch
+Caliphornia OS Share Link Receiver 43 Patch
 
 Purpose:
-- Keep the restored Apple/iOS app world intact.
-- Upgrade Share into a signature Caliphornia OS experience.
-- Let signed-in users browse projects, share one song, or share a full project.
-- A full project Share gives the guest one full listen per song in that project.
-- Give the recipient clear instructions: open Caliphornia OS, go to Share, tap Receive, then accept the transfer.
-- Keep account/settings and Share accessible everywhere through non-overlapping global quick actions.
-- Continue using the current Stripe commerce product checkout system for locked projects.
-- Normalize major app page widths and spacing so desktop and mobile feel more uniform.
+- Fix the receiver flow so a recipient does not need an account or access to /apps/share.
+- Keep the signed-in Share app for senders.
+- Create a public /unlock?share=... activation screen for recipients.
+- Prevent duplicate Share/Account buttons on Share, Account, Guest, Unlock, Home, and root screens.
 
 Files included:
-- app/layout.tsx
-- app/globals.css
-- lib/app-registry.ts
-- components/HomeScreen.tsx
-- components/GlobalQuickActions.tsx
-- app/apps/share/page.tsx
-- app/apps/share/share.css
-- components/share/ShareClient.tsx
-- lib/share/share-access.ts
-- app/api/share/library/route.ts
 - app/api/share/start/route.ts
-- app/api/nearby/receive/candidates/route.ts
-- app/api/nearby/receive/confirm/route.ts
-- app/api/guest/audio-url/route.ts
-- app/api/guest/playback/complete/route.ts
-- app/guest/[token]/page.tsx
+- app/api/share/claim/route.ts
+- app/unlock/page.tsx
+- components/share/ShareClient.tsx
+- components/share/ShareUnlockClient.tsx
+- components/GlobalQuickActions.tsx
 - components/guest/GuestPlayer.tsx
-
-Also retained from the previous functional restore patch:
-- Calendar restore files
-- Stats restore files
-- Account/Wallet settings files
-- FarTHErHOOD/Fri.ends restore loaders
-- restored GlobalPlayer
+- app/globals.css
+- app/apps/share/share.css
 
 Upload instructions:
-1. Upload every file to the exact same GitHub path.
+1. Upload these files to the same paths in GitHub.
 2. Do not upload package-lock.json.
 3. Let Vercel redeploy.
-4. Test in an incognito/private window.
+4. Test with one signed-in sender and one incognito receiver.
 
-QA order:
-1. Home screen dock labels.
-2. Global Share and Account quick actions on each app page.
-3. Share Send, song mode.
-4. Share Send, full project mode.
-5. Share Receive from another browser/device.
-6. Guest player one listen per song.
-7. Claim guest listen into Music.
-8. Locked project unlock button opens Stripe checkout.
-9. Calendar, Stats, Account, Music, Fri.ends, FarTHErHOOD, and Milia still keep their restored iOS personalities.
+Test:
+- Sender signs in, opens Share, starts a song or project Share.
+- Sender sends the /unlock?share=... link.
+- Receiver opens the link without signing in.
+- Receiver is routed to the guest player.
+- Share and Account shortcut buttons should not appear twice on Share or Account pages.

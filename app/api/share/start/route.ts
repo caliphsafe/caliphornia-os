@@ -180,7 +180,7 @@ export async function POST(req: NextRequest) {
           share_song_titles: songs.map((song) => song.title || song.slug),
           share_count: songs.length,
           receiver_instruction:
-            "Open Caliphornia OS, go to Share, tap Receive, then accept the transfer that appears.",
+            "Open the private Share link. No account is needed for the guest listen.",
         },
       })
       .select("id")
@@ -212,9 +212,9 @@ export async function POST(req: NextRequest) {
       title: displayTitle,
       songCount: songs.length,
       expiresAt,
-      receiveUrl: `${siteUrl}/apps/share?mode=receive`,
+      receiveUrl: `${siteUrl}/unlock?share=${encodeURIComponent(token)}`,
       receiverInstruction:
-        "Tell the recipient to open Caliphornia OS, go to Share, tap Receive, and accept your transfer. If they are not next to you, send them the Share screen link and phrase.",
+        "Send this Share link to the recipient. It opens the public unlock screen and activates their guest listen without requiring an account.",
     });
   } catch (error: any) {
     return NextResponse.json(
