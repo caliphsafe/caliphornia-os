@@ -937,3 +937,173 @@ body.has-global-player .cos-quick-actions {
 }
 
 
+/* =========================================================
+   CALIPHORNIA OS — HOME SCREEN SPACING + LABEL CLEANUP
+   Place at the END of app/globals.css
+   ========================================================= */
+
+/* Keep the Home Screen at true iPhone width on desktop. */
+.ios-home-page {
+  width: 100% !important;
+  min-height: 100dvh !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: flex-start !important;
+  overflow-x: hidden !important;
+}
+
+.ios-home-phone,
+.ios-home-surface {
+  width: min(100%, 430px) !important;
+  max-width: 430px !important;
+  min-height: 100dvh !important;
+  margin: 0 auto !important;
+  padding:
+    max(24px, env(safe-area-inset-top))
+    max(16px, env(safe-area-inset-right))
+    max(24px, env(safe-area-inset-bottom))
+    max(16px, env(safe-area-inset-left)) !important;
+  border: 0 !important;
+  border-radius: 0 !important;
+  box-shadow: none !important;
+  background: transparent !important;
+}
+
+/* Add clear space between the user's name/header and the card row. */
+.ios-home-header,
+.ios-home-identity,
+.ios-home-profile,
+.ios-home-user-row,
+.ios-home-title-row {
+  margin-bottom: 22px !important;
+}
+
+.ios-home-header + *,
+.ios-home-identity + *,
+.ios-home-profile + *,
+.ios-home-user-row + *,
+.ios-home-title-row + * {
+  margin-top: 0 !important;
+}
+
+/* Specifically protect the visible user name from touching the cards below. */
+.ios-home-user-name,
+.ios-home-name,
+.ios-home-greeting,
+.ios-home-title,
+.ios-home-profile-name {
+  display: block !important;
+  margin: 0 0 24px !important;
+  line-height: 0.95 !important;
+}
+
+/* Preserve spacing around the top widget/card row. */
+.ios-home-widget-row,
+.ios-home-cards,
+.ios-home-feature-row {
+  margin-top: 0 !important;
+  margin-bottom: 22px !important;
+}
+
+/* Make app rows feel balanced after removing descriptions. */
+.ios-home-grid {
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  column-gap: 8px !important;
+  row-gap: 28px !important;
+  align-items: start !important;
+}
+
+.ios-app-icon,
+.ios-home-app,
+.ios-home-app-link {
+  min-width: 0 !important;
+  text-align: center !important;
+}
+
+.ios-app-icon-name,
+.ios-home-app-name,
+.ios-app-name {
+  display: block !important;
+  margin-top: 10px !important;
+  line-height: 1.1 !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  white-space: nowrap !important;
+  overflow: hidden !important;
+  text-overflow: ellipsis !important;
+}
+
+/* Remove every secondary app description/subtitle on Home. */
+.ios-app-icon small,
+.ios-app-icon-description,
+.ios-app-description,
+.ios-home-app-description,
+.ios-home-app-subtitle,
+.ios-app-subtitle,
+.ios-dock-description,
+.ios-dock-subtitle,
+.ios-home-dock small,
+.ios-home-grid small,
+[data-home-app-description],
+[data-app-subtitle] {
+  display: none !important;
+}
+
+/* Tighten app blocks now that descriptions are gone. */
+.ios-app-icon,
+.ios-home-app,
+.ios-home-app-link {
+  padding-bottom: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+/* Give the final app row enough separation from the dock. */
+.ios-home-grid {
+  margin-bottom: 30px !important;
+}
+
+/* Keep dock labels clean: app name only. */
+.ios-home-dock {
+  width: calc(100% - 4px) !important;
+  margin: 0 auto !important;
+  padding: 12px 10px 14px !important;
+  grid-template-columns: repeat(4, minmax(0, 1fr)) !important;
+  gap: 4px !important;
+}
+
+.ios-home-dock .ios-app-icon-name,
+.ios-home-dock .ios-home-app-name,
+.ios-home-dock .ios-app-name {
+  margin-top: 8px !important;
+  font-size: 13px !important;
+}
+
+/* Mobile remains full width. */
+@media (max-width: 430px) {
+  .ios-home-page {
+    display: block !important;
+  }
+
+  .ios-home-phone,
+  .ios-home-surface {
+    width: 100% !important;
+    max-width: none !important;
+  }
+
+  .ios-home-header,
+  .ios-home-identity,
+  .ios-home-profile,
+  .ios-home-user-row,
+  .ios-home-title-row {
+    margin-bottom: 20px !important;
+  }
+
+  .ios-home-user-name,
+  .ios-home-name,
+  .ios-home-greeting,
+  .ios-home-title,
+  .ios-home-profile-name {
+    margin-bottom: 22px !important;
+  }
+}
+
