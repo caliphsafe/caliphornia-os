@@ -1,0 +1,28 @@
+Caliphornia OS 43 Build Patch: Invite Route Build Fix
+
+The Vercel build failed because Next.js found two dynamic routes with the same pattern:
+
+- app/invite/[code]/page.tsx
+- app/invite/[token]/page.tsx
+
+Both resolve to /invite/*, so Next.js cannot know which one should handle a URL.
+
+Fix:
+1. Keep app/invite/[code]/page.tsx.
+2. Delete app/invite/[token]/page.tsx and the app/invite/[token] folder.
+
+Why this is the correct route to keep:
+- The current admin invite creation API returns invite URLs as /invite/${inviteCode}.
+- The current invite claim API expects a code and checks token_hash.
+- Therefore /invite/[code] is the canonical invite route.
+
+GitHub browser delete steps:
+1. Open the repo in GitHub.
+2. Go to app/invite/[token]/page.tsx.
+3. Click the three-dot menu or pencil/edit area.
+4. Choose Delete file.
+5. Commit the deletion directly to main.
+6. Confirm app/invite/[code]/page.tsx still exists.
+7. Let Vercel redeploy.
+
+Do not upload or create package-lock.json.
