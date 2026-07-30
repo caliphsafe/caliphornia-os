@@ -118,7 +118,7 @@
   display:block;
   width:100%;
   text-align:left;
-  padding:18px 18px 16px;
+  padding:18px 92px 18px 18px;
   border:0;
   border-radius:30px;
   color:#fff;
@@ -132,7 +132,7 @@
   cursor:pointer;
   overflow:hidden;
   position:relative;
-  min-height:168px;
+  min-height:220px;
 }
 
 .card::before{
@@ -153,10 +153,8 @@
 }
 
 .cardTop{
-  display:flex;
-  align-items:flex-start;
-  justify-content:space-between;
-  gap:16px;
+  display:block;
+  min-width:0;
 }
 
 .cardCopy{
@@ -187,6 +185,11 @@
 }
 
 .cardTemp{
+  position:absolute;
+  top:18px;
+  right:18px;
+  width:64px;
+  text-align:right;
   font-size:58px;
   line-height:.92;
   letter-spacing:-0.06em;
@@ -196,12 +199,16 @@
 }
 
 .cardBottomMeta{
-  margin-top:28px;
+  position:absolute;
+  left:18px;
+  right:92px;
+  bottom:18px;
+  margin:0;
   display:flex;
   align-items:flex-end;
   justify-content:space-between;
   gap:16px;
-  padding-right:74px;
+  padding:0;
 }
 
 .cardCondition{
@@ -221,9 +228,13 @@
 
 .cardActions{
   position:absolute;
+  top:82px;
   right:18px;
-  bottom:16px;
   z-index:2;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  gap:10px;
 }
 
 .cardPlayButton{
@@ -601,8 +612,28 @@
     grid-template-columns:62px 34px 42px 1fr 42px;
     gap:10px;
   }
+  .card{
+    min-height:206px;
+    padding-right:82px;
+  }
+
+  .cardTemp{
+    right:16px;
+    width:58px;
+    font-size:52px;
+  }
+
+  .cardActions{
+    top:76px;
+    right:16px;
+    gap:8px;
+  }
+
   .cardBottomMeta{
-    padding-right:68px;
+    left:18px;
+    right:82px;
+    bottom:16px;
+    gap:10px;
   }
 
   .cardPlayButton{
