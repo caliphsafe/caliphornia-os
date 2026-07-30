@@ -1107,3 +1107,30 @@ body.has-global-player .cos-quick-actions {
   }
 }
 
+/* Caliphornia OS — add vertical space below the user name */
+
+.ios-home-title,
+.ios-home-name,
+.ios-home-user-name,
+.ios-home-profile-name,
+.ios-home-greeting {
+  display: block;
+  margin-bottom: 28px !important;
+}
+
+/* Prevent the card row from pulling upward */
+.ios-home-title + *,
+.ios-home-name + *,
+.ios-home-user-name + *,
+.ios-home-profile-name + *,
+.ios-home-greeting + * {
+  margin-top: 0 !important;
+}
+
+/* Extra protection for the top header area */
+.ios-home-header,
+.ios-home-title-row,
+.ios-home-profile,
+.ios-home-identity {
+  padding-bottom: 28px !important;
+}
