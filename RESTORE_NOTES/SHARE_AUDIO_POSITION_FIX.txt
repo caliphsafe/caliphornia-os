@@ -1,0 +1,14 @@
+Caliphornia OS Share Receiver Audio + Top Card Fix
+
+Purpose:
+- Fix guest receiver playback when Supabase returns "Object not found".
+- Keep the proximity receive card at the top of the main page instead of the bottom.
+
+What changed:
+- lib/media.ts now treats paths like fartherhood/song.mp3 as objects inside the private songs bucket.
+- lib/media.ts still supports explicit bucket paths like songs/fartherhood/song.mp3.
+- lib/media.ts has fallback signing attempts for older path formats.
+- app/api/guest/audio-url/route.ts now returns clearer audio-path errors.
+- components/share/ProximityReceivePrompt.tsx now appears near the top safe area.
+
+Upload these files to the same GitHub paths. Do not upload package-lock.json.

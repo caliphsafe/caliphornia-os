@@ -209,9 +209,11 @@ export default function ProximityReceivePrompt() {
       style={{
         position: "fixed",
         left: "50%",
-        bottom: "calc(24px + env(safe-area-inset-bottom, 0px))",
+        top: "calc(14px + env(safe-area-inset-top, 0px))",
         zIndex: 90,
         width: "min(390px, calc(100vw - 28px))",
+        maxHeight: "min(360px, calc(100dvh - 28px))",
+        overflowY: "auto",
         transform: "translateX(-50%)",
         pointerEvents: "auto",
       }}

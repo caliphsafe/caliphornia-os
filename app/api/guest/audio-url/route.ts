@@ -56,6 +56,17 @@ export async function GET(req: NextRequest) {
       playable[0];
 
     const song = selected.song;
+
+    if (!song.audio_path) {
+      return NextResponse.json(
+        {
+          ok: false,
+          error: `Audio is missing for ${song.title || song.slug}. Add a valid songs.audio_path for this song.`,
+        },
+        { status: 404 }
+      );
+    }
+
     const playbackUrl = await createSignedMediaUrl(song.audio_path);
 
     await supabaseAdmin
