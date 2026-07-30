@@ -18,32 +18,43 @@ const adminLinks = [
   ["Audit", "/dashboard/audit"],
 ];
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const admin = await requireAdminUser();
 
   return (
     <main className="admin-os-page">
       <section className="admin-os-shell">
-        <header className="admin-os-topbar">
-          <div>
+        <header className="admin-os-header">
+          <div className="admin-os-identity">
             <p>Caliphornia OS</p>
             <h1>Admin Control</h1>
             <span>{admin.email}</span>
           </div>
-          <div className="admin-os-top-actions">
+
+          <nav
+            className="admin-os-utility-nav"
+            aria-label="Admin utility links"
+          >
             <Link href="/home">Home</Link>
             <Link href="/apps/music">Music</Link>
+            <Link href="/apps/share">Share</Link>
             <Link href="/apps/account">Account</Link>
-          </div>
+          </nav>
         </header>
 
         <nav className="admin-os-nav" aria-label="Admin sections">
           {adminLinks.map(([label, href]) => (
-            <Link key={href} href={href}>{label}</Link>
+            <Link key={href} href={href}>
+              {label}
+            </Link>
           ))}
         </nav>
 
-        {children}
+        <section className="admin-os-content">{children}</section>
       </section>
     </main>
   );

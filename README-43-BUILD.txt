@@ -1,27 +1,26 @@
-CALIPHORNIA OS — CANONICAL INVITE SYSTEM 43 BUILD
+CALIPHORNIA OS — UX, SHARE, MUSIC & ADMIN 43 BUILD
 
-WHAT THIS BUILD FIXES
+THIS BUILD ADDRESSES
 
-1. Removes the duplicate /invite/[token] route that conflicts with /invite/[code].
-2. Removes the older API that queries the nonexistent admin_invite_links.token column.
-3. Keeps one database model: invite_code + token_hash.
-4. Makes invite use-count updates concurrency-safe.
-5. Standardizes admin audit logging on action_type.
-6. Adds one repair migration for clean, partially migrated, and legacy databases.
+- Admin header content no longer floats over dashboard content.
+- Admin utility links are integrated into a structured header.
+- Admin section navigation stays readable without covering content.
+- Music library no longer depends on the optional songs.position column.
+- Song data failures are displayed rather than silently appearing as an empty app.
+- Share buttons follow one consistent UX:
+  choose content -> open Share app -> review selection -> request location -> start transfer.
+- songs.id remains the canonical database identifier.
+- songSlug remains only a lookup/navigation fallback.
+- Share Stats is positioned before Rankings.
+- Rankings remains the final Stats navigation destination.
+- Share rankings use actual shareStats data, not listening totals.
+- No package-lock.json is included.
 
-UPLOAD STEPS
+UPLOAD
 
-1. Open the ZIP.
-2. In GitHub, delete every file listed in DELETE_THESE_FILES.txt.
-3. Upload the app, components, and supabase folders from this ZIP, preserving paths.
-4. In Supabase SQL Editor, run:
-   supabase/migrations/012_canonical_invite_system.sql
-5. Commit the GitHub changes.
-6. Vercel will redeploy automatically.
+1. Upload the app, components, and lib folders from this ZIP, preserving paths.
+2. Complete the exact replacements in PATCH-REQUIRED-EXISTING-FILES.txt.
+3. Commit all changes together to main.
+4. Let Vercel redeploy.
 
-IMPORTANT
-
-Do not rerun the old conflicting 011 migration after applying this build.
-Do not add a token column.
-Do not keep both [token] and [code] routes.
-No package-lock.json is included.
+There is no SQL migration in this build.

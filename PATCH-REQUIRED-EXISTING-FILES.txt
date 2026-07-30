@@ -1,0 +1,167 @@
+CALIPHORNIA OS — REQUIRED SMALL EDITS
+
+These edits are needed because the listed files are large existing application
+files. Do not add duplicate components or duplicate song identifiers.
+
+1. components/GlobalPlayer.tsx
+
+Find the existing sharePlaying function and replace it with:
+
+  function sharePlaying() {
+    const target = getPlaylistTarget(currentTrack);
+    if (!target.songId && !target.songSlug) {
+      setShareMessage("No song selected to share.");
+      return;
+    }
+
+    const params = new URLSearchParams({
+      mode: "send",
+      scope: "song",
+    });
+
+    if (target.songId) params.set("songId", target.songId);
+    if (target.songSlug) params.set("songSlug", target.songSlug);
+
+    router.push(`/apps/share?${params.toString()}`);
+  }
+
+This makes the global-player Share button open the Share page with the current
+song selected. It must no longer call /api/share/start directly.
+
+
+2. components/MusicLibraryClient.tsx
+
+Add this import:
+
+  import { buildShareHref } from "@/lib/share-navigation";
+
+Replace the entire startShare function with:
+
+  function startShare(song: MusicSong) {
+    window.location.assign(
+      buildShareHref({
+        songId: song.id,
+        songSlug: song.slug,
+      }),
+    );
+  }
+
+This preserves all existing buttons while moving permission and transfer logic
+to the actual Share app.
+
+
+3. components/MiliaSongCard.tsx
+
+Add this import:
+
+  import { buildShareHref } from "@/lib/share-navigation";
+
+Replace handleShare with:
+
+  function handleShare(event: React.MouseEvent<HTMLButtonElement>) {
+    event.preventDefault();
+    event.stopPropagation();
+
+    const track: GlobalTrack =
+      queue[startIndex] || { title, slug };
+
+    window.location.assign(
+      buildShareHref({
+        songId: track.id || track.songId || null,
+        songSlug: track.songSlug || track.slug || slug,
+      }),
+    );
+  }
+
+
+4. components/share/ShareClient.tsx
+
+Inside the existing load() function, after:
+
+  const libraryData = await libraryRes.json();
+
+add:
+
+  const requestedSongId = params.get("songId");
+  const requestedSongSlug = params.get("songSlug");
+  const requestedProjectId = params.get("projectId");
+  const requestedProjectSlug = params.get("projectSlug");
+  const requestedScope = params.get("scope") === "project" ? "project" : "song";
+
+Then replace the firstShareableProject selection block with:
+
+  const requestedProject = libraryData.projects.find(
+    (project: ShareProject) =>
+      project.id === requestedProjectId ||
+      project.slug === requestedProjectSlug ||
+      project.songs?.some(
+        (song: ShareSong) =>
+          song.id === requestedSongId ||
+          song.slug === requestedSongSlug,
+      ),
+  );
+
+  const firstShareableProject =
+    requestedProject ||
+    libraryData.projects.find(
+      (project: ShareProject) => project.shareable,
+    ) ||
+    libraryData.projects[0];
+
+  if (firstShareableProject?.id) {
+    setSelectedProjectId(firstShareableProject.id);
+    setShareScope(requestedScope);
+
+    const requestedSong = firstShareableProject.songs?.find(
+      (song: ShareSong) =>
+        song.shareable &&
+        (song.id === requestedSongId ||
+          song.slug === requestedSongSlug),
+    );
+
+    const firstSong =
+      requestedSong ||
+      firstShareableProject.songs?.find(
+        (song: ShareSong) => song.shareable,
+      );
+
+    if (firstSong?.slug) setSelectedSongSlug(firstSong.slug);
+  }
+
+The Share page then lands on the exact song selected elsewhere.
+
+
+5. components/StatsPageClient.tsx
+
+The Stats navigation order must be:
+
+  Summary
+  Apps
+  Places
+  Share
+  Rankings
+
+Rankings must be the final link.
+
+In the Rankings panel, include Share performance in the ranking cards:
+- Top Sharer from shareStats.topSharers[0]
+- Most Shared Song from shareStats.mostSharedSongs[0]
+- Most Shared Project from shareStats.mostSharedProjects[0]
+
+Do not calculate sharing rankings from play totals. Use the existing shareStats
+arrays supplied by the Stats server page.
+
+
+6. Floating Share and Account links
+
+Remove any fixed-position or absolute-position declarations from platform-level
+Share and Account utility controls. Keep these links inside each page's normal
+header/topbar navigation.
+
+Use:
+  position: relative;
+  inset: auto;
+  transform: none;
+
+Do not remove the global music player. Only utility links should stop floating
+over page content.
