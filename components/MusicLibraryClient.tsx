@@ -34,6 +34,26 @@ type MusicData = {
   error?: string;
 };
 
+function AppleShareIcon() {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      aria-hidden="true"
+      width="18"
+      height="18"
+    >
+      <path
+        d="M12 3v11M8 7l4-4 4 4M6.5 11.5v7A2.5 2.5 0 0 0 9 21h6a2.5 2.5 0 0 0 2.5-2.5v-7"
+        fill="none"
+        stroke="currentColor"
+        strokeWidth="1.8"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
+}
+
 function playerTracks(queue: MusicSong[]) {
   return queue.map((song) => ({
     id: song.id,
@@ -344,8 +364,13 @@ export default function MusicLibraryClient({
                     : "☆ Favorite"}
                 </button>
 
-                <a href={shareHref(featured)}>
-                  ⌁ Share
+                <a
+                  href={shareHref(featured)}
+                  aria-label={`Share ${featured.title}`}
+                  title={`Share ${featured.title}`}
+                >
+                  <AppleShareIcon />
+                  <span>Share</span>
                 </a>
               </div>
             </div>
@@ -526,7 +551,7 @@ export default function MusicLibraryClient({
                     title="Share"
                     aria-label={`Share ${song.title}`}
                   >
-                    ⌁
+                    <AppleShareIcon />
                   </a>
 
                   {view === "favorites" ? (

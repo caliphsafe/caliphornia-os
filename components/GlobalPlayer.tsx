@@ -113,7 +113,7 @@ function IconShare() {
   return (
     <svg viewBox="0 0 24 24" aria-hidden="true">
       <path
-        d="M12 4v10M8.5 7.5 12 4l3.5 3.5M6.5 12v6a2 2 0 0 0 2 2h7a2 2 0 0 0 2-2v-6"
+        d="M12 3v11M8 7l4-4 4 4M6.5 11.5v7A2.5 2.5 0 0 0 9 21h6a2.5 2.5 0 0 0 2.5-2.5v-7"
         fill="none"
         stroke="currentColor"
         strokeWidth="1.8"
@@ -753,7 +753,9 @@ export default function GlobalPlayer({ email }: Props) {
         >
           <button
             type="button"
-            className={styles.collapseButton}
+            className={`${styles.collapseButton} ${
+              expanded ? "" : styles.collapseButtonHidden
+            }`}
             onClick={(event) => {
               event.stopPropagation();
               setExpanded((current) => {
@@ -844,9 +846,11 @@ export default function GlobalPlayer({ email }: Props) {
             <button
               type="button"
               className={styles.primary}
-              onClick={() => {
+              onClick={(event) => {
+                event.stopPropagation();
                 const audio = audioRef.current;
                 if (!audio) return;
+
                 if (audio.paused) {
                   void audio.play();
                 } else {

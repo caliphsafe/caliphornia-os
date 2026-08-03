@@ -20,7 +20,8 @@
 .collapsed {
   right: 12px;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  width: min(330px, calc(100vw - 24px));
+  width: 58px;
+  height: 58px;
   transform: none;
 }
 
@@ -58,6 +59,10 @@
   color: rgba(255,255,255,.76);
   background: rgba(255,255,255,.09);
   cursor: pointer;
+}
+
+.collapseButtonHidden {
+  display: none;
 }
 
 .track {
@@ -184,66 +189,75 @@
   color: #f8d477;
 }
 
-/* Discreet persistent mini player */
+/* Ultra-minimal persistent player:
+   one cover-art tile with Play/Pause over the artwork. */
 .collapsed .player {
-  min-height: 62px;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-  padding: 7px 34px 7px 8px;
-  border-radius: 21px;
+  width: 58px;
+  height: 58px;
+  min-height: 58px;
+  padding: 0;
+  display: block;
+  overflow: hidden;
+  border-radius: 17px;
+  border-color: rgba(255,255,255,.20);
+  cursor: pointer;
+  box-shadow:
+    0 14px 38px rgba(0,0,0,.46),
+    inset 0 1px 0 rgba(255,255,255,.12);
 }
 
 .collapsed .track {
-  grid-template-columns: 46px minmax(0, 1fr);
-  gap: 9px;
+  position: absolute;
+  inset: 0;
+  display: block;
 }
 
 .collapsed .cover {
-  width: 46px;
-  height: 46px;
-  border-radius: 13px;
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
 }
 
-.collapsed .copy strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 13px;
+.collapsed .cover::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.24);
 }
 
-.collapsed .copy span {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  font-size: 10px;
-}
-
-.collapsed .copy small,
+.collapsed .copy,
 .collapsed .timeline {
   display: none;
+}
+
+.collapsed .controls {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  display: grid;
+  place-items: center;
 }
 
 .collapsed .controls button:not(.primary) {
   display: none;
 }
 
-.collapsed .controls {
-  grid-column: 2;
-  gap: 0;
-}
-
 .collapsed .controls .primary {
   display: grid;
-  width: 42px;
-  height: 42px;
-  flex-basis: 42px;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border: 1px solid rgba(255,255,255,.30);
+  color: #fff;
+  background: rgba(0,0,0,.42);
+  box-shadow: 0 5px 16px rgba(0,0,0,.35);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.collapsed .collapseButton {
-  top: 4px;
-  right: 5px;
-  width: 24px;
-  height: 24px;
+.collapsed .controls .primary svg {
+  width: 19px;
+  height: 19px;
 }
 
 @media (max-width: 680px) {
@@ -292,9 +306,17 @@
   }
 
   .collapsed {
-    right: 6px;
-    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-    width: min(300px, calc(100vw - 12px));
+    right: 8px;
+    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+    width: 54px;
+    height: 54px;
+  }
+
+  .collapsed .player {
+    width: 54px;
+    height: 54px;
+    min-height: 54px;
+    border-radius: 16px;
   }
 
   .expanded .player {
