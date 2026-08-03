@@ -1,66 +1,364 @@
 "use client";
 
 import Link from "next/link";
-import Image from "next/image";
 import { useMemo, useState } from "react";
 import styles from "@/app/apps/stats/stats.module.css";
 
-type SongRow = { songSlug: string; title: string; artistName: string; producerNames: string; appSlug: string; durationLabel: string; coverImageUrl: string | null; playCount?: number; uniqueListenerCount?: number; lastPlayedAt?: string | null; favoritedAt?: string | null; userPlayCount?: number; globalPlayCount?: number; };
-type CountRow = { label: string; count: number };
-type ListenerRow = { label: string; count: number };
-type ShareStats = { myShares: number; globalShares: number; acceptedTransfers: number; projectShares: number; songShares: number; accountsFromShare: number; topSharers: CountRow[]; mostSharedSongs: CountRow[]; mostSharedProjects: CountRow[]; };
+type SongRow = {
+  songSlug: string;
+  title: string;
+  artistName: string;
+  appSlug: string;
+  playCount?: number;
+  uniqueListenerCount?: number;
+};
 
-function compactNumber(value: number) { return new Intl.NumberFormat("en-US", { notation: "compact", maximumFractionDigits: 1 }).format(value || 0); }
-function formatHeaderDate(date = new Date()) { return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "short", day: "numeric" }).format(date); }
-function clampPercent(value: number) { return Math.max(0, Math.min(100, value)); }
-function formatShortDate(value?: string | null) { if (!value) return "—"; try { return new Date(value).toLocaleDateString("en-US", { month: "numeric", day: "numeric", year: "2-digit" }); } catch { return "—"; } }
+type CountRow = {
+  label: string;
+  count: number;
+};
 
-function getRingPercents({ totalUserPlays, totalFavoriteSongs, totalGlobalReach, shareStats }: { totalUserPlays: number; totalFavoriteSongs: number; totalGlobalReach: number; shareStats: ShareStats }) {
-  return {
-    listening: clampPercent((totalUserPlays / 200) * 100),
-    favorites: clampPercent((totalFavoriteSongs / 10) * 100),
-    reach: clampPercent(((totalGlobalReach + shareStats.acceptedTransfers) / 25) * 100),
-  };
+type ShareStats = {
+  myShares: number;
+  globalShares: number;
+  acceptedTransfers: number;
+  projectShares: number;
+  songShares: number;
+  accountsFromShare: number;
+  topSharers: CountRow[];
+  mostSharedSongs: CountRow[];
+  mostSharedProjects: CountRow[];
+};
+
+type Props = {
+  username: string;
+  globalSongs: SongRow[];
+  userSongs: SongRow[];
+  favoriteSongs: SongRow[];
+  userTopCities: CountRow[];
+  userTopRegions: CountRow[];
+  userTopCountries: CountRow[];
+  globalTopCities: CountRow[];
+  globalTopRegions: CountRow[];
+  globalTopCountries: CountRow[];
+  userAppRows: CountRow[];
+  globalAppRows: CountRow[];
+  topListeners: CountRow[];
+  shareStats: ShareStats;
+};
+
+type Tab =
+  | "summary"
+  | "apps"
+  | "places"
+  | "share"
+  | "rankings";
+
+function compact(value = 0) {
+  return new Intl.NumberFormat("en-US", {
+    notation: "compact",
+    maximumFractionDigits: 1,
+  }).format(value);
 }
 
-function TopCard({ title, subtitle, value, tone, onClick, coverImageUrl, fallback = "♪", footer }: { title: string; subtitle: string; value: string; tone: "purple" | "blue" | "green"; onClick?: () => void; coverImageUrl?: string | null; fallback?: string; footer?: string; }) {
-  const valueClass = tone === "purple" ? styles.bigNumberPurple : tone === "blue" ? styles.bigNumberBlue : styles.bigNumberGreen;
-  return <button className={`${styles.card} ${styles.tapCard}`} onClick={onClick}><div className={styles.cardHeaderMini}><h3 className={styles.cardTitle}>{title}</h3><span className={styles.chev}>›</span></div><p className={styles.miniLabel}>{subtitle}</p>{coverImageUrl ? <img src={coverImageUrl} alt={title} className={styles.sessionCover} /> : fallback ? <div className={styles.sessionCoverFallback}>{fallback}</div> : null}<div className={valueClass}>{value}</div>{footer ? <div className={styles.sessionDate}>{footer}</div> : null}</button>;
-}
-
-export default function StatsPageClient({ username, globalSongs, userSongs, favoriteSongs, userTopCities, userTopRegions, userTopCountries, globalTopCities, globalTopRegions, globalTopCountries, userAppRows, globalAppRows, topListeners, shareStats }: { username: string; globalSongs: SongRow[]; userSongs: SongRow[]; favoriteSongs: SongRow[]; userTopCities: CountRow[]; userTopRegions: CountRow[]; userTopCountries: CountRow[]; globalTopCities: CountRow[]; globalTopRegions: CountRow[]; globalTopCountries: CountRow[]; userAppRows: CountRow[]; globalAppRows: CountRow[]; topListeners: ListenerRow[]; shareStats: ShareStats; }) {
-  const [mode, setMode] = useState<"user" | "global">("user");
-  const [activeTab, setActiveTab] = useState<"summary" | "apps" | "places" | "rankings" | "share">("summary");
-  const [selectedSong, setSelectedSong] = useState<SongRow | null>(null);
-  const totals = useMemo(() => ({ totalUserPlays: userSongs.reduce((sum, row) => sum + (row.playCount || 0), 0), totalFavoriteSongs: favoriteSongs.length, totalGlobalPlays: globalSongs.reduce((sum, row) => sum + (row.playCount || 0), 0), totalGlobalReach: globalSongs.reduce((sum, row) => sum + (row.uniqueListenerCount || 0), 0) }), [userSongs, favoriteSongs, globalSongs]);
-  const ringPercents = getRingPercents({ ...totals, shareStats });
-  const topUserSong = userSongs[0] || null;
-  const topGlobalSong = globalSongs[0] || null;
-  const latestFavorite = favoriteSongs[0] || null;
-  const currentTopSong = mode === "user" ? topUserSong : topGlobalSong;
-  const currentTopApp = mode === "user" ? userAppRows[0] : globalAppRows[0];
-  const currentTopCity = mode === "user" ? userTopCities[0] : globalTopCities[0];
-  const currentTopRegion = mode === "user" ? userTopRegions[0] : globalTopRegions[0];
-  const currentTopCountry = mode === "user" ? userTopCountries[0] : globalTopCountries[0];
-  const currentAppRows = mode === "user" ? userAppRows : globalAppRows;
-  const currentCityRows = mode === "user" ? userTopCities : globalTopCities;
-  const currentRegionRows = mode === "user" ? userTopRegions : globalTopRegions;
-  const currentCountryRows = mode === "user" ? userTopCountries : globalTopCountries;
-
-  function ListRows({ rows, suffix = "plays" }: { rows: CountRow[]; suffix?: string }) {
-    return <div className={styles.listStack}>{rows.slice(0, 10).map((row, index) => <div key={`${row.label}-${index}`} className={styles.listRow}><div className={styles.listRowText}><strong>{index + 1}. {row.label}</strong><span>{suffix}</span></div><div className={styles.listRowValue}>{compactNumber(row.count)}</div></div>)}</div>;
+function RankedList({
+  rows,
+  empty = "No activity yet.",
+}: {
+  rows: CountRow[];
+  empty?: string;
+}) {
+  if (!rows.length) {
+    return <div className={styles.empty}>{empty}</div>;
   }
 
   return (
+    <div className={styles.list}>
+      {rows.slice(0, 10).map((row, index) => (
+        <article key={`${row.label}-${index}`}>
+          <span>{index + 1}</span>
+          <strong>{row.label}</strong>
+          <b>{compact(row.count)}</b>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+export default function StatsPageClient(props: Props) {
+  const [mode, setMode] =
+    useState<"user" | "global">("user");
+  const [activeTab, setActiveTab] =
+    useState<Tab>("summary");
+
+  const songs =
+    mode === "user" ? props.userSongs : props.globalSongs;
+  const apps =
+    mode === "user"
+      ? props.userAppRows
+      : props.globalAppRows;
+  const cities =
+    mode === "user"
+      ? props.userTopCities
+      : props.globalTopCities;
+  const regions =
+    mode === "user"
+      ? props.userTopRegions
+      : props.globalTopRegions;
+  const countries =
+    mode === "user"
+      ? props.userTopCountries
+      : props.globalTopCountries;
+
+  const totals = useMemo(
+    () => ({
+      plays: songs.reduce(
+        (sum, song) => sum + Number(song.playCount || 0),
+        0,
+      ),
+      favorites: props.favoriteSongs.length,
+      shares:
+        mode === "user"
+          ? props.shareStats.myShares
+          : props.shareStats.globalShares,
+    }),
+    [
+      songs,
+      props.favoriteSongs.length,
+      props.shareStats,
+      mode,
+    ],
+  );
+
+  const tabs: Array<{ key: Tab; label: string }> = [
+    { key: "summary", label: "Summary" },
+    { key: "apps", label: "Apps" },
+    { key: "places", label: "Places" },
+    { key: "share", label: "Share" },
+    { key: "rankings", label: "Rankings" },
+  ];
+
+  return (
     <main className={styles.page}>
-      <div className={styles.topChrome}><Link href="/home" className={styles.backPill} aria-label="Back to Home"><Image src="/apps/stats/back.png" alt="Back" width={22} height={22} className={styles.backImg} /></Link><div className={styles.userChip} title={username ? `@${username}` : "@user"}>@{username || "user"}</div></div>
-      <div className={styles.header}><div><h1 className={styles.title}>{username ? `${username}'s Activity` : "Your Activity"}</h1><p className={styles.date}>{formatHeaderDate()}</p></div></div>
-      <section className={styles.modeSwitch}><button className={`${styles.modeSwitchBtn} ${mode === "user" ? styles.modeSwitchBtnActive : ""}`} onClick={() => { setMode("user"); setActiveTab("summary"); }}>{username || "User"}</button><button className={`${styles.modeSwitchBtn} ${mode === "global" ? styles.modeSwitchBtnActive : ""}`} onClick={() => { setMode("global"); setActiveTab("summary"); }}>Global</button></section>
-      <section className={`${styles.card} ${styles.ringsCard}`}><div><h2 className={styles.cardTitle}>{mode === "user" ? "Your Activity Rings" : "Global Activity Rings"}</h2><div className={styles.rings} style={{ ["--listening" as any]: `${ringPercents.listening}%`, ["--favorites" as any]: `${ringPercents.favorites}%`, ["--reach" as any]: `${ringPercents.reach}%` } as React.CSSProperties}><div className={`${styles.ring} ${styles.ringListening}`} /><div className={`${styles.ring} ${styles.ringFavorites}`} /><div className={`${styles.ring} ${styles.ringReach}`} /><div className={styles.ringsCenter} /></div></div><div className={styles.ringLegend}><div className={styles.legendRow}><span className={`${styles.legendDot} ${styles.listeningDot}`} /><div><strong>{mode === "user" ? "Your Listening" : "Global Plays"}</strong><span>{compactNumber(mode === "user" ? totals.totalUserPlays : totals.totalGlobalPlays)} total plays</span></div></div><div className={styles.legendRow}><span className={`${styles.legendDot} ${styles.favoritesDot}`} /><div><strong>{mode === "user" ? "Your Favorites" : "Share Reach"}</strong><span>{mode === "user" ? `${compactNumber(totals.totalFavoriteSongs)} songs saved` : `${compactNumber(shareStats.acceptedTransfers)} accepted transfers`}</span></div></div><div className={styles.legendRow}><span className={`${styles.legendDot} ${styles.reachDot}`} /><div><strong>{mode === "user" ? "Your Shares" : "Accounts from Share"}</strong><span>{mode === "user" ? `${compactNumber(shareStats.myShares)} shares started` : `${compactNumber(shareStats.accountsFromShare)} accounts`}</span></div></div></div></section>
-      <section className={styles.twoColGrid}>{mode === "user" ? <><TopCard title="Your Plays" subtitle="Personal activity" value={compactNumber(totals.totalUserPlays)} tone="purple" footer="Listening total" onClick={() => setActiveTab("summary")} /><TopCard title="Your Shares" subtitle="Nearby activity" value={compactNumber(shareStats.myShares)} tone="blue" fallback="⌁" footer="Transfers started" onClick={() => setActiveTab("share")} /><TopCard title="Your Top Song" subtitle="Most played" value={compactNumber(topUserSong?.playCount || 0)} tone="green" coverImageUrl={topUserSong?.coverImageUrl || null} footer={topUserSong?.title || "No listening yet"} onClick={() => topUserSong && setSelectedSong(topUserSong)} /><TopCard title="Latest Favorite" subtitle="Most recently saved" value={compactNumber(totals.totalFavoriteSongs)} tone="green" coverImageUrl={latestFavorite?.coverImageUrl || null} fallback="♥" footer={latestFavorite?.title || "No favorites yet"} onClick={() => latestFavorite && setSelectedSong(latestFavorite)} /></> : <><TopCard title="Global Plays" subtitle="Overall activity" value={compactNumber(totals.totalGlobalPlays)} tone="blue" footer="All song plays" onClick={() => setActiveTab("summary")} /><TopCard title="Global Shares" subtitle="Nearby transfers" value={compactNumber(shareStats.globalShares)} tone="purple" fallback="⌁" footer="All shares started" onClick={() => setActiveTab("share")} /><TopCard title="Most Shared" subtitle="Top shared song" value={compactNumber(shareStats.mostSharedSongs[0]?.count || 0)} tone="green" fallback="↗" footer={shareStats.mostSharedSongs[0]?.label || "No shares yet"} onClick={() => setActiveTab("share")} /><TopCard title="Top Listener" subtitle="Ranked by plays" value={topListeners[0]?.label || "—"} tone="blue" fallback="" footer={`${compactNumber(topListeners[0]?.count || 0)} plays`} onClick={() => setActiveTab("rankings")} /></>}</section>
-      <section className={`${styles.card} ${styles.fullCard}`}><div className={styles.cardHeaderMini}><h3 className={styles.cardTitle}>{mode === "user" ? `${username || "User"} Overview` : "Global Overview"}</h3><span className={styles.chev}>›</span></div><div className={styles.locationGrid}><button className={styles.locationCell} onClick={() => setActiveTab("places")}><span className={styles.locationLabel}>Top City</span><strong>{currentTopCity?.label || "—"}</strong><span>{compactNumber(currentTopCity?.count || 0)} plays</span></button><button className={styles.locationCell} onClick={() => setActiveTab("places")}><span className={styles.locationLabel}>Top State</span><strong>{currentTopRegion?.label || "—"}</strong><span>{compactNumber(currentTopRegion?.count || 0)} plays</span></button><button className={styles.locationCell} onClick={() => setActiveTab("apps")}><span className={styles.locationLabel}>Top App</span><strong>{currentTopApp?.label || "—"}</strong><span>{compactNumber(currentTopApp?.count || 0)} plays</span></button><button className={styles.locationCell} onClick={() => setActiveTab("share")}><span className={styles.locationLabel}>Share</span><strong>{mode === "user" ? shareStats.myShares : shareStats.globalShares}</strong><span>nearby shares</span></button></div></section>
-      <section className={styles.bottomPanel}><div className={styles.bottomContent}>{activeTab === "summary" ? <><div className={styles.bottomKicker}>{mode === "user" ? `${username || "User"} Summary` : "Global Summary"}</div><div className={styles.bottomTitle}>{mode === "user" ? "Your listening, favorites, apps, and shares" : "Songs, listeners, apps, locations, and shares"}</div><div className={styles.summaryStack}><div className={styles.summarySection}><div className={styles.summarySectionTitle}>{mode === "user" ? "Listening" : "Songs"}</div><div className={styles.listStack}>{(mode === "user" ? userSongs : globalSongs).slice(0, 5).map((song) => <button key={song.songSlug} className={styles.listRow} onClick={() => setSelectedSong(song)}><div className={styles.listRowText}><strong>{song.title}</strong><span>{song.appSlug || "Unknown app"}</span></div><div className={styles.listRowValue}>{compactNumber(song.playCount || 0)}</div></button>)}</div></div></div></> : null}{activeTab === "apps" ? <><div className={styles.bottomKicker}>{mode === "user" ? "Your App Stats" : "Global App Stats"}</div><ListRows rows={currentAppRows} suffix="app plays" /></> : null}{activeTab === "places" ? <><div className={styles.bottomKicker}>{mode === "user" ? "Your Places" : "Global Places"}</div><div className={styles.summaryStack}><div className={styles.summarySection}><div className={styles.summarySectionTitle}>Top Cities</div><ListRows rows={currentCityRows} suffix="city plays" /></div><div className={styles.summarySection}><div className={styles.summarySectionTitle}>Top States</div><ListRows rows={currentRegionRows} suffix="state plays" /></div><div className={styles.summarySection}><div className={styles.summarySectionTitle}>Top Countries</div><ListRows rows={currentCountryRows} suffix="country plays" /></div></div></> : null}{activeTab === "rankings" ? <><div className={styles.bottomKicker}>{mode === "user" ? "Your Rankings" : "Global Rankings"}</div><div className={styles.rankingsGrid}>{[{ label: "Top Song", value: currentTopSong?.title || "—", meta: `${compactNumber(currentTopSong?.playCount || 0)} plays` }, { label: "Top App", value: currentTopApp?.label || "—", meta: `${compactNumber(currentTopApp?.count || 0)} plays` }, { label: "Top Country", value: currentTopCountry?.label || "—", meta: `${compactNumber(currentTopCountry?.count || 0)} plays` }].map((row) => <div key={row.label} className={styles.rankingCell}><div className={styles.rankingLabel}>{row.label}</div><div className={styles.rankingValue}>{row.value}</div><div className={styles.rankingMeta}>{row.meta}</div></div>)}</div></> : null}{activeTab === "share" ? <><div className={styles.bottomKicker}>Share Stats</div><div className={styles.bottomTitle}>The sharing engine that makes Caliphornia OS different.</div><div className={styles.rankingsGrid}><div className={styles.rankingCell}><div className={styles.rankingLabel}>Your Shares</div><div className={styles.rankingValue}>{compactNumber(shareStats.myShares)}</div><div className={styles.rankingMeta}>Started by you</div></div><div className={styles.rankingCell}><div className={styles.rankingLabel}>Global Shares</div><div className={styles.rankingValue}>{compactNumber(shareStats.globalShares)}</div><div className={styles.rankingMeta}>All nearby starts</div></div><div className={styles.rankingCell}><div className={styles.rankingLabel}>Accepted Transfers</div><div className={styles.rankingValue}>{compactNumber(shareStats.acceptedTransfers)}</div><div className={styles.rankingMeta}>Receiver accepted</div></div><div className={styles.rankingCell}><div className={styles.rankingLabel}>Accounts from Share</div><div className={styles.rankingValue}>{compactNumber(shareStats.accountsFromShare)}</div><div className={styles.rankingMeta}>Guest claims</div></div></div><div className={styles.summaryStack}><div className={styles.summarySection}><div className={styles.summarySectionTitle}>Top Sharers</div><ListRows rows={shareStats.topSharers} suffix="shares" /></div><div className={styles.summarySection}><div className={styles.summarySectionTitle}>Most Shared Songs</div><ListRows rows={shareStats.mostSharedSongs} suffix="shares" /></div><div className={styles.summarySection}><div className={styles.summarySectionTitle}>Most Shared Projects</div><ListRows rows={shareStats.mostSharedProjects} suffix="project shares" /></div></div></> : null}</div><div className={styles.bottomTabs}><button className={`${styles.bottomTab} ${activeTab === "summary" ? styles.bottomTabActive : ""}`} onClick={() => setActiveTab("summary")}>Summary</button><button className={`${styles.bottomTab} ${activeTab === "apps" ? styles.bottomTabActive : ""}`} onClick={() => setActiveTab("apps")}>Apps</button><button className={`${styles.bottomTab} ${activeTab === "places" ? styles.bottomTabActive : ""}`} onClick={() => setActiveTab("places")}>Places</button><button className={`${styles.bottomTab} ${activeTab === "rankings" ? styles.bottomTabActive : ""}`} onClick={() => setActiveTab("rankings")}>Rankings</button><button className={`${styles.bottomTab} ${activeTab === "share" ? styles.bottomTabActive : ""}`} onClick={() => setActiveTab("share")}>Share</button></div></section>
-      {selectedSong ? <div className={styles.modalOverlay} onClick={() => setSelectedSong(null)}><div className={styles.modalCard} onClick={(e) => e.stopPropagation()}><button className={styles.modalClose} onClick={() => setSelectedSong(null)}>×</button><div className={styles.modalBody}><div className={styles.modalMedia}>{selectedSong.coverImageUrl ? <img src={selectedSong.coverImageUrl} alt={selectedSong.title} className={styles.modalImg} /> : <div className={styles.modalFallback}>♪</div>}</div><div className={styles.modalCopy}><h3>{selectedSong.title}</h3><p>{selectedSong.artistName || "Unknown artist"}</p><div className={styles.modalStats}><div><span>App</span><strong>{selectedSong.appSlug || "—"}</strong></div><div><span>Duration</span><strong>{selectedSong.durationLabel || "—"}</strong></div><div><span>Your Plays</span><strong>{compactNumber(selectedSong.userPlayCount || selectedSong.playCount || 0)}</strong></div><div><span>Global Reach</span><strong>{compactNumber(selectedSong.uniqueListenerCount || selectedSong.globalPlayCount || 0)}</strong></div></div></div></div></div></div> : null}
+      <section className={styles.shell}>
+        <header className={styles.topbar}>
+          <Link href="/home">‹ Home</Link>
+          <span>@{props.username || "user"}</span>
+        </header>
+
+        <section className={styles.hero}>
+          <p>Caliphornia OS</p>
+          <h1>Stats</h1>
+          <span>
+            Listening, apps, places, sharing, and rankings.
+          </span>
+        </section>
+
+        <section className={styles.modeSwitch}>
+          <button
+            className={
+              mode === "user" ? styles.active : ""
+            }
+            onClick={() => {
+              setMode("user");
+              setActiveTab("summary");
+            }}
+          >
+            {props.username || "You"}
+          </button>
+          <button
+            className={
+              mode === "global" ? styles.active : ""
+            }
+            onClick={() => {
+              setMode("global");
+              setActiveTab("summary");
+            }}
+          >
+            Global
+          </button>
+        </section>
+
+        <nav
+          className={styles.sectionNav}
+          aria-label="Stats sections"
+        >
+          {tabs.map((tab) => (
+            <button
+              key={tab.key}
+              className={
+                activeTab === tab.key ? styles.active : ""
+              }
+              onClick={() => setActiveTab(tab.key)}
+            >
+              {tab.label}
+            </button>
+          ))}
+        </nav>
+
+        <section className={styles.metrics}>
+          <article>
+            <span>Plays</span>
+            <strong>{compact(totals.plays)}</strong>
+          </article>
+          <article>
+            <span>Favorites</span>
+            <strong>{compact(totals.favorites)}</strong>
+          </article>
+          <article>
+            <span>Shares</span>
+            <strong>{compact(totals.shares)}</strong>
+          </article>
+        </section>
+
+        <section className={styles.content}>
+          {activeTab === "summary" ? (
+            <>
+              <div className={styles.heading}>
+                <p>
+                  {mode === "user"
+                    ? "Your listening"
+                    : "Global listening"}
+                </p>
+                <h2>Top songs</h2>
+              </div>
+              <RankedList
+                rows={songs.map((song) => ({
+                  label: `${song.title} — ${song.artistName}`,
+                  count: Number(song.playCount || 0),
+                }))}
+              />
+            </>
+          ) : null}
+
+          {activeTab === "apps" ? (
+            <>
+              <div className={styles.heading}>
+                <p>App activity</p>
+                <h2>Most used apps</h2>
+              </div>
+              <RankedList rows={apps} />
+            </>
+          ) : null}
+
+          {activeTab === "places" ? (
+            <>
+              <div className={styles.heading}>
+                <p>Listening geography</p>
+                <h2>Places</h2>
+              </div>
+              <div className={styles.threeColumns}>
+                <section>
+                  <h3>Cities</h3>
+                  <RankedList rows={cities} />
+                </section>
+                <section>
+                  <h3>States</h3>
+                  <RankedList rows={regions} />
+                </section>
+                <section>
+                  <h3>Countries</h3>
+                  <RankedList rows={countries} />
+                </section>
+              </div>
+            </>
+          ) : null}
+
+          {activeTab === "share" ? (
+            <>
+              <div className={styles.heading}>
+                <p>Sharing engine</p>
+                <h2>Share Stats</h2>
+              </div>
+
+              <div className={styles.shareMetrics}>
+                <article>
+                  <span>Your Shares</span>
+                  <strong>
+                    {compact(props.shareStats.myShares)}
+                  </strong>
+                </article>
+                <article>
+                  <span>Global Shares</span>
+                  <strong>
+                    {compact(props.shareStats.globalShares)}
+                  </strong>
+                </article>
+                <article>
+                  <span>Accepted</span>
+                  <strong>
+                    {compact(
+                      props.shareStats.acceptedTransfers,
+                    )}
+                  </strong>
+                </article>
+                <article>
+                  <span>New Accounts</span>
+                  <strong>
+                    {compact(
+                      props.shareStats.accountsFromShare,
+                    )}
+                  </strong>
+                </article>
+              </div>
+
+              <div className={styles.threeColumns}>
+                <section>
+                  <h3>Top Sharers</h3>
+                  <RankedList
+                    rows={props.shareStats.topSharers}
+                  />
+                </section>
+                <section>
+                  <h3>Most Shared Songs</h3>
+                  <RankedList
+                    rows={
+                      props.shareStats.mostSharedSongs
+                    }
+                  />
+                </section>
+                <section>
+                  <h3>Most Shared Projects</h3>
+                  <RankedList
+                    rows={
+                      props.shareStats.mostSharedProjects
+                    }
+                  />
+                </section>
+              </div>
+            </>
+          ) : null}
+
+          {activeTab === "rankings" ? (
+            <>
+              <div className={styles.heading}>
+                <p>Community standings</p>
+                <h2>Rankings</h2>
+              </div>
+
+              <div className={styles.threeColumns}>
+                <section>
+                  <h3>Top Listeners</h3>
+                  <RankedList rows={props.topListeners} />
+                </section>
+                <section>
+                  <h3>Top Songs</h3>
+                  <RankedList
+                    rows={props.globalSongs.map((song) => ({
+                      label: song.title,
+                      count: Number(song.playCount || 0),
+                    }))}
+                  />
+                </section>
+                <section>
+                  <h3>Top Apps</h3>
+                  <RankedList rows={props.globalAppRows} />
+                </section>
+              </div>
+            </>
+          ) : null}
+        </section>
+      </section>
     </main>
   );
 }

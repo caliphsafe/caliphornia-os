@@ -22,16 +22,9 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    if (!guestToken) {
-      return NextResponse.json(
-        { ok: false, error: "Guest session expired." },
-        { status: 401 },
-      );
-    }
-
     const guestResult = await supabaseAdmin
       .from("guest_sessions")
-      .select("id, status, claimed_by_user_id")
+      .select("id,status,claimed_by_user_id")
       .eq("guest_token_hash", sha256(guestToken))
       .maybeSingle();
 
@@ -63,7 +56,7 @@ export async function POST(req: NextRequest) {
     const songIds = Array.from(
       new Set(
         entitlements
-          .map((entitlement) => entitlement.song_id)
+          .map((item) => item.song_id)
           .filter(Boolean),
       ),
     );
@@ -71,7 +64,7 @@ export async function POST(req: NextRequest) {
     const songResult = songIds.length
       ? await supabaseAdmin
           .from("songs")
-          .select("id, slug")
+          .select("id,slug")
           .in("id", songIds)
       : { data: [], error: null };
 
@@ -79,22 +72,74 @@ export async function POST(req: NextRequest) {
       throw new Error(songResult.error.message);
     }
 
-    const songSlugById = new Map(
+    const slugById = new Map(
       (songResult.data || []).map((song) => [
         song.id,
         song.slug,
       ]),
     );
 
-    /*
-     * Do not use PostgREST upsert/onConflict here. Existing databases do not
-     * consistently have a UNIQUE(user_id, song_id) constraint, so an upsert
-     * can fail even though these columns exist.
-     */
     for (const entitlement of entitlements) {
       if (!entitlement.song_id) continue;
 
-      const existingFavoriteResult = await supabaseAdmin
+      /*
+       * A claimed Share is a real entitlement for this song only. It does not
+       * grant project access, a pass, or full playback for any other song.
+       */
+      const existingAccess = await supabaseAdmin
+        .from("user_song_access")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("song_id", entitlement.song_id)
+        .limit(1)
+        .maybeSingle();
+
+      if (existingAccess.error) {
+        throw new Error(existingAccess.error.message);
+      }
+
+      const accessValues = {
+        user_id: user.id,
+        user_email: user.email,
+        song_id: entitlement.song_id,
+        source_type: "nearby_share",
+        source_share_session_id:
+          entitlement.share_session_id || null,
+        status: "active",
+        starts_at: new Date().toISOString(),
+        expires_at: null,
+        play_limit: null,
+        plays_used: 0,
+        can_share: false,
+        can_download: false,
+        idempotency_key: idempotencyKey([
+          "shared_song_access",
+          guest.id,
+          user.id,
+          entitlement.song_id,
+        ]),
+      };
+
+      if (existingAccess.data?.id) {
+        const update = await supabaseAdmin
+          .from("user_song_access")
+          .update(accessValues)
+          .eq("id", existingAccess.data.id);
+
+        if (update.error) {
+          throw new Error(update.error.message);
+        }
+      } else {
+        const insert = await supabaseAdmin
+          .from("user_song_access")
+          .insert(accessValues);
+
+        if (insert.error) {
+          throw new Error(insert.error.message);
+        }
+      }
+
+      const existingFavorite = await supabaseAdmin
         .from("user_favorite_songs")
         .select("id")
         .eq("user_id", user.id)
@@ -102,8 +147,8 @@ export async function POST(req: NextRequest) {
         .limit(1)
         .maybeSingle();
 
-      if (existingFavoriteResult.error) {
-        throw new Error(existingFavoriteResult.error.message);
+      if (existingFavorite.error) {
+        throw new Error(existingFavorite.error.message);
       }
 
       const favoriteValues = {
@@ -111,29 +156,30 @@ export async function POST(req: NextRequest) {
         user_email: user.email,
         song_id: entitlement.song_id,
         song_slug:
-          songSlugById.get(entitlement.song_id) || null,
+          slugById.get(entitlement.song_id) || null,
         source_type: "share_claim",
-        source_access_table: "guest_one_play_entitlements",
+        source_access_table:
+          "guest_one_play_entitlements",
         source_access_id: entitlement.id,
         status: "active",
       };
 
-      if (existingFavoriteResult.data?.id) {
-        const updateFavoriteResult = await supabaseAdmin
+      if (existingFavorite.data?.id) {
+        const update = await supabaseAdmin
           .from("user_favorite_songs")
           .update(favoriteValues)
-          .eq("id", existingFavoriteResult.data.id);
+          .eq("id", existingFavorite.data.id);
 
-        if (updateFavoriteResult.error) {
-          throw new Error(updateFavoriteResult.error.message);
+        if (update.error) {
+          throw new Error(update.error.message);
         }
       } else {
-        const insertFavoriteResult = await supabaseAdmin
+        const insert = await supabaseAdmin
           .from("user_favorite_songs")
           .insert(favoriteValues);
 
-        if (insertFavoriteResult.error) {
-          throw new Error(insertFavoriteResult.error.message);
+        if (insert.error) {
+          throw new Error(insert.error.message);
         }
       }
 
@@ -158,7 +204,7 @@ export async function POST(req: NextRequest) {
     const shareResult = shareSessionId
       ? await supabaseAdmin
           .from("nearby_share_sessions")
-          .select("id, sender_user_id, project_id, song_id")
+          .select("id,project_id,song_id")
           .eq("id", shareSessionId)
           .maybeSingle()
       : { data: null, error: null };
@@ -186,19 +232,15 @@ export async function POST(req: NextRequest) {
       user.id,
     ]);
 
-    /*
-     * Same rule for guest_account_claims: explicit read/update/insert avoids
-     * depending on a UNIQUE(idempotency_key) constraint that may not exist.
-     */
-    const existingClaimResult = await supabaseAdmin
+    const existingClaim = await supabaseAdmin
       .from("guest_account_claims")
       .select("id")
       .eq("idempotency_key", claimKey)
       .limit(1)
       .maybeSingle();
 
-    if (existingClaimResult.error) {
-      throw new Error(existingClaimResult.error.message);
+    if (existingClaim.error) {
+      throw new Error(existingClaim.error.message);
     }
 
     const claimValues = {
@@ -212,22 +254,22 @@ export async function POST(req: NextRequest) {
       idempotency_key: claimKey,
     };
 
-    if (existingClaimResult.data?.id) {
-      const updateClaimResult = await supabaseAdmin
+    if (existingClaim.data?.id) {
+      const update = await supabaseAdmin
         .from("guest_account_claims")
         .update(claimValues)
-        .eq("id", existingClaimResult.data.id);
+        .eq("id", existingClaim.data.id);
 
-      if (updateClaimResult.error) {
-        throw new Error(updateClaimResult.error.message);
+      if (update.error) {
+        throw new Error(update.error.message);
       }
     } else {
-      const insertClaimResult = await supabaseAdmin
+      const insert = await supabaseAdmin
         .from("guest_account_claims")
         .insert(claimValues);
 
-      if (insertClaimResult.error) {
-        throw new Error(insertClaimResult.error.message);
+      if (insert.error) {
+        throw new Error(insert.error.message);
       }
     }
 
@@ -239,7 +281,9 @@ export async function POST(req: NextRequest) {
       .limit(1)
       .maybeSingle();
 
-    const amount = Number(ruleResult.data?.credit_amount || 0);
+    const amount = Number(
+      ruleResult.data?.credit_amount || 0,
+    );
 
     if (amount > 0 && ruleResult.data?.id) {
       await createKiikuTransaction({
