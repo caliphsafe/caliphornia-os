@@ -775,7 +775,7 @@ export default function GlobalPlayer({ email }: Props) {
                 : "Open full player"
             }
           >
-            ×
+            "×"
           </button>
           <div className={styles.track}>
             <div className={styles.cover}>
