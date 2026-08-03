@@ -10,11 +10,8 @@ type UnknownRow = Record<string, any>;
 
 function text(...values: unknown[]) {
   for (const value of values) {
-    if (typeof value === "string" && value.trim()) {
-      return value.trim();
-    }
+    if (typeof value === "string" && value.trim()) return value.trim();
   }
-
   return "";
 }
 
@@ -23,11 +20,7 @@ function statusIsVisible(value: unknown) {
   return !["archived", "deleted", "removed"].includes(status);
 }
 
-/*
- * Cover art is returned through a stable same-origin binary endpoint.
- * The browser never stores a temporary Supabase signed URL.
- */
-function coverUrl(row: UnknownRow) {
+async function signedCover(row: UnknownRow) {
   const directUrl = text(
     row.cover_url,
     row.coverUrl,
@@ -35,10 +28,7 @@ function coverUrl(row: UnknownRow) {
     row.image_url,
   );
 
-  if (
-    directUrl.startsWith("http://") ||
-    directUrl.startsWith("https://")
-  ) {
+  if (directUrl.startsWith("http://") || directUrl.startsWith("https://")) {
     return directUrl;
   }
 
@@ -51,20 +41,23 @@ function coverUrl(row: UnknownRow) {
 
   if (!rawPath) return null;
 
-  const songId = text(row.id);
-  const songSlug = text(row.slug, row.song_slug);
-  const params = new URLSearchParams({ v: "3" });
+  try {
+    const clean = rawPath.replace(/^\/+/, "");
+    const objectPath = clean.startsWith("cover-art/")
+      ? clean.slice("cover-art/".length)
+      : clean;
 
-  if (songId) params.set("songId", songId);
-  if (songSlug) params.set("songSlug", songSlug);
+    const { data, error } = await supabaseAdmin.storage
+      .from("cover-art")
+      .createSignedUrl(objectPath, 60 * 60);
 
-  return `/api/media/cover?${params.toString()}`;
+    return error ? null : data?.signedUrl || null;
+  } catch {
+    return null;
+  }
 }
 
-function projectTitle(
-  project: UnknownRow | null,
-  song: UnknownRow,
-) {
+function projectTitle(project: UnknownRow | null, song: UnknownRow) {
   return (
     text(
       project?.name,
@@ -80,6 +73,10 @@ export async function GET() {
   try {
     const user = await requireCurrentAppUser();
 
+    /*
+     * The working Music implementation depended on the songs table itself.
+     * Read full rows so optional/newer columns cannot make the whole query fail.
+     */
     const songsResult = await supabaseAdmin
       .from("songs")
       .select("*");
@@ -95,33 +92,31 @@ export async function GET() {
         statusIsVisible(song.status),
     );
 
-    const [favoritesResult, projectsResult] =
-      await Promise.all([
-        supabaseAdmin
-          .from("user_favorite_songs")
-          .select("*")
-          .or(
-            `user_id.eq.${user.id},user_email.eq.${user.email}`,
-          )
-          .then(
-            (result) => result,
-            () => ({ data: [], error: null }),
-          ),
-        supabaseAdmin
-          .from("projects")
-          .select("*")
-          .then(
-            (result) => result,
-            () => ({ data: [], error: null }),
-          ),
-      ]);
+    /*
+     * Favorites and projects improve presentation, but must never prevent songs
+     * from appearing. Each enhancement is loaded independently and safely.
+     */
+    const [favoritesResult, projectsResult] = await Promise.all([
+      supabaseAdmin
+        .from("user_favorite_songs")
+        .select("*")
+        .or(`user_id.eq.${user.id},user_email.eq.${user.email}`)
+        .then(
+          (result) => result,
+          () => ({ data: [], error: null }),
+        ),
+      supabaseAdmin
+        .from("projects")
+        .select("*")
+        .then(
+          (result) => result,
+          () => ({ data: [], error: null }),
+        ),
+    ]);
 
-    const favoriteRows = (
-      favoritesResult.data || []
-    ).filter((row: UnknownRow) =>
-      statusIsVisible(row.status),
+    const favoriteRows = (favoritesResult.data || []).filter(
+      (row: UnknownRow) => statusIsVisible(row.status),
     );
-
     const projects = (projectsResult.data || []).filter(
       (row: UnknownRow) => statusIsVisible(row.status),
     );
@@ -129,19 +124,12 @@ export async function GET() {
     const favoriteById = new Map(
       favoriteRows
         .filter((row: UnknownRow) => text(row.song_id))
-        .map((row: UnknownRow) => [
-          text(row.song_id),
-          row,
-        ]),
+        .map((row: UnknownRow) => [text(row.song_id), row]),
     );
-
     const favoriteBySlug = new Map(
       favoriteRows
         .filter((row: UnknownRow) => text(row.song_slug))
-        .map((row: UnknownRow) => [
-          text(row.song_slug),
-          row,
-        ]),
+        .map((row: UnknownRow) => [text(row.song_slug), row]),
     );
 
     const projectById = new Map(
@@ -149,14 +137,10 @@ export async function GET() {
         .filter((row: UnknownRow) => text(row.id))
         .map((row: UnknownRow) => [text(row.id), row]),
     );
-
     const projectBySlug = new Map(
       projects
         .filter((row: UnknownRow) => text(row.slug))
-        .map((row: UnknownRow) => [
-          text(row.slug),
-          row,
-        ]),
+        .map((row: UnknownRow) => [text(row.slug), row]),
     );
 
     const songs = await Promise.all(
@@ -165,11 +149,8 @@ export async function GET() {
         const slug = text(song.slug, song.song_slug);
         const project =
           projectById.get(text(song.project_id)) ||
-          projectBySlug.get(
-            text(song.source_app_slug, song.project_slug),
-          ) ||
+          projectBySlug.get(text(song.source_app_slug, song.project_slug)) ||
           null;
-
         const favorite =
           favoriteById.get(id) ||
           favoriteBySlug.get(slug) ||
@@ -193,8 +174,7 @@ export async function GET() {
         return {
           id,
           slug,
-          title:
-            text(song.title, song.name, slug) || "Song",
+          title: text(song.title, song.name, slug) || "Song",
           artist:
             text(
               song.artist_name,
@@ -203,10 +183,9 @@ export async function GET() {
             ) || "Caliph",
           projectName: projectTitle(project, song),
           projectSlug:
-            text(project?.slug, song.project_slug, appSlug) ||
-            "music",
+            text(project?.slug, song.project_slug, appSlug) || "music",
           appSlug,
-          coverUrl: coverUrl(song),
+          coverUrl: await signedCover(song),
           durationLabel: text(
             song.duration_label,
             song.duration,
@@ -217,17 +196,13 @@ export async function GET() {
             (access?.playbackMode === "preview"
               ? "Preview"
               : "Available"),
-          canPlay: access
-            ? access.playbackMode !== "blocked"
-            : true,
+          canPlay: access ? access.playbackMode !== "blocked" : true,
           isPreview: access
             ? access.playbackMode === "preview"
             : false,
           isFavorite: Boolean(favorite),
           favoriteId: text(favorite?.id) || null,
-          favoriteOrder: Number.isFinite(
-            Number(favorite?.favorite_order),
-          )
+          favoriteOrder: Number.isFinite(Number(favorite?.favorite_order))
             ? Number(favorite.favorite_order)
             : null,
           shareable:
@@ -239,9 +214,7 @@ export async function GET() {
                 favorite ||
                 song.is_free_full_play,
             ),
-          sharesRemaining: Number(
-            access?.sharesRemaining || 0,
-          ),
+          sharesRemaining: Number(access?.sharesRemaining || 0),
           sortOrder: Number.isFinite(Number(song.position))
             ? Number(song.position)
             : Number.isFinite(Number(song.track_number))
@@ -253,14 +226,10 @@ export async function GET() {
     );
 
     songs.sort((a, b) => {
-      if (a.sortOrder !== b.sortOrder) {
-        return a.sortOrder - b.sortOrder;
-      }
-
+      if (a.sortOrder !== b.sortOrder) return a.sortOrder - b.sortOrder;
       if (a.createdAt && b.createdAt) {
         return a.createdAt.localeCompare(b.createdAt);
       }
-
       return a.title.localeCompare(b.title);
     });
 
@@ -269,7 +238,6 @@ export async function GET() {
       .sort((a, b) => {
         const aOrder = a.favoriteOrder ?? 999999;
         const bOrder = b.favoriteOrder ?? 999999;
-
         if (aOrder !== bOrder) return aOrder - bOrder;
         return a.title.localeCompare(b.title);
       });
@@ -280,33 +248,24 @@ export async function GET() {
     >();
 
     for (const song of songs) {
-      const key =
-        song.projectSlug || song.appSlug || "music";
+      const key = song.projectSlug || song.appSlug || "music";
       const current = projectCounts.get(key) || {
         slug: key,
         name: song.projectName || key,
         count: 0,
       };
-
       current.count += 1;
       projectCounts.set(key, current);
     }
 
-    return NextResponse.json(
-      {
-        ok: true,
-        songs,
-        favorites,
-        projects: Array.from(
-          projectCounts.values(),
-        ).sort((a, b) => a.name.localeCompare(b.name)),
-      },
-      {
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      },
-    );
+    return NextResponse.json({
+      ok: true,
+      songs,
+      favorites,
+      projects: Array.from(projectCounts.values()).sort((a, b) =>
+        a.name.localeCompare(b.name),
+      ),
+    });
   } catch (error: unknown) {
     return NextResponse.json(
       {
@@ -319,12 +278,7 @@ export async function GET() {
         favorites: [],
         projects: [],
       },
-      {
-        status: 500,
-        headers: {
-          "Cache-Control": "no-store",
-        },
-      },
+      { status: 500 },
     );
   }
 }
