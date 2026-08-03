@@ -102,7 +102,7 @@ export default function MusicLibraryClient({
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<
     "listen" | "library" | "favorites" | "projects" | "shareable"
-  >("listen");
+  >("favorites");
   const [query, setQuery] = useState("");
   const [selectedProject, setSelectedProject] =
     useState("all");
@@ -172,7 +172,11 @@ export default function MusicLibraryClient({
     selectedProject,
   ]);
 
-  const featured = filteredSongs[0] || data.songs[0] || null;
+  const featured =
+    filteredSongs[0] ||
+    data.favorites[0] ||
+    data.songs[0] ||
+    null;
 
   function playSong(
     song: MusicSong,
@@ -278,7 +282,9 @@ export default function MusicLibraryClient({
         <section className="apple-music-hero">
           <div>
             <p>Caliphornia Music</p>
-            <h1>Listen Now</h1>
+            <h1>
+            {view === "favorites" ? "Favorites" : "Listen Now"}
+          </h1>
             <span>
               {data.songs.length} songs ·{" "}
               {data.favorites.length} favorites ·{" "}

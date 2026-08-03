@@ -1,29 +1,63 @@
 .shell {
   position: fixed;
+  z-index: 2000;
+  color: #fff;
+  transition:
+    width .24s ease,
+    right .24s ease,
+    left .24s ease,
+    bottom .24s ease,
+    transform .24s ease;
+}
+
+.expanded {
   left: 50%;
   bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  z-index: 2000;
   width: min(760px, calc(100vw - 20px));
   transform: translateX(-50%);
-  color: #fff;
+}
+
+.collapsed {
+  right: 12px;
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: min(330px, calc(100vw - 24px));
+  transform: none;
 }
 
 .player {
+  position: relative;
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(160px, .7fr) auto;
   gap: 14px;
   align-items: center;
   min-height: 86px;
-  padding: 11px 12px;
+  padding: 11px 42px 11px 12px;
   border: 1px solid rgba(255,255,255,.13);
   border-radius: 28px;
   background:
     linear-gradient(180deg, rgba(34,34,39,.94), rgba(10,10,13,.96));
   box-shadow:
-    0 28px 90px rgba(0,0,0,.58),
+    0 22px 62px rgba(0,0,0,.46),
     inset 0 1px 0 rgba(255,255,255,.10);
   backdrop-filter: blur(28px) saturate(150%);
   -webkit-backdrop-filter: blur(28px) saturate(150%);
+}
+
+.collapseButton {
+  position: absolute;
+  top: 8px;
+  right: 9px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  color: rgba(255,255,255,.76);
+  background: rgba(255,255,255,.09);
+  cursor: pointer;
 }
 
 .track {
@@ -63,7 +97,6 @@
 }
 
 .copy strong {
-  overflow: visible;
   font-size: 15px;
   line-height: 1.18;
   white-space: normal;
@@ -129,10 +162,6 @@
   cursor: pointer;
 }
 
-.controls button:hover {
-  background: rgba(255,255,255,.18);
-}
-
 .controls button svg {
   width: 20px;
   height: 20px;
@@ -155,39 +184,101 @@
   color: #f8d477;
 }
 
+/* Discreet persistent mini player */
+.collapsed .player {
+  min-height: 62px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
+  padding: 7px 34px 7px 8px;
+  border-radius: 21px;
+}
+
+.collapsed .track {
+  grid-template-columns: 46px minmax(0, 1fr);
+  gap: 9px;
+}
+
+.collapsed .cover {
+  width: 46px;
+  height: 46px;
+  border-radius: 13px;
+}
+
+.collapsed .copy strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 13px;
+}
+
+.collapsed .copy span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 10px;
+}
+
+.collapsed .copy small,
+.collapsed .timeline {
+  display: none;
+}
+
+.collapsed .controls button:not(.primary) {
+  display: none;
+}
+
+.collapsed .controls {
+  grid-column: 2;
+  gap: 0;
+}
+
+.collapsed .controls .primary {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  flex-basis: 42px;
+}
+
+.collapsed .collapseButton {
+  top: 4px;
+  right: 5px;
+  width: 24px;
+  height: 24px;
+}
+
 @media (max-width: 680px) {
-  .player {
+  .expanded .player {
     grid-template-columns: minmax(0, 1fr) auto;
     gap: 9px;
   }
 
-  .timeline {
+  .expanded .timeline {
     grid-column: 1 / -1;
     grid-row: 2;
   }
 
-  .controls {
+  .expanded .controls {
     grid-column: 2;
     grid-row: 1;
   }
 
-  .controls button {
+  .expanded .controls button {
     width: 34px;
     height: 34px;
     flex-basis: 34px;
   }
 
-  .controls .primary {
+  .expanded .controls .primary {
     width: 42px;
     height: 42px;
     flex-basis: 42px;
   }
 
-  .track {
+  .expanded .track {
     grid-template-columns: 52px minmax(0, 1fr);
   }
 
-  .cover {
+  .expanded .cover {
     width: 52px;
     height: 52px;
     border-radius: 14px;
@@ -195,42 +286,40 @@
 }
 
 @media (max-width: 460px) {
-  .shell {
+  .expanded {
     width: calc(100vw - 12px);
     bottom: calc(6px + env(safe-area-inset-bottom, 0px));
   }
 
-  .player {
-    padding: 9px;
+  .collapsed {
+    right: 6px;
+    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
+    width: min(300px, calc(100vw - 12px));
+  }
+
+  .expanded .player {
+    padding: 9px 38px 9px 9px;
     border-radius: 23px;
   }
 
-  .controls {
+  .expanded .controls {
     gap: 3px;
   }
 
-  .controls button {
+  .expanded .controls button {
     width: 31px;
     height: 31px;
     flex-basis: 31px;
   }
 
-  .controls .primary {
+  .expanded .controls .primary {
     width: 38px;
     height: 38px;
     flex-basis: 38px;
   }
 
-  .controls button svg {
+  .expanded .controls button svg {
     width: 17px;
     height: 17px;
-  }
-
-  .copy strong {
-    font-size: 13px;
-  }
-
-  .copy span {
-    font-size: 11px;
   }
 }

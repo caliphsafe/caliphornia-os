@@ -7,24 +7,34 @@ import GlobalPlayer from "@/components/GlobalPlayer";
 import GlobalQuickActions from "@/components/GlobalQuickActions";
 import OnboardingTips from "@/components/OnboardingTips";
 import GlobalSongShareBridge from "@/components/music/GlobalSongShareBridge";
+import GlobalNavigationBridge from "@/components/GlobalNavigationBridge";
 
 export const metadata: Metadata = {
   title: "Caliphornia OS",
   description: "A modular iPhone-style music and media platform.",
 };
 
-export default async function RootLayout({ children }: Readonly<{ children: React.ReactNode }>) {
+export default async function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   const cookieStore = await cookies();
-  const session = verifySession(cookieStore.get("caliph_os_session")?.value);
+  const session = verifySession(
+    cookieStore.get("caliph_os_session")?.value,
+  );
 
   return (
     <html lang="en">
       <body>
         {children}
+        <GlobalNavigationBridge />
         {session ? <GlobalQuickActions /> : null}
         {session ? <GlobalSongShareBridge /> : null}
         {session ? <OnboardingTips /> : null}
-        {session ? <GlobalPlayer email={session.email} /> : null}
+        {session ? (
+          <GlobalPlayer email={session.email} />
+        ) : null}
       </body>
     </html>
   );

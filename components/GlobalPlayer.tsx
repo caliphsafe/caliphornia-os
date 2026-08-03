@@ -38,6 +38,9 @@ type Props = {
 type PersistedPlayer = {
   queue: GlobalTrack[];
   currentIndex: number;
+  currentTime: number;
+  isPlaying: boolean;
+  expanded: boolean;
 };
 
 const STORAGE_KEY = "caliphornia-global-player-v2";
@@ -152,11 +155,16 @@ export default function GlobalPlayer({ email }: Props) {
   const playbackSessionRef = useRef<string | null>(null);
   const queueRef = useRef<GlobalTrack[]>([]);
   const indexRef = useRef(-1);
+  const restoredTimeRef = useRef(0);
+  const restoredPlayingRef = useRef(false);
+  const restoringRef = useRef(false);
+  const collapseTimerRef = useRef<number | null>(null);
 
   const [queue, setQueue] = useState<GlobalTrack[]>([]);
   const [currentIndex, setCurrentIndex] = useState(-1);
   const [reloadKey, setReloadKey] = useState(0);
   const [visible, setVisible] = useState(false);
+  const [expanded, setExpanded] = useState(true);
   const [playing, setPlaying] = useState(false);
   const [saved, setSaved] = useState(false);
   const [coverUrl, setCoverUrl] = useState<string | null>(null);
@@ -175,15 +183,35 @@ export default function GlobalPlayer({ email }: Props) {
     [queue, currentIndex],
   );
 
+  const persistPlayer = useCallback(
+    (overrides: Partial<PersistedPlayer> = {}) => {
+      if (!queueRef.current.length || indexRef.current < 0) {
+        return;
+      }
+
+      const audio = audioRef.current;
+      const state: PersistedPlayer = {
+        queue: queueRef.current,
+        currentIndex: indexRef.current,
+        currentTime: audio?.currentTime || 0,
+        isPlaying: audio ? !audio.paused : playing,
+        expanded,
+        ...overrides,
+      };
+
+      sessionStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify(state),
+      );
+    },
+    [expanded, playing],
+  );
+
   useEffect(() => {
     queueRef.current = queue;
     indexRef.current = currentIndex;
-
-    if (queue.length && currentIndex >= 0) {
-      const state: PersistedPlayer = { queue, currentIndex };
-      sessionStorage.setItem(STORAGE_KEY, JSON.stringify(state));
-    }
-  }, [queue, currentIndex]);
+    persistPlayer({ queue, currentIndex });
+  }, [queue, currentIndex, persistPlayer]);
 
   useEffect(() => {
     try {
@@ -195,10 +223,23 @@ export default function GlobalPlayer({ email }: Props) {
         restored.queue.length &&
         restored.currentIndex >= 0
       ) {
+        restoringRef.current = true;
+        restoredTimeRef.current = Number(
+          restored.currentTime || 0,
+        );
+        restoredPlayingRef.current = Boolean(
+          restored.isPlaying,
+        );
+
         setQueue(restored.queue);
         setCurrentIndex(
-          Math.min(restored.currentIndex, restored.queue.length - 1),
+          Math.min(
+            restored.currentIndex,
+            restored.queue.length - 1,
+          ),
         );
+        setExpanded(Boolean(restored.expanded));
+        setPlaying(Boolean(restored.isPlaying));
         setVisible(true);
       }
     } catch {
@@ -230,13 +271,37 @@ export default function GlobalPlayer({ email }: Props) {
         return;
       }
 
+      restoringRef.current = false;
+      restoredTimeRef.current = 0;
+      restoredPlayingRef.current = true;
+
       setQueue(tracks);
       setCurrentIndex(safeIndex);
       setReloadKey((value) => value + 1);
+      setExpanded(true);
       setVisible(true);
     },
     [],
   );
+
+  useEffect(() => {
+    if (!visible || !currentTrack || !expanded) return;
+
+    if (collapseTimerRef.current) {
+      window.clearTimeout(collapseTimerRef.current);
+    }
+
+    collapseTimerRef.current = window.setTimeout(() => {
+      setExpanded(false);
+      persistPlayer({ expanded: false });
+    }, 5000);
+
+    return () => {
+      if (collapseTimerRef.current) {
+        window.clearTimeout(collapseTimerRef.current);
+      }
+    };
+  }, [visible, currentTrack, expanded, persistPlayer]);
 
   useEffect(() => {
     function onMessage(event: MessageEvent) {
@@ -392,13 +457,19 @@ export default function GlobalPlayer({ email }: Props) {
 
         const startAt = Math.max(
           0,
-          playback.start ??
-            Number(
-              currentTrack.resumeSeconds ??
-                currentTrack.clipStartSeconds ??
-                0,
-            ),
+          restoringRef.current
+            ? restoredTimeRef.current
+            : playback.start ??
+                Number(
+                  currentTrack.resumeSeconds ??
+                    currentTrack.clipStartSeconds ??
+                    0,
+                ),
         );
+
+        const shouldPlay =
+          !restoringRef.current ||
+          restoredPlayingRef.current;
 
         let started = false;
 
@@ -417,12 +488,20 @@ export default function GlobalPlayer({ email }: Props) {
             if (startAt > 0) player.currentTime = startAt;
           } catch {}
 
-          try {
-            await player.play();
-            setPlaybackError("");
-          } catch {
-            setPlaybackError("Tap Play to begin.");
+          if (shouldPlay) {
+            try {
+              await player.play();
+              setPlaybackError("");
+            } catch {
+              setPlaybackError("Tap Play to begin.");
+            }
+          } else {
+            player.pause();
+            setPlaying(false);
           }
+
+          restoringRef.current = false;
+          restoredTimeRef.current = 0;
         };
 
         /*
@@ -510,6 +589,11 @@ export default function GlobalPlayer({ email }: Props) {
           : 0,
       });
 
+      persistPlayer({
+        currentTime: current,
+        isPlaying: !audio.paused,
+      });
+
       const end = currentTrack?.clipEndSeconds;
       if (end != null && current >= Number(end)) {
         audio.pause();
@@ -568,7 +652,24 @@ export default function GlobalPlayer({ email }: Props) {
       audio.removeEventListener("ended", ended);
       audio.removeEventListener("error", mediaError);
     };
-  }, [currentTrack, queue, currentIndex]);
+  }, [
+    currentTrack,
+    queue,
+    currentIndex,
+    persistPlayer,
+  ]);
+
+  useEffect(() => {
+    const save = () => persistPlayer();
+
+    window.addEventListener("pagehide", save);
+    window.addEventListener("beforeunload", save);
+
+    return () => {
+      window.removeEventListener("pagehide", save);
+      window.removeEventListener("beforeunload", save);
+    };
+  }, [persistPlayer]);
 
   useEffect(() => {
     document.body.classList.toggle(
@@ -636,10 +737,44 @@ export default function GlobalPlayer({ email }: Props) {
       <audio ref={audioRef} preload="auto" />
 
       <section
-        className={styles.shell}
+        className={`${styles.shell} ${
+          expanded ? styles.expanded : styles.collapsed
+        }`}
         aria-label="Global music player"
       >
-        <div className={styles.player}>
+        <div
+          className={styles.player}
+          onClick={() => {
+            if (!expanded) {
+              setExpanded(true);
+              persistPlayer({ expanded: true });
+            }
+          }}
+        >
+          <button
+            type="button"
+            className={styles.collapseButton}
+            onClick={(event) => {
+              event.stopPropagation();
+              setExpanded((current) => {
+                const next = !current;
+                persistPlayer({ expanded: next });
+                return next;
+              });
+            }}
+            aria-label={
+              expanded
+                ? "Minimize global player"
+                : "Open global player"
+            }
+            title={
+              expanded
+                ? "Minimize player"
+                : "Open player"
+            }
+          >
+            {expanded ? "⌄" : "⌃"}
+          </button>
           <div className={styles.track}>
             <div className={styles.cover}>
               {coverUrl ? (
