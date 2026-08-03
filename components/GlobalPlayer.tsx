@@ -766,16 +766,16 @@ export default function GlobalPlayer({ email }: Props) {
             }}
             aria-label={
               expanded
-                ? "Minimize global player"
-                : "Open global player"
+                ? "Close full player"
+                : "Open full player"
             }
             title={
               expanded
-                ? "Minimize player"
-                : "Open player"
+                ? "Close full player"
+                : "Open full player"
             }
           >
-            {expanded ? "⌄" : "⌃"}
+            "×"
           </button>
           <div className={styles.track}>
             <div className={styles.cover}>

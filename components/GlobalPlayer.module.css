@@ -2,62 +2,56 @@
   position: fixed;
   z-index: 2000;
   color: #fff;
-  transition:
-    width .24s ease,
-    right .24s ease,
-    left .24s ease,
-    bottom .24s ease,
-    transform .24s ease;
 }
 
 .expanded {
-  left: 50%;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  width: min(760px, calc(100vw - 20px));
-  transform: translateX(-50%);
+  left: 6px;
+  right: 6px;
+  bottom: calc(6px + env(safe-area-inset-bottom, 0px));
 }
 
 .collapsed {
-  right: 12px;
-  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
-  width: 58px;
-  height: 58px;
-  transform: none;
+  right: 8px;
+  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  width: 50px;
+  height: 50px;
 }
 
 .player {
   position: relative;
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(160px, .7fr) auto;
-  gap: 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 8px;
   align-items: center;
-  min-height: 86px;
-  padding: 11px 42px 11px 12px;
+  min-height: 76px;
+  padding: 9px 38px 9px 9px;
   border: 1px solid rgba(255,255,255,.13);
-  border-radius: 28px;
+  border-radius: 23px;
   background:
-    linear-gradient(180deg, rgba(34,34,39,.94), rgba(10,10,13,.96));
+    linear-gradient(180deg, rgba(34,34,39,.96), rgba(10,10,13,.98));
   box-shadow:
-    0 22px 62px rgba(0,0,0,.46),
+    0 18px 52px rgba(0,0,0,.48),
     inset 0 1px 0 rgba(255,255,255,.10);
-  backdrop-filter: blur(28px) saturate(150%);
-  -webkit-backdrop-filter: blur(28px) saturate(150%);
+  backdrop-filter: blur(26px) saturate(150%);
+  -webkit-backdrop-filter: blur(26px) saturate(150%);
 }
 
 .collapseButton {
   position: absolute;
-  top: 8px;
-  right: 9px;
-  z-index: 3;
-  width: 28px;
-  height: 28px;
-  padding: 0;
+  top: 7px;
+  right: 7px;
+  z-index: 4;
+  width: 29px;
+  height: 29px;
+  padding: 0 0 2px;
   border: 0;
   border-radius: 50%;
   display: grid;
   place-items: center;
-  color: rgba(255,255,255,.76);
-  background: rgba(255,255,255,.09);
+  color: #fff;
+  background: rgba(255,255,255,.11);
+  font-size: 22px;
+  line-height: 1;
   cursor: pointer;
 }
 
@@ -68,20 +62,20 @@
 .track {
   min-width: 0;
   display: grid;
-  grid-template-columns: 62px minmax(0, 1fr);
-  gap: 12px;
+  grid-template-columns: 52px minmax(0, 1fr);
+  gap: 10px;
   align-items: center;
 }
 
 .cover {
-  width: 62px;
-  height: 62px;
+  width: 52px;
+  height: 52px;
   overflow: hidden;
-  border-radius: 17px;
+  border-radius: 14px;
   display: grid;
   place-items: center;
-  background: rgba(255,255,255,.10);
-  font-size: 24px;
+  background: rgba(255,255,255,.08);
+  font-size: 22px;
   font-weight: 900;
 }
 
@@ -102,39 +96,39 @@
 }
 
 .copy strong {
-  font-size: 15px;
+  font-size: 13px;
   line-height: 1.18;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
 .copy span {
-  margin-top: 4px;
+  margin-top: 3px;
   color: rgba(255,255,255,.66);
-  font-size: 12px;
-  line-height: 1.25;
+  font-size: 11px;
+  line-height: 1.2;
   white-space: normal;
   overflow-wrap: anywhere;
 }
 
 .copy small {
-  margin-top: 4px;
+  margin-top: 3px;
   color: #9ddcff;
-  font-size: 10px;
+  font-size: 9px;
 }
 
 .timeline {
-  min-width: 0;
+  grid-column: 1 / -1;
   display: grid;
   grid-template-columns: auto minmax(70px, 1fr) auto;
-  gap: 8px;
+  gap: 7px;
   align-items: center;
-  color: rgba(255,255,255,.56);
-  font-size: 10px;
+  color: rgba(255,255,255,.54);
+  font-size: 9px;
 }
 
 .timeline > div {
-  height: 4px;
+  height: 3px;
   overflow: hidden;
   border-radius: 999px;
   background: rgba(255,255,255,.14);
@@ -148,15 +142,17 @@
 }
 
 .controls {
+  grid-column: 2;
+  grid-row: 1;
   display: flex;
   align-items: center;
-  gap: 6px;
+  gap: 3px;
 }
 
 .controls button {
-  width: 38px;
-  height: 38px;
-  flex: 0 0 38px;
+  width: 31px;
+  height: 31px;
+  flex: 0 0 31px;
   padding: 0;
   border: 0;
   border-radius: 50%;
@@ -168,41 +164,39 @@
 }
 
 .controls button svg {
-  width: 20px;
-  height: 20px;
+  width: 17px;
+  height: 17px;
 }
 
 .controls .primary {
-  width: 48px;
-  height: 48px;
-  flex-basis: 48px;
+  width: 38px;
+  height: 38px;
+  flex-basis: 38px;
   color: #08090c;
   background: #fff;
 }
 
 .controls .primary svg {
-  width: 25px;
-  height: 25px;
+  width: 21px;
+  height: 21px;
 }
 
 .controls .saved {
   color: #f8d477;
 }
 
-/* Ultra-minimal persistent player:
-   one cover-art tile with Play/Pause over the artwork. */
+/* Mobile-first mini player: artwork only. Tapping opens the full player. */
 .collapsed .player {
-  width: 58px;
-  height: 58px;
-  min-height: 58px;
+  width: 50px;
+  height: 50px;
+  min-height: 50px;
   padding: 0;
   display: block;
   overflow: hidden;
-  border-radius: 17px;
-  border-color: rgba(255,255,255,.20);
+  border-radius: 15px;
   cursor: pointer;
   box-shadow:
-    0 14px 38px rgba(0,0,0,.46),
+    0 12px 34px rgba(0,0,0,.46),
     inset 0 1px 0 rgba(255,255,255,.12);
 }
 
@@ -218,130 +212,67 @@
   border-radius: inherit;
 }
 
-.collapsed .cover::after {
-  content: "";
-  position: absolute;
-  inset: 0;
-  background: rgba(0,0,0,.24);
-}
-
 .collapsed .copy,
-.collapsed .timeline {
-  display: none;
-}
-
+.collapsed .timeline,
 .collapsed .controls {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  display: grid;
-  place-items: center;
-}
-
-.collapsed .controls button:not(.primary) {
   display: none;
 }
 
-.collapsed .controls .primary {
-  display: grid;
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border: 1px solid rgba(255,255,255,.30);
-  color: #fff;
-  background: rgba(0,0,0,.42);
-  box-shadow: 0 5px 16px rgba(0,0,0,.35);
-  backdrop-filter: blur(10px);
-  -webkit-backdrop-filter: blur(10px);
-}
+@media (min-width: 700px) {
+  .expanded {
+    left: 50%;
+    right: auto;
+    width: min(760px, calc(100vw - 20px));
+    transform: translateX(-50%);
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  }
 
-.collapsed .controls .primary svg {
-  width: 19px;
-  height: 19px;
-}
-
-@media (max-width: 680px) {
   .expanded .player {
-    grid-template-columns: minmax(0, 1fr) auto;
-    gap: 9px;
+    grid-template-columns: minmax(0, 1fr) minmax(150px, .65fr) auto;
+    gap: 12px;
+    min-height: 82px;
+    padding: 10px 42px 10px 10px;
+    border-radius: 26px;
   }
 
   .expanded .timeline {
-    grid-column: 1 / -1;
-    grid-row: 2;
+    grid-column: auto;
   }
 
   .expanded .controls {
-    grid-column: 2;
-    grid-row: 1;
+    grid-column: auto;
+    grid-row: auto;
+    gap: 6px;
   }
 
   .expanded .controls button {
-    width: 34px;
-    height: 34px;
-    flex-basis: 34px;
-  }
-
-  .expanded .controls .primary {
-    width: 42px;
-    height: 42px;
-    flex-basis: 42px;
-  }
-
-  .expanded .track {
-    grid-template-columns: 52px minmax(0, 1fr);
-  }
-
-  .expanded .cover {
-    width: 52px;
-    height: 52px;
-    border-radius: 14px;
-  }
-}
-
-@media (max-width: 460px) {
-  .expanded {
-    width: calc(100vw - 12px);
-    bottom: calc(6px + env(safe-area-inset-bottom, 0px));
-  }
-
-  .collapsed {
-    right: 8px;
-    bottom: calc(8px + env(safe-area-inset-bottom, 0px));
-    width: 54px;
-    height: 54px;
-  }
-
-  .collapsed .player {
-    width: 54px;
-    height: 54px;
-    min-height: 54px;
-    border-radius: 16px;
-  }
-
-  .expanded .player {
-    padding: 9px 38px 9px 9px;
-    border-radius: 23px;
-  }
-
-  .expanded .controls {
-    gap: 3px;
-  }
-
-  .expanded .controls button {
-    width: 31px;
-    height: 31px;
-    flex-basis: 31px;
-  }
-
-  .expanded .controls .primary {
     width: 38px;
     height: 38px;
     flex-basis: 38px;
   }
 
-  .expanded .controls button svg {
-    width: 17px;
-    height: 17px;
+  .expanded .controls .primary {
+    width: 48px;
+    height: 48px;
+    flex-basis: 48px;
+  }
+
+  .expanded .track {
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 12px;
+  }
+
+  .expanded .cover {
+    width: 62px;
+    height: 62px;
+    border-radius: 17px;
+  }
+
+  .expanded .copy strong {
+    font-size: 15px;
+  }
+
+  .expanded .copy span {
+    font-size: 12px;
   }
 }

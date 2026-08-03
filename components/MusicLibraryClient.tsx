@@ -121,7 +121,7 @@ export default function MusicLibraryClient({
   });
   const [loading, setLoading] = useState(true);
   const [view, setView] = useState<
-    "listen" | "library" | "favorites" | "projects" | "shareable"
+    "library" | "favorites" | "projects" | "shareable"
   >("favorites");
   const [query, setQuery] = useState("");
   const [selectedProject, setSelectedProject] =
@@ -303,7 +303,11 @@ export default function MusicLibraryClient({
           <div>
             <p>Caliphornia Music</p>
             <h1>
-            {view === "favorites" ? "Favorites" : "Listen Now"}
+            {view === "favorites"
+              ? "Favorites"
+              : view === "projects"
+                ? "Albums"
+                : "Music"}
           </h1>
             <span>
               {data.songs.length} songs ·{" "}
@@ -326,56 +330,6 @@ export default function MusicLibraryClient({
             </button>
           ) : null}
         </section>
-
-        {featured ? (
-          <section className="apple-music-now-card">
-            <div className="apple-music-art-lg">
-              {featured.coverUrl ? (
-                <img src={featured.coverUrl} alt="" />
-              ) : (
-                <span>♪</span>
-              )}
-            </div>
-
-            <div>
-              <p>Recommended</p>
-              <h2>{featured.title}</h2>
-              <span>
-                {featured.artist} ·{" "}
-                {featured.projectName ||
-                  featured.appSlug ||
-                  "Caliphornia OS"}
-              </span>
-
-              <div className="apple-music-action-row">
-                <button
-                  onClick={() => playSong(featured)}
-                >
-                  ▶ Play
-                </button>
-
-                <button
-                  onClick={() =>
-                    void toggleFavorite(featured)
-                  }
-                >
-                  {featured.isFavorite
-                    ? "★ Favorited"
-                    : "☆ Favorite"}
-                </button>
-
-                <a
-                  href={shareHref(featured)}
-                  aria-label={`Share ${featured.title}`}
-                  title={`Share ${featured.title}`}
-                >
-                  <AppleShareIcon />
-                  <span>Share</span>
-                </a>
-              </div>
-            </div>
-          </section>
-        ) : null}
 
         <section className="apple-music-search-row">
           <input
@@ -408,14 +362,6 @@ export default function MusicLibraryClient({
           className="apple-music-tabs"
           aria-label="Music sections"
         >
-          <button
-            className={
-              view === "listen" ? "active" : ""
-            }
-            onClick={() => setView("listen")}
-          >
-            Listen Now
-          </button>
           <button
             className={
               view === "library" ? "active" : ""
@@ -464,21 +410,45 @@ export default function MusicLibraryClient({
 
         {view === "projects" ? (
           <section className="apple-music-project-grid">
-            {data.projects.map((project) => (
-              <button
-                key={project.slug}
-                onClick={() => {
-                  setSelectedProject(project.slug);
-                  setView("library");
-                }}
-              >
-                <span>Project</span>
-                <strong>{project.name}</strong>
-                <small>
-                  {compact(project.count)} songs
-                </small>
-              </button>
-            ))}
+            {data.projects.map((project) => {
+              const projectSongs = data.songs.filter(
+                (song) =>
+                  song.projectSlug === project.slug ||
+                  song.appSlug === project.slug,
+              );
+              const albumCover =
+                projectSongs.find((song) => song.coverUrl)
+                  ?.coverUrl || null;
+              const albumArtist =
+                projectSongs[0]?.artist || "Caliph";
+
+              return (
+                <button
+                  key={project.slug}
+                  className="apple-music-album"
+                  onClick={() => {
+                    setSelectedProject(project.slug);
+                    setView("library");
+                  }}
+                >
+                  <span className="apple-music-album-art">
+                    {albumCover ? (
+                      <img src={albumCover} alt="" />
+                    ) : (
+                      <b>♪</b>
+                    )}
+                  </span>
+
+                  <span className="apple-music-album-copy">
+                    <strong>{project.name}</strong>
+                    <small>{albumArtist}</small>
+                    <em>
+                      {compact(project.count)} songs
+                    </em>
+                  </span>
+                </button>
+              );
+            })}
           </section>
         ) : (
           <section className="apple-music-list">
