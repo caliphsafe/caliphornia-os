@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import ProximityReceivePrompt from "@/components/share/ProximityReceivePrompt";
 
 function formatTime(date: Date) {
   return date.toLocaleTimeString("en-US", {
@@ -26,24 +27,29 @@ export default function EmailWall() {
   const [isOpen, setIsOpen] = useState(false);
 
   useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), 1000 * 30);
-    return () => clearInterval(timer);
+    const timer = window.setInterval(
+      () => setNow(new Date()),
+      1000 * 30,
+    );
+
+    return () => window.clearInterval(timer);
   }, []);
 
   const greeting = useMemo(() => {
     const hour = now.getHours();
+
     if (hour < 12) return "Good morning";
     if (hour < 18) return "Good afternoon";
     return "Good evening";
   }, [now]);
 
-  async function submit(e: React.FormEvent) {
-    e.preventDefault();
+  async function submit(event: React.FormEvent<HTMLFormElement>) {
+    event.preventDefault();
     setLoading(true);
     setError("");
 
     try {
-      const res = await fetch("/api/access", {
+      const response = await fetch("/api/access", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -51,7 +57,7 @@ export default function EmailWall() {
         body: JSON.stringify({ email, username }),
       });
 
-      const data = await res.json();
+      const data = await response.json();
 
       if (!data.ok) {
         setError(data.error || "Could not enter.");
@@ -67,94 +73,29 @@ export default function EmailWall() {
   }
 
   return (
-    <main
-      className="shell"
-      style={{
-        minHeight: "100dvh",
-        display: "grid",
-        placeItems: "center",
-        overflow: "hidden",
-        position: "relative",
-      }}
-    >
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          inset: 0,
-          background:
-            "radial-gradient(circle at 50% 8%, rgba(157,220,255,.30), transparent 30%), radial-gradient(circle at 20% 85%, rgba(248,212,119,.22), transparent 26%), linear-gradient(180deg, #111827 0%, #05060a 58%, #02030a 100%)",
-          zIndex: -3,
-        }}
-      />
+    <main className="lock-screen-page">
+      <div className="lock-screen-background" aria-hidden="true" />
 
-      <div
-        aria-hidden="true"
-        style={{
-          position: "fixed",
-          inset: 0,
-          background:
-            "linear-gradient(120deg, transparent, rgba(255,255,255,.06), transparent)",
-          opacity: 0.45,
-          zIndex: -2,
-        }}
-      />
+      <section className="lock-screen-phone">
+        <div className="lock-screen-island" aria-hidden="true" />
 
-      <section
-        style={{
-          width: "min(430px, 100%)",
-          minHeight: "min(820px, calc(100dvh - 28px))",
-          borderRadius: 44,
-          border: "1px solid rgba(255,255,255,.18)",
-          background:
-            "linear-gradient(180deg, rgba(255,255,255,.13), rgba(255,255,255,.05))",
-          boxShadow: "0 40px 120px rgba(0,0,0,.48)",
-          backdropFilter: "blur(28px)",
-          padding: 22,
-          display: "grid",
-          alignContent: "space-between",
-          position: "relative",
-          overflow: "hidden",
-        }}
-      >
-        <div
-          style={{
-            position: "absolute",
-            top: 10,
-            left: "50%",
-            transform: "translateX(-50%)",
-            width: 118,
-            height: 28,
-            borderRadius: 999,
-            background: "rgba(0,0,0,.55)",
-            border: "1px solid rgba(255,255,255,.08)",
-          }}
-        />
+        <header className="lock-screen-clock">
+          <div className="lock-screen-time">{formatTime(now)}</div>
+          <div className="lock-screen-date">{formatDate(now)}</div>
+        </header>
 
-        <div style={{ textAlign: "center", paddingTop: 64 }}>
+        {!isOpen ? (
           <div
-            style={{
-              fontSize: "4.8rem",
-              lineHeight: 1,
-              letterSpacing: "-.08em",
-              fontWeight: 700,
-            }}
+            className="lock-screen-notification-area"
+            aria-label="Nearby Share notifications"
           >
-            {formatTime(now)}
+            <ProximityReceivePrompt />
           </div>
+        ) : (
+          <div aria-hidden="true" />
+        )}
 
-          <div
-            style={{
-              marginTop: 8,
-              color: "rgba(248,250,252,.82)",
-              fontWeight: 600,
-            }}
-          >
-            {formatDate(now)}
-          </div>
-        </div>
-
-        <div style={{ display: "grid", gap: 18 }}>
+        <div className="lock-screen-bottom">
           {!isOpen ? (
             <>
               <div className="glass card stack">
@@ -169,7 +110,6 @@ export default function EmailWall() {
                 type="button"
                 className="btn primary"
                 onClick={() => setIsOpen(true)}
-                style={{ width: "100%" }}
               >
                 Swipe to enter
               </button>
@@ -180,8 +120,8 @@ export default function EmailWall() {
                 <span className="eyebrow">Caliphornia OS</span>
                 <h1 className="h2">Enter the world.</h1>
                 <p className="muted" style={{ margin: 0 }}>
-                  Sign in with your email to keep your Music library, Kiiku,
-                  access, shares, and Stats connected.
+                  Sign in with your email to keep your Music library,
+                  Kiiku, access, shares, and Stats connected.
                 </p>
               </div>
 
@@ -191,18 +131,21 @@ export default function EmailWall() {
                 required
                 placeholder="Email"
                 value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                onChange={(event) => setEmail(event.target.value)}
               />
 
               <input
                 className="input"
                 placeholder="Username, optional"
                 value={username}
-                onChange={(e) => setUsername(e.target.value)}
+                onChange={(event) => setUsername(event.target.value)}
               />
 
               {error ? (
-                <p className="small" style={{ color: "var(--danger)", margin: 0 }}>
+                <p
+                  className="small"
+                  style={{ color: "var(--danger)", margin: 0 }}
+                >
                   {error}
                 </p>
               ) : null}
