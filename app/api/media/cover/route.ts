@@ -16,6 +16,20 @@ function cleanObjectPath(
     : clean;
 }
 
+function contentTypeFromPath(path: string) {
+  const lower = path.toLowerCase();
+
+  if (lower.endsWith(".png")) return "image/png";
+  if (lower.endsWith(".jpg") || lower.endsWith(".jpeg")) {
+    return "image/jpeg";
+  }
+  if (lower.endsWith(".webp")) return "image/webp";
+  if (lower.endsWith(".gif")) return "image/gif";
+  if (lower.endsWith(".avif")) return "image/avif";
+
+  return "application/octet-stream";
+}
+
 export async function GET(request: NextRequest) {
   try {
     const songId =
@@ -26,6 +40,7 @@ export async function GET(request: NextRequest) {
     if (!songId && !songSlug) {
       return new NextResponse("Missing song identity.", {
         status: 400,
+        headers: { "Cache-Control": "no-store" },
       });
     }
 
@@ -51,6 +66,7 @@ export async function GET(request: NextRequest) {
     if (!song) {
       return new NextResponse("Cover not found.", {
         status: 404,
+        headers: { "Cache-Control": "no-store" },
       });
     }
 
@@ -60,10 +76,23 @@ export async function GET(request: NextRequest) {
       directUrl.startsWith("https://") ||
       directUrl.startsWith("http://")
     ) {
-      return NextResponse.redirect(directUrl, {
-        status: 307,
+      const response = await fetch(directUrl, {
+        cache: "no-store",
+      });
+
+      if (!response.ok) {
+        throw new Error(
+          `Cover request failed with ${response.status}.`,
+        );
+      }
+
+      return new NextResponse(await response.arrayBuffer(), {
+        status: 200,
         headers: {
-          "Cache-Control": "no-store",
+          "Content-Type":
+            response.headers.get("content-type") ||
+            "application/octet-stream",
+          "Cache-Control": "private, max-age=300",
         },
       });
     }
@@ -75,6 +104,7 @@ export async function GET(request: NextRequest) {
     if (!rawPath) {
       return new NextResponse("Cover not found.", {
         status: 404,
+        headers: { "Cache-Control": "no-store" },
       });
     }
 
@@ -83,20 +113,27 @@ export async function GET(request: NextRequest) {
     ).trim();
     const objectPath = cleanObjectPath(rawPath, bucket);
 
+    /*
+     * Download with the authenticated server client and return the bytes.
+     * This does not expose or depend on a signed URL in the browser.
+     */
     const { data, error } = await supabaseAdmin.storage
       .from(bucket)
-      .createSignedUrl(objectPath, 60 * 60);
+      .download(objectPath);
 
-    if (error || !data?.signedUrl) {
+    if (error || !data) {
       throw new Error(
-        error?.message || "Could not sign cover artwork.",
+        error?.message || "Could not download cover artwork.",
       );
     }
 
-    return NextResponse.redirect(data.signedUrl, {
-      status: 307,
+    return new NextResponse(await data.arrayBuffer(), {
+      status: 200,
       headers: {
-        "Cache-Control": "no-store, max-age=0",
+        "Content-Type":
+          data.type || contentTypeFromPath(objectPath),
+        "Content-Length": String(data.size),
+        "Cache-Control": "private, max-age=300",
       },
     });
   } catch (error: unknown) {

@@ -23,10 +23,9 @@ function statusIsVisible(value: unknown) {
   return !["archived", "deleted", "removed"].includes(status);
 }
 
-/**
- * Return a stable same-origin URL instead of embedding a temporary Supabase
- * signed URL in Music state/sessionStorage. The cover endpoint signs the real
- * Storage object each time it is requested.
+/*
+ * Cover art is returned through a stable same-origin binary endpoint.
+ * The browser never stores a temporary Supabase signed URL.
  */
 function coverUrl(row: UnknownRow) {
   const directUrl = text(
@@ -54,14 +53,12 @@ function coverUrl(row: UnknownRow) {
 
   const songId = text(row.id);
   const songSlug = text(row.slug, row.song_slug);
-  const params = new URLSearchParams();
+  const params = new URLSearchParams({ v: "3" });
 
   if (songId) params.set("songId", songId);
   if (songSlug) params.set("songSlug", songSlug);
 
-  return params.size
-    ? `/api/media/cover?${params.toString()}`
-    : null;
+  return `/api/media/cover?${params.toString()}`;
 }
 
 function projectTitle(
