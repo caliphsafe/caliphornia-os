@@ -17,17 +17,23 @@ type GuestData = {
   error?: string;
   playbackUrl?: string;
   entitlementId?: string;
-  song?: { id: string; slug: string; title: string; artist: string };
+  song?: {
+    id: string;
+    slug: string;
+    title: string;
+    artist: string;
+  };
   playlist?: GuestTrack[];
 };
 
 export default function GuestPlayer({ token }: { token: string }) {
   const [data, setData] = useState<GuestData | null>(null);
-  const [activeTrack, setActiveTrack] = useState<GuestTrack | null>(null);
+  const [activeTrack, setActiveTrack] =
+    useState<GuestTrack | null>(null);
   const [claimEmail, setClaimEmail] = useState("");
-  const [code, setCode] = useState("");
   const [message, setMessage] = useState("");
   const [loadingTrack, setLoadingTrack] = useState(false);
+  const [claiming, setClaiming] = useState(false);
   const audio = useRef<HTMLAudioElement | null>(null);
 
   async function loadTrack(track?: GuestTrack | null) {
@@ -35,21 +41,38 @@ export default function GuestPlayer({ token }: { token: string }) {
     setMessage("");
 
     const params = new URLSearchParams({ guestToken: token });
-    if (track?.entitlementId) params.set("entitlementId", track.entitlementId);
-    if (track?.songId) params.set("songId", track.songId);
 
-    const result = await fetch(`/api/guest/audio-url?${params.toString()}`, {
-      cache: "no-store",
-    })
-      .then((res) => res.json())
-      .catch(() => ({ ok: false, error: "Could not prepare the guest player." }));
+    if (track?.entitlementId) {
+      params.set("entitlementId", track.entitlementId);
+    }
+
+    if (track?.songId) {
+      params.set("songId", track.songId);
+    }
+
+    const result = await fetch(
+      `/api/guest/audio-url?${params.toString()}`,
+      { cache: "no-store" },
+    )
+      .then((response) => response.json())
+      .catch(() => ({
+        ok: false,
+        error: "Could not prepare the guest player.",
+      }));
 
     setData(result);
 
     const selected =
-      result?.playlist?.find((item: GuestTrack) => item.entitlementId === result.entitlementId) ||
-      result?.playlist?.find((item: GuestTrack) => item.songId === result?.song?.id) ||
+      result?.playlist?.find(
+        (item: GuestTrack) =>
+          item.entitlementId === result.entitlementId,
+      ) ||
+      result?.playlist?.find(
+        (item: GuestTrack) =>
+          item.songId === result?.song?.id,
+      ) ||
       null;
+
     setActiveTrack(selected);
     setLoadingTrack(false);
   }
@@ -59,49 +82,77 @@ export default function GuestPlayer({ token }: { token: string }) {
   }, [token]);
 
   async function completeCurrentTrack() {
-    if (!activeTrack?.entitlementId && !data?.entitlementId) return;
+    if (!activeTrack?.entitlementId && !data?.entitlementId) {
+      return;
+    }
 
-    const result = await fetch("/api/guest/playback/complete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        guestToken: token,
-        entitlementId: activeTrack?.entitlementId || data?.entitlementId,
-        songId: activeTrack?.songId || data?.song?.id,
-      }),
-    })
-      .then((res) => res.json())
+    const result = await fetch(
+      "/api/guest/playback/complete",
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          guestToken: token,
+          entitlementId:
+            activeTrack?.entitlementId || data?.entitlementId,
+          songId: activeTrack?.songId || data?.song?.id,
+        }),
+      },
+    )
+      .then((response) => response.json())
       .catch(() => ({ ok: false }));
 
     if (result?.ok) {
       setMessage(
         result.remaining > 0
-          ? `${result.remaining} shared play${result.remaining === 1 ? "" : "s"} left in this project.`
-          : "You completed the shared listen. Claim it to keep it in your Caliphornia Music library."
+          ? `${result.remaining} shared play${
+              result.remaining === 1 ? "" : "s"
+            } left in this project.`
+          : "Shared listen complete. Enter your email to keep it in Music.",
       );
+
       await loadTrack(null);
     }
   }
 
-  async function startClaim() {
-    const result = await fetch("/api/guest/claim/start", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guestToken: token, email: claimEmail }),
-    }).then((res) => res.json());
+  async function createAccount() {
+    if (!claimEmail.trim()) {
+      setMessage("Enter your email.");
+      return;
+    }
 
-    setMessage(result.devCode ? `Code sent. Dev code: ${result.devCode}` : result.ok ? "Code sent." : result.error);
-  }
+    setClaiming(true);
+    setMessage("");
 
-  async function verify() {
-    const result = await fetch("/api/guest/claim/verify", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ guestToken: token, email: claimEmail, code }),
-    }).then((res) => res.json());
+    try {
+      const response = await fetch(
+        "/api/guest/claim/start",
+        {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            guestToken: token,
+            email: claimEmail,
+          }),
+        },
+      );
 
-    if (result.ok) window.location.href = "/apps/music";
-    else setMessage(result.error || "Could not verify this code.");
+      const result = await response.json();
+
+      if (!response.ok || !result?.ok) {
+        setMessage(
+          result?.error || "Could not create your account.",
+        );
+        return;
+      }
+
+      window.location.href =
+        result.redirectTo || "/apps/music";
+    } catch {
+      setMessage("Could not create your account.");
+    } finally {
+      setClaiming(false);
+    }
   }
 
   const playlist = data?.playlist || [];
@@ -111,12 +162,18 @@ export default function GuestPlayer({ token }: { token: string }) {
     <main className="guest-share-page">
       <section className="guest-share-phone">
         <header className="guest-share-topbar">
-          <a href="/" className="guest-share-pill">Caliphornia OS</a>
-          <a href="/" className="guest-share-pill">Open Caliphornia OS</a>
+          <a href="/" className="guest-share-pill">
+            Caliphornia OS
+          </a>
+          <a href="/" className="guest-share-pill">
+            Open Caliphornia OS
+          </a>
         </header>
 
         <section className="guest-share-hero">
-          <p>{hasProjectShare ? "Project Share" : "Song Share"}</p>
+          <p>
+            {hasProjectShare ? "Project Share" : "Song Share"}
+          </p>
           <h1>{data?.song?.title || "Shared listening"}</h1>
           <span>
             {hasProjectShare
@@ -131,11 +188,18 @@ export default function GuestPlayer({ token }: { token: string }) {
               <button
                 key={track.entitlementId}
                 type="button"
-                className={activeTrack?.entitlementId === track.entitlementId ? "active" : ""}
+                className={
+                  activeTrack?.entitlementId ===
+                  track.entitlementId
+                    ? "active"
+                    : ""
+                }
                 disabled={track.used || loadingTrack}
                 onClick={() => loadTrack(track)}
               >
-                <span>{track.used ? "Played" : "Available"}</span>
+                <span>
+                  {track.used ? "Played" : "Available"}
+                </span>
                 <strong>{track.title}</strong>
                 <small>{track.artist}</small>
               </button>
@@ -154,21 +218,45 @@ export default function GuestPlayer({ token }: { token: string }) {
               onEnded={() => void completeCurrentTrack()}
             />
           ) : (
-            <p>{data?.error || "Preparing your shared play..."}</p>
+            <p>
+              {data?.error || "Preparing your shared play..."}
+            </p>
           )}
         </section>
 
         <section className="guest-claim-card">
-          <p>Claim after listening</p>
-          <h2>Keep this in your Music library.</h2>
+          <p>Keep the experience</p>
+          <h2>Create your Caliphornia OS account.</h2>
           <span>
-            Enter your email after listening. Caliphornia OS will connect this shared play to your account without making you restart the experience.
+            Enter your email once. Your account opens immediately,
+            and the shared music is added to your Music library.
+            No verification code is required.
           </span>
-          <input type="email" placeholder="Email" value={claimEmail} onChange={(event) => setClaimEmail(event.target.value)} />
-          <button type="button" onClick={startClaim}>Send code</button>
-          <input placeholder="One-time code" value={code} onChange={(event) => setCode(event.target.value)} />
-          <button type="button" className="primary" onClick={verify}>Verify and open Music</button>
-          {message ? <div className="guest-message">{message}</div> : null}
+
+          <input
+            type="email"
+            autoComplete="email"
+            placeholder="Email"
+            value={claimEmail}
+            onChange={(event) =>
+              setClaimEmail(event.target.value)
+            }
+          />
+
+          <button
+            type="button"
+            className="primary"
+            onClick={createAccount}
+            disabled={claiming}
+          >
+            {claiming
+              ? "Creating account..."
+              : "Create account and open Music"}
+          </button>
+
+          {message ? (
+            <div className="guest-message">{message}</div>
+          ) : null}
         </section>
       </section>
     </main>
