@@ -43,7 +43,7 @@ type PersistedPlayer = {
   expanded: boolean;
 };
 
-const STORAGE_KEY = "caliphornia-global-player-v2";
+const STORAGE_KEY = "caliphornia-global-player-v3";
 
 function looksLikeUuid(value?: string | null) {
   return Boolean(
