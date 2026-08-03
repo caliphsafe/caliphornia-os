@@ -1,21 +1,17 @@
 import { NextRequest, NextResponse } from "next/server";
-import { idempotencyKey } from "@/lib/crypto";
+import { getCurrentAppUser } from "@/lib/users";
+import { supabaseAdmin } from "@/lib/supabase-admin";
 import { resolveEffectiveAccess } from "@/lib/access/effective-access";
 import { createSignedMediaUrl } from "@/lib/media";
-import { supabaseAdmin } from "@/lib/supabase-admin";
-import { getCurrentAppUser } from "@/lib/users";
+import { idempotencyKey } from "@/lib/crypto";
 
 export async function POST(req: NextRequest) {
   try {
     const user = await getCurrentAppUser();
     const body = await req.json().catch(() => ({}));
 
-    const songId = body.songId
-      ? String(body.songId)
-      : null;
-    const songSlug = body.songSlug
-      ? String(body.songSlug)
-      : null;
+    const songId = body.songId ? String(body.songId) : null;
+    const songSlug = body.songSlug ? String(body.songSlug) : null;
 
     if (!songId && !songSlug) {
       return NextResponse.json(
@@ -44,6 +40,11 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    /*
+     * The audited database stores object paths such as
+     * milia/outside/outside-final.mp3 inside the private `songs` bucket.
+     * createSignedMediaUrl already resolves that exact contract.
+     */
     const playbackUrl = await createSignedMediaUrl(
       access.playbackPath,
     );
@@ -51,29 +52,32 @@ export async function POST(req: NextRequest) {
     const songResult = songId
       ? await supabaseAdmin
           .from("songs")
-          .select("id, project_id, app_id")
+          .select("id,project_id,app_id")
           .eq("id", songId)
           .maybeSingle()
       : await supabaseAdmin
           .from("songs")
-          .select("id, project_id, app_id")
+          .select("id,project_id,app_id")
           .eq("slug", songSlug || "")
           .maybeSingle();
 
-    const resolvedSongId =
-      songResult.data?.id || songId || null;
+    if (songResult.error) {
+      throw new Error(songResult.error.message);
+    }
 
-    /*
-     * Analytics must never prevent music from playing. Playback is returned
-     * even when an older database is missing a playback_sessions field.
-     */
+    const song = songResult.data;
     let playbackSessionId: string | null = null;
 
-    if (resolvedSongId) {
+    /*
+     * Playback logging is important, but it must never prevent valid audio
+     * from starting. The signed URL is returned even if analytics insertion
+     * fails for an older or partially migrated playback_sessions table.
+     */
+    if (song?.id) {
       const key = idempotencyKey([
         "playback",
         user?.id || "anon",
-        resolvedSongId,
+        song.id,
         Date.now(),
       ]);
 
@@ -81,7 +85,9 @@ export async function POST(req: NextRequest) {
         .from("playback_sessions")
         .insert({
           user_id: user?.id || null,
-          song_id: resolvedSongId,
+          song_id: song.id,
+          project_id: song.project_id || null,
+          app_id: song.app_id || null,
           access_mode: access.accessType,
           is_preview: access.playbackMode === "preview",
           qualification_status: "pending",
@@ -91,8 +97,7 @@ export async function POST(req: NextRequest) {
         .maybeSingle();
 
       if (!sessionResult.error) {
-        playbackSessionId =
-          sessionResult.data?.id || null;
+        playbackSessionId = sessionResult.data?.id || null;
       }
     }
 

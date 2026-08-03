@@ -178,9 +178,13 @@ export default function MusicLibraryClient({
     song: MusicSong,
     queue = filteredSongs,
   ) {
-    if (!song.canPlay) return;
+    /*
+     * canPlay is supplied by the existing Music library API. Preview rows are
+     * intentionally playable; only truly blocked rows are ignored.
+     */
+    if (song.canPlay === false) return;
     setNowPlaying(song);
-    playInGlobalPlayer(song, queue);
+    playInGlobalPlayer(song, queue.length ? queue : [song]);
   }
 
   async function toggleFavorite(song: MusicSong) {

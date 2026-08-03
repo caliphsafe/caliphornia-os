@@ -287,61 +287,80 @@ export default function GlobalPlayer({ email }: Props) {
   }, [loadQueue]);
 
   async function resolvePlayback(track: GlobalTrack) {
-    const songId = songIdFor(track);
-    const songSlug = songSlugFor(track);
+    playbackSessionRef.current = null;
 
     /*
-     * Canonical songs always use the central playback endpoint. This ensures
-     * Music, Milia, FarTHErHOOD and Fri.ends obey the same access decision.
+     * Preserve the established Caliphornia OS track contract.
+     *
+     * Milia, Fri.ends and other app experiences may already supply a resolved
+     * playbackUrl or a direct file path. Those values are intentional and were
+     * supported by the original global player. They must be used before falling
+     * back to the database playback endpoint.
      */
-    if (songId || songSlug) {
-      const response = await fetch("/api/playback/start", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ songId, songSlug }),
-      });
+    const direct = track.playbackUrl || track.file;
 
-      const result = await response.json();
-
-      if (!response.ok || !result?.ok || !result.playbackUrl) {
-        throw new Error(
-          result?.error || "This song could not be played.",
-        );
-      }
-
-      playbackSessionRef.current =
-        result.playbackSessionId || null;
-
+    if (direct) {
       return {
-        url: String(result.playbackUrl),
-        preview:
-          result.access?.playbackMode === "preview" ||
-          result.access?.accessType === "preview",
-        start: Number(result.access?.previewStartSeconds || 0),
+        url: String(direct),
+        preview: Boolean(track.isPreview),
+        start: Number(
+          track.resumeSeconds ??
+            track.clipStartSeconds ??
+            0,
+        ),
         end:
-          result.access?.previewEndSeconds == null
+          track.clipEndSeconds == null
             ? null
-            : Number(result.access.previewEndSeconds),
+            : Number(track.clipEndSeconds),
       };
     }
 
     /*
-     * Non-catalogue clips can use their direct source. These do not represent
-     * another song identity and cannot bypass catalogue access rules.
+     * Music-library rows and any track without a resolved source use the
+     * existing database-backed playback endpoint with the existing song ID
+     * and slug fields. No new identifiers or audio-path variables are created.
      */
-    const direct = track.playbackUrl || track.file;
-    if (!direct) {
+    const songId = songIdFor(track);
+    const songSlug = songSlugFor(track);
+
+    if (!songId && !songSlug) {
       throw new Error("This audio file is not connected.");
     }
 
+    const response = await fetch("/api/playback/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ songId, songSlug }),
+    });
+
+    const result = await response.json().catch(() => null);
+
+    if (!response.ok || !result?.ok || !result.playbackUrl) {
+      throw new Error(
+        result?.error || "This song could not be played.",
+      );
+    }
+
+    playbackSessionRef.current =
+      result.playbackSessionId || null;
+
     return {
-      url: String(direct),
-      preview: Boolean(track.isPreview),
-      start: Number(track.clipStartSeconds || 0),
+      url: String(result.playbackUrl),
+      preview:
+        result.access?.playbackMode === "preview" ||
+        result.access?.accessType === "preview",
+      start: Number(
+        result.access?.previewStartSeconds ??
+          track.resumeSeconds ??
+          track.clipStartSeconds ??
+          0,
+      ),
       end:
-        track.clipEndSeconds == null
-          ? null
-          : Number(track.clipEndSeconds),
+        result.access?.previewEndSeconds == null
+          ? track.clipEndSeconds == null
+            ? null
+            : Number(track.clipEndSeconds)
+          : Number(result.access.previewEndSeconds),
     };
   }
 
@@ -370,22 +389,29 @@ export default function GlobalPlayer({ email }: Props) {
 
         const player = audioRef.current;
         player.pause();
-        player.src = playback.url;
-        player.load();
 
         const startAt = Math.max(
           0,
-          playback.start ||
-            Number(currentTrack.clipStartSeconds || 0),
+          playback.start ??
+            Number(
+              currentTrack.resumeSeconds ??
+                currentTrack.clipStartSeconds ??
+                0,
+            ),
         );
 
-        const canPlay = async () => {
+        let started = false;
+
+        const startPlayback = async () => {
           if (
+            started ||
             cancelled ||
             sequence !== loadSequence.current
           ) {
             return;
           }
+
+          started = true;
 
           try {
             if (startAt > 0) player.currentTime = startAt;
@@ -393,14 +419,29 @@ export default function GlobalPlayer({ email }: Props) {
 
           try {
             await player.play();
+            setPlaybackError("");
           } catch {
             setPlaybackError("Tap Play to begin.");
           }
         };
 
-        player.addEventListener("canplay", canPlay, {
-          once: true,
-        });
+        /*
+         * Register media listeners before changing src/load. Cached signed URLs
+         * can become playable immediately; attaching the listener afterward can
+         * miss the event and leave Music visibly loaded but silent.
+         */
+        player.addEventListener(
+          "canplay",
+          startPlayback,
+          { once: true },
+        );
+
+        player.src = playback.url;
+        player.load();
+
+        if (player.readyState >= HTMLMediaElement.HAVE_FUTURE_DATA) {
+          void startPlayback();
+        }
 
         const params = new URLSearchParams();
         const songId = songIdFor(currentTrack);
@@ -442,6 +483,16 @@ export default function GlobalPlayer({ email }: Props) {
   useEffect(() => {
     const audio = audioRef.current;
     if (!audio) return;
+
+    function mediaError() {
+      const code = audio.error?.code;
+      const message =
+        code === MediaError.MEDIA_ERR_SRC_NOT_SUPPORTED
+          ? "This audio source is not supported or could not be reached."
+          : "This song could not be loaded.";
+      setPlaybackError(message);
+      setPlaying(false);
+    }
 
     function sync() {
       const current = audio.currentTime || 0;
@@ -507,6 +558,7 @@ export default function GlobalPlayer({ email }: Props) {
     audio.addEventListener("timeupdate", sync);
     audio.addEventListener("loadedmetadata", sync);
     audio.addEventListener("ended", ended);
+    audio.addEventListener("error", mediaError);
 
     return () => {
       audio.removeEventListener("play", sync);
@@ -514,6 +566,7 @@ export default function GlobalPlayer({ email }: Props) {
       audio.removeEventListener("timeupdate", sync);
       audio.removeEventListener("loadedmetadata", sync);
       audio.removeEventListener("ended", ended);
+      audio.removeEventListener("error", mediaError);
     };
   }, [currentTrack, queue, currentIndex]);
 

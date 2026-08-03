@@ -48,12 +48,8 @@ function active(row: {
 function baseResult(
   song: Record<string, any> | null,
 ): EffectiveAccessResult {
-  const previewStart = Number(
-    song?.preview_starts_at ?? 0,
-  );
-  const previewDuration = Number(
-    song?.preview_duration ?? 30,
-  );
+  const previewStart = Number(song?.preview_starts_at ?? 0);
+  const previewDuration = Number(song?.preview_duration ?? 30);
 
   return {
     allowed: Boolean(song),
@@ -72,6 +68,11 @@ function baseResult(
     allContributingSources: [],
     blockedReason: song ? null : "Song not found.",
     displayLabel: song ? "30-second preview" : "Unavailable",
+
+    /*
+     * The audit shows preview_audio_path is currently null. Preview playback
+     * therefore signs audio_path and enforces the configured 0–30 second range.
+     */
     playbackPath:
       song?.preview_audio_path || song?.audio_path || null,
     previewStartSeconds: song ? previewStart : null,
@@ -98,21 +99,46 @@ export async function resolveEffectiveAccess(input: {
   const songQuery = supabaseAdmin
     .from("songs")
     .select(
-      "id,slug,title,artist,project_id,app_id,audio_path,preview_audio_path,preview_starts_at,preview_duration,is_locked,is_free_full_play,requires_project_access,requires_all_access,release_at,early_access_at,is_shareable,share_access_mode,default_share_play_limit,default_share_expires_hours,download_enabled,status",
+      [
+        "id",
+        "slug",
+        "title",
+        "artist_name",
+        "project_id",
+        "app_id",
+        "audio_path",
+        "storage_bucket",
+        "preview_audio_path",
+        "preview_starts_at",
+        "preview_duration",
+        "is_locked",
+        "is_free_full_play",
+        "requires_project_access",
+        "requires_all_access",
+        "release_at",
+        "early_access_at",
+        "is_shareable",
+        "share_access_mode",
+        "default_share_play_limit",
+        "default_share_expires_hours",
+        "download_enabled",
+        "status",
+      ].join(","),
     )
     .limit(1);
 
   const songResult = input.songId
-    ? await songQuery
-        .eq("id", input.songId)
-        .maybeSingle()
+    ? await songQuery.eq("id", input.songId).maybeSingle()
     : await songQuery
         .eq("slug", input.songSlug || "")
         .maybeSingle();
 
+  if (songResult.error) {
+    throw new Error(songResult.error.message);
+  }
+
   const song =
-    (songResult.data as Record<string, any> | null) ||
-    null;
+    (songResult.data as Record<string, any> | null) || null;
   const fallback = baseResult(song);
 
   if (!song?.id) return fallback;
@@ -173,20 +199,23 @@ export async function resolveEffectiveAccess(input: {
           .select("*")
           .eq("song_id", song.id)
           .or(identityFilter),
+
         projectId
           ? supabaseAdmin
               .from("user_project_access")
               .select("*")
-              .or(identityFilter)
               .eq("project_id", projectId)
+              .or(identityFilter)
           : Promise.resolve({
               data: [] as any[],
               error: null,
             }),
+
         supabaseAdmin
           .from("user_access_passes")
           .select("*")
           .or(identityFilter),
+
         supabaseAdmin
           .from("sharing_allowances")
           .select("*")
@@ -198,18 +227,29 @@ export async function resolveEffectiveAccess(input: {
           .in("status", ["active", "reserved"]) as any,
       ]);
 
+    if (songAccess.error) {
+      throw new Error(songAccess.error.message);
+    }
+
+    if (projectAccess.error) {
+      throw new Error(projectAccess.error.message);
+    }
+
+    if (passes.error) {
+      throw new Error(passes.error.message);
+    }
+
     for (const row of songAccess.data || []) {
       if (!active(row)) continue;
 
       const sourceType = String(
         row.source_type || "purchase",
       );
-
       const isShared =
         sourceType === "nearby_share" ||
         sourceType === "share_claim";
 
-      const accessType = isShared
+      const type = isShared
         ? ("nearby_claimed_access" as AccessMode)
         : sourceType === "kiiku"
           ? ("kiiku_unlock" as AccessMode)
@@ -222,12 +262,12 @@ export async function resolveEffectiveAccess(input: {
       sources.push({
         priority: isShared
           ? 96
-          : accessType === "admin_grant"
+          : type === "admin_grant"
             ? 100
-            : accessType === "purchased_song"
+            : type === "purchased_song"
               ? 98
               : 94,
-        accessType,
+        accessType: type,
         accessSource: sourceType,
         expiresAt: row.expires_at || null,
         playLimit: row.play_limit ?? null,
@@ -242,14 +282,12 @@ export async function resolveEffectiveAccess(input: {
         ),
         downloadPermission: Boolean(row.can_download),
         librarySavePermission: true,
-        refundSensitive: Boolean(
-          row.source_purchase_id,
-        ),
+        refundSensitive: Boolean(row.source_purchase_id),
         displayLabel: isShared
           ? "Shared with you"
-          : accessType === "kiiku_unlock"
+          : type === "kiiku_unlock"
             ? "Unlocked with Kiiku"
-            : accessType === "admin_grant"
+            : type === "admin_grant"
               ? "Admin granted"
               : "Owned",
         row,
@@ -262,7 +300,7 @@ export async function resolveEffectiveAccess(input: {
       const sourceType = String(
         row.source_type || row.access_type || "purchase",
       );
-      const accessType =
+      const type =
         sourceType === "kiiku"
           ? ("kiiku_unlock" as AccessMode)
           : sourceType === "admin"
@@ -273,12 +311,12 @@ export async function resolveEffectiveAccess(input: {
 
       sources.push({
         priority:
-          accessType === "admin_grant"
+          type === "admin_grant"
             ? 100
-            : accessType === "purchased_project"
+            : type === "purchased_project"
               ? 97
               : 93,
-        accessType,
+        accessType: type,
         accessSource: sourceType,
         expiresAt: row.expires_at || null,
         playLimit: null,
@@ -293,13 +331,11 @@ export async function resolveEffectiveAccess(input: {
         ),
         downloadPermission: Boolean(row.can_download),
         librarySavePermission: true,
-        refundSensitive: Boolean(
-          row.source_purchase_id,
-        ),
+        refundSensitive: Boolean(row.source_purchase_id),
         displayLabel:
-          accessType === "kiiku_unlock"
+          type === "kiiku_unlock"
             ? "Project unlocked with Kiiku"
-            : accessType === "admin_grant"
+            : type === "admin_grant"
               ? "Admin granted"
               : "Project owned",
         row,
@@ -308,6 +344,7 @@ export async function resolveEffectiveAccess(input: {
 
     for (const row of passes.data || []) {
       if (!active(row)) continue;
+
       const key = String(row.access_key || "");
       const sourceType = String(
         row.source_type || "subscription",
@@ -323,9 +360,7 @@ export async function resolveEffectiveAccess(input: {
         expiresAt: row.expires_at || null,
         playLimit: null,
         playsUsed: null,
-        sharingEligible: Boolean(
-          row.can_share ?? false,
-        ),
+        sharingEligible: Boolean(row.can_share ?? false),
         sharesRemaining: countShares(
           allowances.data || [],
           song.id,
@@ -350,11 +385,12 @@ export async function resolveEffectiveAccess(input: {
     const guest = await supabaseAdmin
       .from("guest_sessions")
       .select("id,status,expires_at")
-      .eq(
-        "guest_token_hash",
-        sha256(input.guestToken),
-      )
+      .eq("guest_token_hash", sha256(input.guestToken))
       .maybeSingle();
+
+    if (guest.error) {
+      throw new Error(guest.error.message);
+    }
 
     if (guest.data?.id && active(guest.data)) {
       const entitlement = await supabaseAdmin
@@ -363,6 +399,10 @@ export async function resolveEffectiveAccess(input: {
         .eq("guest_session_id", guest.data.id)
         .eq("song_id", song.id)
         .maybeSingle();
+
+      if (entitlement.error) {
+        throw new Error(entitlement.error.message);
+      }
 
       if (
         entitlement.data &&
