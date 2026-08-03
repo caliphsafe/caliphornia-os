@@ -4,7 +4,6 @@ import type { Metadata } from "next";
 import { cookies } from "next/headers";
 import { verifySession } from "@/lib/session";
 import GlobalPlayer from "@/components/GlobalPlayer";
-import OnboardingTips from "@/components/OnboardingTips";
 import GlobalSongShareBridge from "@/components/music/GlobalSongShareBridge";
 import GlobalNavigationBridge from "@/components/GlobalNavigationBridge";
 
@@ -29,7 +28,6 @@ export default async function RootLayout({
         {children}
         <GlobalNavigationBridge />
         {session ? <GlobalSongShareBridge /> : null}
-        {session ? <OnboardingTips /> : null}
         {session ? (
           <GlobalPlayer email={session.email} />
         ) : null}

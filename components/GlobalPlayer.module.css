@@ -11,8 +11,9 @@
 }
 
 .collapsed {
-  right: 8px;
-  bottom: calc(8px + env(safe-area-inset-bottom, 0px));
+  left: 14px;
+  right: auto;
+  bottom: calc(74px + env(safe-area-inset-bottom, 0px));
   width: 50px;
   height: 50px;
 }
@@ -228,7 +229,7 @@
   }
 
   .expanded .player {
-    grid-template-columns: minmax(0, 1fr) minmax(150px, .65fr) auto;
+    grid-template-columns: minmax(0, 1fr) minmax(150px,.65fr) auto;
     gap: 12px;
     min-height: 82px;
     padding: 10px 42px 10px 10px;
