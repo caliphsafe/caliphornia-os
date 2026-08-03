@@ -305,8 +305,7 @@
   white-space: nowrap;
 }
 
-.share-project-strip,
-.share-song-strip {
+.share-project-strip {
   display: grid;
   grid-auto-flow: column;
   grid-auto-columns: minmax(150px, 42%);
@@ -317,9 +316,15 @@
   scrollbar-width: none;
 }
 
-.share-project-strip::-webkit-scrollbar,
-.share-song-strip::-webkit-scrollbar {
+.share-project-strip::-webkit-scrollbar {
   display: none;
+}
+
+.share-song-strip {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  padding: 2px 0 12px;
 }
 
 .share-project-tile,
@@ -363,6 +368,27 @@
   font-size: 19px;
   line-height: 1.05;
   letter-spacing: -.03em;
+}
+
+.share-song-strip button {
+  min-width: 0;
+}
+
+.share-song-strip strong,
+.share-song-strip small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.share-song-strip strong {
+  display: -webkit-box;
+  min-height: 40px;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+}
+
+.share-song-strip small {
+  white-space: nowrap;
 }
 
 .share-picker-toolbar {
@@ -624,9 +650,30 @@
     right: 98px;
   }
 
-  .share-project-strip,
-  .share-song-strip {
+  .share-project-strip {
     grid-auto-columns: minmax(142px, 72%);
+  }
+
+  .share-song-strip {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 6px;
+  }
+
+  .share-song-strip button {
+    min-height: 104px;
+    padding: 9px 7px;
+    border-radius: 16px;
+  }
+
+  .share-song-strip strong {
+    margin: 6px 0;
+    min-height: 34px;
+    font-size: 14px;
+  }
+
+  .share-song-strip span,
+  .share-song-strip small {
+    font-size: 9px;
   }
 
   .share-picker-toolbar {
