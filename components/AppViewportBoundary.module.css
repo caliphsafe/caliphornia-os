@@ -1,0 +1,81 @@
+.viewport {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  isolation: isolate;
+  background: #05060a;
+  contain: layout paint;
+}
+
+.route {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  overflow: hidden;
+  isolation: isolate;
+  background: #05060a;
+}
+
+/*
+ * Every OS route already renders one app-specific <main> element.
+ * That existing element keeps its own background and visual design,
+ * but now becomes the only scrolling surface.
+ */
+.route > :global(main) {
+  position: relative;
+  z-index: 0;
+  width: 100%;
+  height: 100%;
+  min-height: 0 !important;
+  max-height: 100%;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior-x: none;
+  overscroll-behavior-y: contain;
+  -webkit-overflow-scrolling: touch;
+  background-size: cover !important;
+  background-position: center !important;
+  background-repeat: no-repeat !important;
+  isolation: isolate;
+}
+
+/*
+ * Prevent transparent app roots from exposing the previous route.
+ * Apps with their own background keep it. Transparent apps receive
+ * only the neutral OS base beneath their content.
+ */
+.route > :global(main)::before {
+  pointer-events: none;
+}
+
+/* Keep the iPhone Home background fixed while its content scrolls. */
+.route > :global(.ios-home-page) {
+  height: 100%;
+  min-height: 0 !important;
+}
+
+/*
+ * Sticky app chrome remains sticky relative to the app's own
+ * scrolling area rather than the browser document.
+ */
+.route > :global(main) > :global(header),
+.route > :global(main) > :global(nav) {
+  flex-shrink: 0;
+}
+
+@supports not (height: 100dvh) {
+  .viewport {
+    height: 100vh;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .route > :global(main) {
+    scroll-behavior: auto;
+  }
+}

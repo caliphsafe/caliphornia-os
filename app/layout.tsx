@@ -6,6 +6,7 @@ import { verifySession } from "@/lib/session";
 import GlobalPlayer from "@/components/GlobalPlayer";
 import GlobalSongShareBridge from "@/components/music/GlobalSongShareBridge";
 import GlobalNavigationBridge from "@/components/GlobalNavigationBridge";
+import AppViewportBoundary from "@/components/AppViewportBoundary";
 
 export const metadata: Metadata = {
   title: "Caliphornia OS",
@@ -25,9 +26,14 @@ export default async function RootLayout({
   return (
     <html lang="en">
       <body>
-        {children}
+        <AppViewportBoundary>
+          {children}
+        </AppViewportBoundary>
+
         <GlobalNavigationBridge />
+
         {session ? <GlobalSongShareBridge /> : null}
+
         {session ? (
           <GlobalPlayer email={session.email} />
         ) : null}
