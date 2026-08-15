@@ -1,7 +1,6 @@
 import Link from "next/link";
 import { appRegistry, type AppItem } from "@/lib/app-registry";
 import type { AppUser } from "@/types/domain";
-import ProximityReceivePrompt from "@/components/share/ProximityReceivePrompt";
 
 function displayName(user: AppUser) {
   return user.username || user.email.split("@")[0] || "Caliphornia";
@@ -68,10 +67,6 @@ export default function HomeScreen({ user }: { user: AppUser }) {
               Music, apps, access, Kiiku, and sharing in one world.
             </strong>
           </div>
-        </section>
-
-        <section aria-label="Receive nearby music">
-          <ProximityReceivePrompt />
         </section>
 
         <section className="ios-home-grid" aria-label="Apps">
