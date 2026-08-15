@@ -11,7 +11,83 @@ function normalizeValue(value: string | null | undefined) {
   return String(value || "").trim().toLowerCase();
 }
 
-export async function getUserAccess(userEmail: string): Promise<AccessCheckResult> {
+async function userHasDirectSongAccess({
+  userEmail,
+  songId,
+  songSlug,
+}: {
+  userEmail: string;
+  songId?: string | null;
+  songSlug?: string | null;
+}) {
+  const email = normalizeValue(userEmail);
+  let resolvedSongId = String(songId || "").trim();
+
+  if (!resolvedSongId && songSlug) {
+    const songLookup = await supabaseAdmin
+      .from("songs")
+      .select("id")
+      .eq("slug", String(songSlug))
+      .maybeSingle();
+
+    if (songLookup.error) {
+      throw new Error(songLookup.error.message);
+    }
+
+    resolvedSongId = String(songLookup.data?.id || "");
+  }
+
+  if (!resolvedSongId) return false;
+
+  const accessResult = await supabaseAdmin
+    .from("user_song_access")
+    .select("status,expires_at,play_limit,plays_used")
+    .eq("user_email", email)
+    .eq("song_id", resolvedSongId);
+
+  if (accessResult.error) {
+    throw new Error(accessResult.error.message);
+  }
+
+  const now = Date.now();
+
+  return (accessResult.data || []).some((row) => {
+    const status = normalizeValue(row.status || "active");
+
+    if (
+      [
+        "revoked",
+        "refunded",
+        "disputed",
+        "canceled",
+        "expired",
+        "reversed",
+      ].includes(status)
+    ) {
+      return false;
+    }
+
+    if (
+      row.expires_at &&
+      new Date(row.expires_at).getTime() <= now
+    ) {
+      return false;
+    }
+
+    if (
+      row.play_limit != null &&
+      Number(row.plays_used || 0) >= Number(row.play_limit)
+    ) {
+      return false;
+    }
+
+    return true;
+  });
+}
+
+export async function getUserAccess(
+  userEmail: string,
+): Promise<AccessCheckResult> {
   const email = normalizeValue(userEmail);
 
   const [passesRes, projectsRes] = await Promise.all([
@@ -29,15 +105,24 @@ export async function getUserAccess(userEmail: string): Promise<AccessCheckResul
   const now = Date.now();
 
   const activePasses = (passesRes.data || [])
-    .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
+    .filter(
+      (row) =>
+        !row.expires_at ||
+        new Date(row.expires_at).getTime() > now,
+    )
     .map((row) => normalizeValue(row.access_key));
 
   const activeProjects = (projectsRes.data || [])
-    .filter((row) => !row.expires_at || new Date(row.expires_at).getTime() > now)
+    .filter(
+      (row) =>
+        !row.expires_at ||
+        new Date(row.expires_at).getTime() > now,
+    )
     .map((row) => normalizeValue(row.project_slug));
 
   const hasAllAccess = activePasses.includes("all_access");
-  const hasMusicFull = hasAllAccess || activePasses.includes("music_full");
+  const hasMusicFull =
+    hasAllAccess || activePasses.includes("music_full");
   const isFounder = activePasses.includes("founder");
 
   return {
@@ -48,17 +133,29 @@ export async function getUserAccess(userEmail: string): Promise<AccessCheckResul
   };
 }
 
-export async function userCanAccessProject(userEmail: string, projectSlug: string) {
+export async function userCanAccessProject(
+  userEmail: string,
+  projectSlug: string,
+) {
   const access = await getUserAccess(userEmail);
-  const normalizedProjectSlug = normalizeValue(projectSlug);
+  const normalizedProjectSlug =
+    normalizeValue(projectSlug);
 
   if (access.hasAllAccess || access.isFounder) return true;
-  return access.projectAccess.includes(normalizedProjectSlug);
+  return access.projectAccess.includes(
+    normalizedProjectSlug,
+  );
 }
 
-export async function userCanAccessMusicFull(userEmail: string) {
+export async function userCanAccessMusicFull(
+  userEmail: string,
+) {
   const access = await getUserAccess(userEmail);
-  return access.hasAllAccess || access.hasMusicFull || access.isFounder;
+  return (
+    access.hasAllAccess ||
+    access.hasMusicFull ||
+    access.isFounder
+  );
 }
 
 export async function userCanAccessSong({
@@ -69,6 +166,8 @@ export async function userCanAccessSong({
   userEmail: string;
   projectSlug?: string | null;
   song: {
+    id?: string | null;
+    slug?: string | null;
     release_at?: string | null;
     early_access_at?: string | null;
     is_locked?: boolean | null;
@@ -78,6 +177,21 @@ export async function userCanAccessSong({
   };
 }) {
   if (song.is_free_full_play) {
+    return true;
+  }
+
+  /*
+   * Exact-song entitlements must be checked before project locking.
+   * Nearby Share claims live in user_song_access and intentionally
+   * unlock only the received song, not the rest of the project.
+   */
+  if (
+    await userHasDirectSongAccess({
+      userEmail,
+      songId: song.id,
+      songSlug: song.slug,
+    })
+  ) {
     return true;
   }
 
@@ -92,18 +206,14 @@ export async function userCanAccessSong({
     return false;
   }
 
-  const normalizedProjectSlug = normalizeValue(projectSlug);
+  const normalizedProjectSlug =
+    normalizeValue(projectSlug);
   const hasProjectAccess =
     Boolean(normalizedProjectSlug) &&
-    access.projectAccess.includes(normalizedProjectSlug);
+    access.projectAccess.includes(
+      normalizedProjectSlug,
+    );
 
-  /*
-    Project purchase fix:
-
-    If a user owns a project, project songs should unlock fully even if
-    is_locked is still true. That is how Fri.ends, Milia, and FarTHErHOOD
-    ownership should work.
-  */
   if (hasProjectAccess) {
     return true;
   }
@@ -112,7 +222,9 @@ export async function userCanAccessSong({
     return false;
   }
 
-  const releaseAt = song.release_at ? new Date(song.release_at).getTime() : null;
+  const releaseAt = song.release_at
+    ? new Date(song.release_at).getTime()
+    : null;
   const earlyAccessAt = song.early_access_at
     ? new Date(song.early_access_at).getTime()
     : null;
@@ -121,7 +233,11 @@ export async function userCanAccessSong({
     return true;
   }
 
-  if (earlyAccessAt && now >= earlyAccessAt && hasProjectAccess) {
+  if (
+    earlyAccessAt &&
+    now >= earlyAccessAt &&
+    hasProjectAccess
+  ) {
     return true;
   }
 
@@ -140,6 +256,7 @@ export async function getSongPlaybackAccess({
   userEmail: string;
   projectSlug?: string | null;
   song: {
+    id?: string | null;
     slug?: string | null;
     audio_path?: string | null;
     preview_audio_path?: string | null;
@@ -187,9 +304,11 @@ export async function getSongPlaybackAccess({
   return {
     canPlayFull: false,
     isPreview: true,
-    playbackPath: song.preview_audio_path || song.audio_path || null,
+    playbackPath:
+      song.preview_audio_path || song.audio_path || null,
     clipStartSeconds: previewStart,
     clipEndSeconds: previewStart + previewDuration,
-    lockedReason: "Unlock this project to hear the full song.",
+    lockedReason:
+      "Unlock this project to hear the full song.",
   };
 }
