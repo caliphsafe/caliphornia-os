@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+    <meta name="theme-color" content="#07120f">
+    <meta name="description" content="SET PIECE: Deem and Chan's pixel-art penalty shootout. Hold the joystick to aim and take your shot.">
+    <title>SET PIECE — DEEM X CHAN</title>
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg">
+    <link rel="preload" href="./assets/kick-atlas-v2.webp" as="image" type="image/webp">
+    <link rel="preload" href="./assets/stadium-mobile.webp" as="image" type="image/webp">
+    <link rel="stylesheet" href="./styles.css">
+    <script src="./game.js" defer></script>
+  </head>
+  <body>
+    <main class="game-shell">
+      <div class="stadium-frame" aria-hidden="true">
+        <canvas id="stadiumCanvas"></canvas>
+        <div class="scene-chip"><span class="chip-spark"></span><span>SET PIECE · NIGHT MATCH</span></div>
+        <div class="keeper-chip">KEEPER SAVE RATE <b>30%</b></div>
+      </div>
+
+      <header class="topbar">
+        <div class="brand-lockup">
+          <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <div>
+            <h1>SET PIECE</h1>
+            <p>DEEM <i>×</i> CHAN</p>
+          </div>
+        </div>
+        <div class="match-state"><span class="live-indicator" aria-hidden="true"></span><span id="roundLabel">MATCH READY</span></div>
+      </header>
+
+      <section class="scoreboard" aria-label="Player identity cards and match score">
+        <div class="score-center" aria-label="Match score">
+          <small>LIVE SCORE</small>
+          <strong><span id="deemScore">0</span><i>:</i><span id="chanScore">0</span></strong>
+          <span id="scoreRound">FIRST TO 5</span>
+        </div>
+
+        <div class="player-cards">
+          <article class="player-card is-active" id="deemCard" aria-label="Kadeem Deem, rapper and midfielder">
+            <img class="id-photo" src="./assets/deem-id.jpg" alt="Deem in his black cap and black outfit">
+            <div class="id-copy">
+              <div class="card-heading"><span class="player-index">01</span><strong>KADEEM</strong><em>“DEEM”</em><span class="role-label">RAPPER</span></div>
+              <div class="id-meta"><b>MIDFIELDER</b><span>HT <i>—</i></span><span>WT <i>—</i></span></div>
+              <div class="card-stats">
+                <div><small>GOALS</small><b id="deemGoals">0</b></div>
+                <div><small>KICKS</small><b id="deemKicks">0</b></div>
+                <div><small>SUPER</small><b id="deemSupers">2/2</b></div>
+              </div>
+            </div>
+          </article>
+
+          <article class="player-card" id="chanCard" aria-label="Chan, producer and defender">
+            <img class="id-photo" src="./assets/chan-id.jpg" alt="Chan in his black cap and purple shirt">
+            <div class="id-copy">
+              <div class="card-heading"><span class="player-index">02</span><strong>CHAN</strong><span class="role-label">PRODUCER</span></div>
+              <div class="id-meta"><b>DEFENDER</b><span>HT <i>—</i></span><span>WT <i>—</i></span></div>
+              <div class="card-stats">
+                <div><small>GOALS</small><b id="chanGoals">0</b></div>
+                <div><small>KICKS</small><b id="chanKicks">0</b></div>
+                <div><small>SUPER</small><b id="chanSupers">2/2</b></div>
+              </div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="game-board" aria-label="Penalty shootout controls">
+        <section class="status-strip" aria-live="polite" aria-atomic="true">
+          <div class="status-copy">
+            <strong id="statusTitle">READY AT THE SPOT</strong>
+            <p id="statusHelp">Start the match, steer your shot with the joystick, then press A or B.</p>
+          </div>
+          <output class="aim-readout" id="aimReadout" aria-label="Target position">X 50% · Y 48%</output>
+        </section>
+
+        <section class="control-deck" aria-label="Game controls">
+          <div class="direction-panel">
+            <div class="control-label"><span>360° AIM STICK</span><small>HOLD &amp; STEER</small></div>
+            <button type="button" class="aim-stick" id="aimStick" aria-label="Hold and steer the joystick to move the shot target" aria-pressed="false">
+              <span class="stick-base" id="stickBase" aria-hidden="true">
+                <span class="stick-mark stick-n">N</span><span class="stick-mark stick-e">E</span>
+                <span class="stick-mark stick-s">S</span><span class="stick-mark stick-w">W</span>
+                <span class="stick-center" aria-hidden="true"></span>
+                <span class="stick-knob" id="stickKnob" aria-hidden="true"></span>
+              </span>
+            </button>
+          </div>
+
+          <div class="shot-panel">
+            <div class="control-label"><span>TAKE THE SHOT</span><small>A / B</small></div>
+            <button type="button" class="start-button" id="startButton"><span>START MATCH</span><small>FIRST TO 5 GOALS</small></button>
+            <div class="shot-buttons" id="shotButtons" hidden>
+              <button type="button" class="shot-button super-button" id="superShot" data-shot="super">
+                <span class="key-cap">A</span><span class="shot-label"><b>SUPER</b><small id="activeSuperCount">2 LEFT</small></span>
+              </button>
+              <button type="button" class="shot-button standard-button" id="standardShot" data-shot="standard">
+                <span class="key-cap">B</span><span class="shot-label"><b>STRIKE</b><small>REGULAR</small></span>
+              </button>
+            </div>
+            <button type="button" class="rematch-button" id="rematchButton" hidden>RUN IT BACK</button>
+          </div>
+        </section>
+
+        <div class="bottom-meta">
+          <span>FIRST TO 5 · ALTERNATING KICKS</span>
+          <span>70% SCORE CHANCE · 2 SUPERS EACH</span>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>
