@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { useRouter } from "next/navigation";
 import AccessWindow from "@/components/AccessWindow";
 
 type Track = {
@@ -166,7 +165,6 @@ function formatNoteDate(dateStr?: string | null) {
 }
 
 export default function FartherhoodClient() {
-  const router = useRouter();
 
   const [tracks, setTracks] = useState<Track[]>(defaultTracks);
   const [playerState, setPlayerState] = useState({
@@ -425,11 +423,6 @@ export default function FartherhoodClient() {
     }
   }
 
-  function backHome(e: React.MouseEvent) {
-    e.preventDefault();
-    router.push("/home");
-  }
-
   const currentModalTime =
     modalTrack && playerState.slug === modalTrack.slug ? playerState.currentTime : 0;
 
@@ -451,11 +444,7 @@ export default function FartherhoodClient() {
 
   return (
     <>
-      <div className="top-chrome">
-        <a href="/home" className="nav-round" aria-label="Back" onClick={backHome}>
-          <img src="/apps/fartherhood/back.png" alt="Back" className="ico-img" />
-        </a>
-
+      <div className="top-chrome top-chrome--actions">
         <div className="nav-capsule" role="group" aria-label="Actions">
           <a
             href="#"

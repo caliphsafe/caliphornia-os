@@ -653,3 +653,12 @@
     height:46px;
   }
 }
+
+
+.listPage {
+  padding-top: calc(82px + env(safe-area-inset-top, 0px));
+}
+
+:global(body.has-os-navigation.has-global-player) .page {
+  padding-bottom: 230px;
+}

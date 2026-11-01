@@ -86,11 +86,7 @@ export default async function MiliaPage() {
   const queue: GlobalTrack[] = cards.map(({ song, access }) => ({ id: song.id, songId: song.id, slug: song.slug, songSlug: song.slug, title: song.title, artist: song.artist_name || "Caliph", displayTitle: song.title, duration: song.duration_label || undefined, description: access.lockedReason || song.description || undefined, playlistSongSlug: song.slug, analyticsSongSlug: song.slug, sourceApp: "milia", isPreview: access.isPreview, clipStartSeconds: access.clipStartSeconds, clipEndSeconds: access.clipEndSeconds }));
 
   return (
-    <main className={styles.page}>
-      <div className={styles.chrome}>
-        <a href="/home" className={styles.backPill} aria-label="Back to home">‹</a>
-        <a href="/apps/share" className={styles.morePill} aria-label="Share">⌁</a>
-      </div>
+    <main className={`${styles.page} ${styles.listPage}`}>
       <section className={styles.container}>
         <div className={styles.hero}><h1 className={styles.heroTitle}>Milia</h1></div>
       </section>

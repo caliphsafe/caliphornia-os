@@ -95,11 +95,6 @@ export default async function AccountSettingsPage() {
   return (
     <main className="settings-page">
       <section className="settings-phone">
-        <header className="settings-topbar">
-          <Link href="/home" className="settings-back">‹ Home</Link>
-          <Link href="/apps/share" className="settings-share-link">Share</Link>
-        </header>
-
         <section className="settings-hero">
           <div className="settings-avatar">{(user.username || email)[0]?.toUpperCase()}</div>
           <div>

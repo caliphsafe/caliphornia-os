@@ -279,26 +279,6 @@ export default function MusicLibraryClient({
   return (
     <main className="apple-music-page cos-uniform-page">
       <section className="apple-music-shell cos-uniform-shell">
-        <header className="apple-music-topbar cos-page-topbar">
-          <a href="/home" className="apple-music-pill">
-            ‹ Home
-          </a>
-          <div className="apple-music-top-actions">
-            <a
-              href="/apps/share"
-              className="apple-music-pill"
-            >
-              Share
-            </a>
-            <a
-              href="/apps/account"
-              className="apple-music-pill"
-            >
-              Account
-            </a>
-          </div>
-        </header>
-
         <section className="apple-music-hero">
           <div>
             <p>Caliphornia Music</p>

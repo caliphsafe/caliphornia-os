@@ -1,4 +1,4 @@
-import Link from "next/link";
+import AppBackLink from "@/components/AppBackLink";
 import { cookies } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import { supabaseAdmin } from "@/lib/supabase-admin";
@@ -406,9 +406,7 @@ export default async function MiliaSongDetailPage({
       <MiliaTrackSync currentSlug={song.slug} />
 
       <div className={styles.chrome}>
-        <Link href="/apps/milia" className={styles.backPill} aria-label="Back to Milia">
-          ‹
-        </Link>
+        <AppBackLink href="/apps/milia" label="Milia" />
 
         <AccessWindow
   projectSlug="milia"

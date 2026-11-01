@@ -88,7 +88,7 @@
 
 /* ===== inbox ===== */
 .friends-original-inbox-header {
-  padding: calc(env(safe-area-inset-top) + 86px) 18px 12px;
+  padding: calc(env(safe-area-inset-top) + 28px) 18px 12px;
 }
 
 .friends-original-inbox-header h1 {

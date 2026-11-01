@@ -1,7 +1,9 @@
 .share-page {
   min-height: 100dvh;
-  padding: var(--cos-page-padding, 18px)
-    var(--cos-page-gutter, 14px) 140px;
+  padding: max(
+    var(--cos-page-padding, 18px),
+    calc(env(safe-area-inset-top, 0px) + 12px)
+  ) var(--cos-page-gutter, 14px) 140px;
   overflow-x: hidden;
   color: #fff;
   background:

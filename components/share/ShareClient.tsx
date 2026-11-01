@@ -551,20 +551,6 @@ export default function ShareClient() {
   return (
     <main className="share-page cos-uniform-page">
       <section className="share-phone cos-uniform-shell">
-        <header className="share-topbar cos-page-topbar">
-          <a href="/home" className="share-pill">
-            ‹ Home
-          </a>
-          <div className="share-top-actions">
-            <a href="/apps/stats" className="share-pill">
-              Stats
-            </a>
-            <a href="/apps/account" className="share-pill">
-              Account
-            </a>
-          </div>
-        </header>
-
         <section className="share-hero">
           <p>Caliphornia OS</p>
           <h1>Share</h1>
