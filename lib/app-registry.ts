@@ -8,6 +8,15 @@ export type AppItem = {
   passLabel?: string;
 };
 
+export type GlobalNavigationIcon = "home" | "music" | "share" | "account";
+
+export type GlobalNavigationItem = {
+  id: string;
+  label: string;
+  href: string;
+  icon: GlobalNavigationIcon;
+};
+
 export const appRegistry: AppItem[] = [
   {
     id: "fartherhood",
@@ -77,4 +86,17 @@ export const appRegistry: AppItem[] = [
     dock: true,
     passLabel: "Settings"
   }
+];
+
+
+const globalNavigationAppIds = ["music", "share", "account"] as const;
+
+export const globalNavigation: GlobalNavigationItem[] = [
+  { id: "home", label: "Home", href: "/home", icon: "home" },
+  ...globalNavigationAppIds.flatMap((id) => {
+    const app = appRegistry.find((item) => item.id === id);
+    return app
+      ? [{ id: app.id, label: app.name, href: app.href, icon: id }]
+      : [];
+  }),
 ];

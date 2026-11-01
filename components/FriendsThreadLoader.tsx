@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import FriendsThreadClient from "@/components/FriendsThreadClient";
+import AppBackLink from "@/components/AppBackLink";
 import type { GlobalTrack } from "@/components/GlobalPlayer";
 
 type ThreadData = {
@@ -64,7 +65,20 @@ export default function FriendsThreadLoader({ slug }: { slug: string }) {
   }
 
   if (error) {
-    return <main className="app-shell friends-original-app-shell"><section className="screen screen-thread is-active"><div className="friends-original-empty-state">{error}</div><a href="/apps/friends" className="friends-original-back-btn">Back</a></section></main>;
+    return (
+      <main className="app-shell friends-original-app-shell">
+        <section className="screen screen-thread is-active">
+          <div className="friends-original-thread-topbar top-safe">
+            <AppBackLink
+              href="/apps/friends"
+              label="Fri.ends"
+              className="friends-original-back-btn"
+            />
+          </div>
+          <div className="friends-original-empty-state">{error}</div>
+        </section>
+      </main>
+    );
   }
 
   if (data?.locked) {
@@ -73,8 +87,11 @@ export default function FriendsThreadLoader({ slug }: { slug: string }) {
       <main className="app-shell friends-original-app-shell">
         <section className="screen screen-thread is-active">
           <div className="friends-original-thread-topbar top-safe">
-            <a href="/apps/friends" className="friends-original-back-btn"><span className="friends-original-back-chevron" aria-hidden="true"></span><span className="friends-original-back-text">Fri.ends</span></a>
-            <a href="/apps/account" className="friends-original-thread-face-btn">◎</a>
+            <AppBackLink
+              href="/apps/friends"
+              label="Fri.ends"
+              className="friends-original-back-btn"
+            />
           </div>
           <div className="friends-original-locked-card">
             <h1>{finalTrack?.title || slug}</h1>
@@ -88,7 +105,20 @@ export default function FriendsThreadLoader({ slug }: { slug: string }) {
   }
 
   if (!data?.conversation) {
-    return <main className="app-shell friends-original-app-shell"><section className="screen screen-thread is-active"><div className="friends-original-empty-state">Conversation not found.</div></section></main>;
+    return (
+      <main className="app-shell friends-original-app-shell">
+        <section className="screen screen-thread is-active">
+          <div className="friends-original-thread-topbar top-safe">
+            <AppBackLink
+              href="/apps/friends"
+              label="Fri.ends"
+              className="friends-original-back-btn"
+            />
+          </div>
+          <div className="friends-original-empty-state">Conversation not found.</div>
+        </section>
+      </main>
+    );
   }
 
   return <FriendsThreadClient conversation={data.conversation} messages={data.messages || []} />;

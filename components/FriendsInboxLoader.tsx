@@ -47,14 +47,6 @@ export default function FriendsInboxLoader() {
   return (
     <main className="app-shell friends-original-app-shell">
       <section className="screen screen-inbox is-active" aria-label="Fri.ends inbox">
-        <div className="friends-original-inbox-topbar top-safe">
-          <a href="/home" className="friends-original-back-btn" aria-label="Back to home">
-            <span className="friends-original-back-chevron" aria-hidden="true"></span>
-            <span className="friends-original-back-text">Home</span>
-          </a>
-          <a href="/apps/share" className="friends-original-thread-face-btn" aria-label="Share">⌁</a>
-        </div>
-
         <header className="friends-original-inbox-header">
           <h1>Fri.ends</h1>
           <p>Conversations, audio messages, and final songs.</p>

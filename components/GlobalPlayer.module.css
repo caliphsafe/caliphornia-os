@@ -277,3 +277,12 @@
     font-size: 12px;
   }
 }
+
+
+:global(body.has-os-navigation) .expanded {
+  bottom: calc(var(--cos-os-nav-height, 86px) + 8px + env(safe-area-inset-bottom, 0px));
+}
+
+:global(body.has-os-navigation) .collapsed {
+  bottom: calc(var(--cos-os-nav-height, 86px) + 54px + env(safe-area-inset-bottom, 0px));
+}

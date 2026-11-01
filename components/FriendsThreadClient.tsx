@@ -310,14 +310,11 @@ export default function FriendsThreadClient({
   <button
     type="button"
     onClick={handleBackToInbox}
-    className="friends-original-back-btn"
+    className="cos-app-back-button friends-original-back-btn"
     aria-label="Back to inbox"
   >
-    <span
-      className="friends-original-back-chevron"
-      aria-hidden="true"
-    ></span>
-    <span className="friends-original-back-text">Fri.ends</span>
+    <span className="cos-app-back-chevron" aria-hidden="true">‹</span>
+    <span>Fri.ends</span>
   </button>
 
   <button

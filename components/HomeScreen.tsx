@@ -51,13 +51,13 @@ export default function HomeScreen({ user }: { user: AppUser }) {
             <h1>{displayName(user)}</h1>
           </div>
 
-          <Link
-            href="/apps/account"
+          <div
             className="ios-home-profile-button"
-            aria-label="Open Account"
+            role="img"
+            aria-label={`Profile for ${displayName(user)}`}
           >
             {displayName(user).slice(0, 1).toUpperCase()}
-          </Link>
+          </div>
         </header>
 
         <section className="ios-home-widget-row" aria-label="Today">

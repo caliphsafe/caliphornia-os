@@ -2,7 +2,7 @@
   min-height: 100dvh;
   color: #fff;
   padding:
-    max(12px, env(safe-area-inset-top))
+    max(12px, calc(env(safe-area-inset-top, 0px) + 12px))
     10px
     max(72px, calc(18px + env(safe-area-inset-bottom)));
   background:
@@ -331,7 +331,7 @@
 
 @media (min-width: 640px) {
   .apple-music-page {
-    padding: 16px 14px 84px;
+    padding: max(16px, calc(env(safe-area-inset-top, 0px) + 10px)) 14px 84px;
   }
 
   .apple-music-search-row {

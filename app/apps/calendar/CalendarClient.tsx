@@ -142,11 +142,13 @@ export default function CalendarClient({ events }: { events: CalendarEvent[] }) 
     <main className="apple-cal-app">
       <section className="apple-cal-screen">
         <header className="apple-cal-topbar">
-          <Link href="/home" className="apple-cal-year-pill"><span>‹</span>{now.getFullYear()}</Link>
+          <div className="apple-cal-year-pill">
+            {now.getFullYear()}
+          </div>
           <div className="apple-cal-control-pill">
-            <Link href="/apps/account" className="apple-cal-icon-button" aria-label="Account">◎</Link>
-            <button type="button" className="apple-cal-icon-button" aria-label="Search calendar" onClick={openToday}><span className="apple-cal-search-symbol">⌕</span></button>
-            <Link href="/apps/share" className="apple-cal-icon-button apple-cal-plus" aria-label="Share">+</Link>
+            <button type="button" className="apple-cal-icon-button" aria-label="Search calendar" onClick={openToday}>
+              <span className="apple-cal-search-symbol">⌕</span>
+            </button>
           </div>
         </header>
 
